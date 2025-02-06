@@ -1,0 +1,66 @@
+﻿@{
+    ViewData["Title"] = "Perfil";
+}
+
+<div class="container mt-4">
+    <div class="card mb-4" style="
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            margin: auto;
+            max-width: 60%;">
+        <div class="card-header">
+            <h3>Perfil del Usuario</h3>
+        </div>
+        <div class="card-body text-center">
+
+            <div id="profile-avatar">
+                <i id="avatar-icon" class="fas fa-male fa-5x"></i>
+            </div>
+
+            <div class="form-group mt-3">
+                <label for="profileName" class="floating-label">Nombre del Usuario</label>
+                <input type="text" id="profileName" class="form-control" value="Reynaldo">
+            </div>
+
+            <div class="form-group mt-3">
+                <label for="profileEmail" class="floating-label">Correo Electrónico</label>
+                <input type="email" id="profileEmail" class="form-control" value="reynaldo@gmail.com">
+            </div>
+
+            <div class="form-group mt-3">
+                <label for="profilePhone" class="floating-label">Teléfono</label>
+                <input type="tel" id="profilePhone" class="form-control" value="+506 4564 7891">
+            </div>
+
+            <div class="form-group mt-3">
+                <label for="profileBio" class="floating-label">Biografía</label>
+                <textarea id="profileBio" class="form-control">Soy un desarrollador apasionado por crear soluciones innovadoras.</textarea>
+            </div>
+
+            <div class="form-group mt-3">
+                <label for="genderSelect">Género:</label>
+                <select id="genderSelect" class="form-control w-50 mx-auto" onchange="updateAvatar()">
+                    <option value="male">Hombre</option>
+                    <option value="female">Mujer</option>
+                </select>       
+            </div>
+
+            <a class="btn btn-primary" href="@Url.Action("Index", "Home")">Confirmar</a>
+        </div> 
+    </div> 
+</div>
+
+<script>
+    function updateAvatar() {
+        const genderSelect = document.getElementById('genderSelect');
+        const avatarIcon = document.getElementById('avatar-icon');
+
+        if (genderSelect.value === 'male') {
+            avatarIcon.className = 'fas fa-male fa-5x';
+        } else if (genderSelect.value === 'female') {
+            avatarIcon.className = 'fas fa-female fa-5x';
+        }
+    }
+</script>

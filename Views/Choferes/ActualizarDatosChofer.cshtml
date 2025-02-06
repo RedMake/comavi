@@ -1,0 +1,22 @@
+﻿@{
+    ViewData["Title"] = "Actualizar Datos del Chofer";
+}
+
+<h1 class="text-center my-4">Actualizar Datos del Chofer</h1>
+<div class="container">
+    <form asp-action="ActualizarDatosChofer" method="post" class="needs-validation my-4" novalidate>
+        <div class="mb-3">
+            <label for="nombre" class="form-label">Nombre Completo:</label>
+            <input type="text" id="nombre" name="nombre" value="Juan Pérez" class="form-control" required />
+            <div class="invalid-feedback">Por favor, ingrese el nombre completo.</div>
+        </div>
+
+        <div class="mb-3">
+            <label for="telefono" class="form-label">Teléfono:</label>
+            <input type="tel" id="telefono" name="telefono" value="123456789" class="form-control" required />
+            <div class="invalid-feedback">Por favor, ingrese un número de teléfono válido.</div>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">Guardar Cambios</button>
+    </form>
+</div>

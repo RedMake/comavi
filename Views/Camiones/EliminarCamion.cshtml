@@ -1,0 +1,10 @@
+﻿@{
+    ViewData["Title"] = "Eliminar Camión";
+}
+
+<h1 class="text-center my-4">Eliminar Camión</h1>
+<p class="text-danger text-center">¿Estás seguro de que deseas eliminar el camión <strong>ABC123</strong>? Esta acción no se puede deshacer.</p>
+<form asp-action="EliminarCamion" method="post" class="text-center my-4">
+    <button type="submit" class="btn btn-danger">Eliminar</button>
+    <a href="/" class="btn btn-secondary">Cancelar</a>
+</form>

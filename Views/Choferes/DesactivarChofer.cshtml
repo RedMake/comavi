@@ -1,0 +1,10 @@
+﻿@{
+    ViewData["Title"] = "Desactivar Chofer";
+}
+
+<h1 class="text-center my-4">Desactivar Chofer</h1>
+<p class="text-warning text-center">¿Estás seguro de que deseas desactivar a <strong>Juan Pérez</strong>?</p>
+<form asp-action="DesactivarChofer" method="post" class="text-center my-4">
+    <button type="submit" class="btn btn-warning">Confirmar</button>
+    <a href="/" class="btn btn-secondary">Cancelar</a>
+</form>

@@ -1,0 +1,22 @@
+﻿@{
+    ViewData["Title"] = "Actualizar Documentos del Chofer";
+}
+
+<h1 class="text-center my-4">Actualizar Documentos del Chofer</h1>
+
+<div class="container">
+    <h2>Automática:</h2>
+    <p>Los documentos se actualizan automáticamente cada día antes del vencimiento.</p>
+
+    <h2>Manual:</h2>
+    <p>En caso de ser necesario, se pueden actualizar manualmente:</p>
+    <form asp-action="ActualizarDocumentos" method="post" enctype="multipart/form-data" class="needs-validation my-4" novalidate>
+        <div class="mb-3">
+            <label for="licencia" class="form-label">Nueva Licencia (PDF):</label>
+            <input type="file" id="licencia" name="licencia" class="form-control" required />
+            <div class="invalid-feedback">Por favor, suba un archivo PDF válido.</div>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">Actualizar</button>
+    </form>
+</div>
