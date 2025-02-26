@@ -1,0 +1,103 @@
+﻿@model COMAVI_SA.Models.PerfilViewModel
+@{
+    ViewData["Title"] = "Perfil - Sistema Administrativo";
+}
+
+<div class="container mt-4">
+    <div class="card mb-4" style="
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            margin: auto;
+            max-width: 60%;">
+        <div class="card-header">
+            <h3>Perfil del Usuario</h3>
+        </div>
+        <div class="card-body text-center">
+
+            <div id="profile-avatar">
+                <i id="avatar-icon" class="fas fa-male fa-5x"></i>
+            </div>
+
+            <div class="form-group mt-3">
+                <label for="profileName" class="floating-label">Nombre del Usuario</label>
+                <input type="text" id="profileName" class="form-control"  value="@Model.NombreUsuario" readonly>
+            </div>
+
+            <div class="form-group mt-3">
+                <label for="profileEmail" class="floating-label">Correo Electrónico</label>
+                <input type="email" id="profileEmail" class="form-control"value="@Model.Email" readonly >
+            </div>
+
+            <div class="form-group mt-3">
+                <label for="profileAge" class="floating-label">Edad</label>
+                <input type="number" id="profileAge" class="form-control" value="@Model.Edad" readonly >
+            </div>
+            <div class="form-group mt-3">
+                <label for="profileRol" class="floating-label">Rol</label>
+                <input type="text" id="profileRol" class="form-control" value="@Model.Rol" readonly >
+            </div>
+            <div class="form-group mt-3">
+                <label for="profileCedula" class="floating-label">Cedula de Identidad</label>
+                <input type="number" id="profileCedula" class="form-control" value="@Model.Numero_Cedula" readonly >
+            </div>
+             <div class="form-group mt-3">
+                <label for="profileLincencia" class="floating-label">Licencia</label>
+                <input type="text" id="profileLincencia" class="form-control" value="@Model.Licencia" readonly >
+            </div>
+            <div class="form-group mt-3">
+                <label for="profileLincenciaVencimiento" class="floating-label">Fecha de vencimiento de Licencia</label>
+                <input type="text" id="profileLincenciaVencimiento" class="form-control" value="@Model.Fecha_Venc_Licencia" readonly >
+            </div>
+            <div class="form-group mt-3">
+                <label for="profileEstate" class="floating-label">Estado</label>
+                <input type="text" id="profileEstate" class="form-control" value="@Model.Estado" readonly >
+            </div>
+
+            <div class="form-group mt-3">
+                <label for="profileIngreso" class="floating-label">Ultimo Ingreso</label>
+                <textarea type="text" id="profileIngreso" class="form-control" value="@Model.UltimoIngreso" readonly></textarea>
+            </div>
+
+            <div class="form-group mt-3">
+                <label for="genderSelect">Género:</label>
+                @if (Model.Genero == "masculino")
+                {
+                    <p id="genderSelect" class="form-control w-50 mx-auto" onchange="updateAvatar()" value="male">Hombre</p>
+                }
+                else
+                {
+                    <p id="genderSelect" class="form-control w-50 mx-auto" onchange="updateAvatar()" value="female">Mujer</p>
+                }
+            </div>
+             <div class="text-center mt-4">
+                <p>
+                    Archivo conteniendo los datos del chofer y su camion
+                </p>
+                <a href="@Url.Action("DescargarPDF", "Perfil")" class="btn btn-danger">
+                    <i class="fas fa-file-pdf"></i> Descargar PDF
+                </a>
+            </div>
+            <p class="small mt-3">
+                Renovacion de licencia automatica
+            </p>
+        </div> 
+    </div> 
+</div>
+
+<script>
+    function updateAvatar() {
+        const genderSelect = document.getElementById('genderSelect');
+        const avatarIcon = document.getElementById('avatar-icon');
+
+        if (genderSelect.value === 'male') {
+            avatarIcon.className = 'fas fa-male fa-5x';
+        } else if (genderSelect.value === 'female') {
+            avatarIcon.className = 'fas fa-female fa-5x';
+        }
+    }
+</script>
+@section Scripts {
+
+}

@@ -1,29 +1,44 @@
 ﻿using MailKit.Net.Smtp;
 using MimeKit;
+using MailKit.Security;
 
-public class EmailService 
+namespace COMAVI_SA.Services
 {
-    private readonly IConfiguration _config;
-
-    public EmailService(IConfiguration config)
+    public interface IEmailService
     {
-        _config = config;
+        Task SendEmailAsync(string to, string subject, string body);
     }
 
-    public async Task EnviarCorreoAsync(string destinatario, string asunto, string mensaje)
+    public class EmailService : IEmailService
     {
-        var email = new MimeMessage();
-        email.From.Add(new MailboxAddress(_config["SmtpSettings:FromName"], _config["SmtpSettings:FromAddress"]));
-        email.To.Add(new MailboxAddress(destinatario, destinatario));
-        email.Subject = asunto;
+        private readonly IConfiguration _configuration;
 
-        var bodyBuilder = new BodyBuilder { HtmlBody = mensaje };
-        email.Body = bodyBuilder.ToMessageBody();
+        public EmailService(IConfiguration configuration)
+        {
+            _configuration = configuration;
+        }
 
-        using var smtp = new SmtpClient();
-        await smtp.ConnectAsync(_config["SmtpSettings:Server"], int.Parse(_config["SmtpSettings:Port"]), false);
-        await smtp.AuthenticateAsync(_config["SmtpSettings:Username"], _config["SmtpSettings:Password"]);
-        await smtp.SendAsync(email);
-        await smtp.DisconnectAsync(true);
+        public async Task SendEmailAsync(string to, string subject, string body)
+        {
+            var email = new MimeMessage();
+            email.From.Add(MailboxAddress.Parse(_configuration["EmailSettings:From"]));
+            email.To.Add(MailboxAddress.Parse(to));
+            email.Subject = subject;
+            email.Body = new TextPart(MimeKit.Text.TextFormat.Html) { Text = body };
+
+            using var smtp = new SmtpClient();
+            await smtp.ConnectAsync(
+                _configuration["EmailSettings:Host"],
+                _configuration.GetValue<int>("EmailSettings:Port"),
+                SecureSocketOptions.StartTls);
+
+            await smtp.AuthenticateAsync(
+                _configuration["EmailSettings:Username"],
+                _configuration["EmailSettings:Password"]);
+
+            await smtp.SendAsync(email);
+            await smtp.DisconnectAsync(true);
+        }
     }
 }
+

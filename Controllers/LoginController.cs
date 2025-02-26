@@ -1,237 +1,264 @@
-﻿using COMAVI_SA.Models;
+﻿using COMAVI_SA.Data;
+using COMAVI_SA.Models;
+using COMAVI_SA.Services;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Runtime.Intrinsics.X86;
 using System.Security.Claims;
 
 namespace COMAVI_SA.Controllers
 {
-    public class LoginController(ApplicationDbContext context, EmailService emailService) : Controller
+    public class LoginController : Controller
     {
-        private readonly ApplicationDbContext _context = context;
-        private readonly EmailService _emailservice = emailService;
+        private readonly IUserService _userService;
+        private readonly IPasswordService _passwordService;
+        private readonly IOtpService _otpService;
+        private readonly IJwtService _jwtService;
+        //private readonly EmailService _emailService;
+        private readonly ComaviDbContext _context;
+
+        public LoginController(
+            IUserService userService,
+            IPasswordService passwordService,
+            IOtpService otpService,
+            IJwtService jwtService,
+           // EmailService emailService, 
+            ComaviDbContext context)
+        {
+            _userService = userService;
+            _passwordService = passwordService;
+            _otpService = otpService;
+            _jwtService = jwtService;
+            //_emailService = emailService;
+            _context = context;
+        }
+
+        [HttpGet]
+        public IActionResult Index()
+        {
+            if (User.Identity.IsAuthenticated)
+                return RedirectToAction("Index", "Home");
+
+            return View();
+        }
 
         [HttpPost]
-        public async Task<IActionResult> Login(LoginModel model)
+        public async Task<IActionResult> Index(LoginViewModel model)
         {
             if (!ModelState.IsValid)
                 return View(model);
 
-            var user = await _context.Usuarios
-                .FirstOrDefaultAsync(u => u.NombreUsuario == model.Username);
-
-            if (user == null || !BCrypt.Net.BCrypt.Verify(model.Password, user.Contrasena))
+            if (await _userService.IsAccountLockedAsync(model.Email))
             {
-                // Registrar intento fallido
-                await RegistrarIntentoFallido(user?.Id, HttpContext.Connection.RemoteIpAddress?.ToString());
-                ModelState.AddModelError(string.Empty, "Credenciales inválidas");
+                ModelState.AddModelError("", "Su cuenta ha sido bloqueada por múltiples intentos fallidos. Intente más tarde.");
                 return View(model);
             }
 
-            // Verificar si requiere MFA
-            if (await RequiereMFA(user.Id))
+            var user = await _userService.AuthenticateAsync(model.Email, model.Password);
+            var ipAddress = HttpContext.Connection.RemoteIpAddress.ToString();
+
+            if (user == null)
             {
-                var mfaCode = GenerarMFACode(user.Id);
-                await EnviarMFAPorEmail(user, mfaCode);
-                return RedirectToAction("MFA", new { userId = user.Id });
+                await _userService.RecordLoginAttemptAsync(null, ipAddress, false);
+                ModelState.AddModelError("", "Correo electrónico o contraseña incorrectos.");
+                return View(model);
             }
 
-            // Crear sesión segura
-            await CrearSesionSegura(user);
+            await _userService.RecordLoginAttemptAsync(user.id_usuario, ipAddress, true);
+
+            TempData["UserEmail"] = user.correo_electronico;
+            TempData["UserId"] = user.id_usuario;
+            TempData["RememberMe"] = model.RememberMe;
+
+            var token = _jwtService.GenerateJwtToken(user);
+            HttpContext.Session.SetString("JwtToken", token);
+
+            return RedirectToAction("VerifyOtp");
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> VerifyOtp()
+        {
+            var userId = TempData.Peek("UserId") as int?;
+            var email = TempData.Peek("UserEmail") as string;
+
+            if (!userId.HasValue || string.IsNullOrEmpty(email))
+                return RedirectToAction("Index");
+
+            var mfaSecret = await _userService.GetMfaSecretAsync(userId.Value);
+            if (string.IsNullOrEmpty(mfaSecret))
+            {
+                await _userService.SetupMfaAsync(userId.Value);
+                mfaSecret = await _userService.GetMfaSecretAsync(userId.Value);
+
+                var qrCode = _otpService.GenerateQrCodeUri(mfaSecret, email);
+                ViewBag.QrCode = qrCode;
+                ViewBag.Secret = mfaSecret;
+                ViewBag.IsFirstTimeSetup = true;
+            }
+
+            var model = new OtpViewModel { Email = email };
+            return View(model);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> VerifyOtp(OtpViewModel model)
+        {
+            if (!ModelState.IsValid)
+                return View(model);
+
+            var userId = TempData["UserId"] as int?;
+            var email = TempData["UserEmail"] as string;
+            var rememberMe = TempData["RememberMe"] as bool? ?? false;
+
+            if (!userId.HasValue || string.IsNullOrEmpty(email))
+                return RedirectToAction("Index");
+
+            if (!await _userService.VerifyMfaCodeAsync(userId.Value, model.OtpCode))
+            {
+                ModelState.AddModelError("", "Código OTP inválido. Intente nuevamente.");
+                return View(model);
+            }
+
+            var user = await _userService.AuthenticateAsync(email, "");
+            if (user == null)
+                return RedirectToAction("Index");
+
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.id_usuario.ToString()),
+                new Claim(ClaimTypes.Name, user.nombre_usuario),
+                new Claim(ClaimTypes.Email, user.correo_electronico),
+                new Claim(ClaimTypes.Role, user.rol)
+            };
+
+            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            var principal = new ClaimsPrincipal(identity);
+
+            await HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                principal,
+                new AuthenticationProperties
+                {
+                    IsPersistent = rememberMe,
+                    ExpiresUtc = rememberMe ?
+                        DateTime.UtcNow.AddDays(7) :  
+                        DateTime.UtcNow.AddMinutes(30) 
+                });
 
             return RedirectToAction("Index", "Home");
         }
 
-
-        private async Task RegistrarIntentoFallido(int? userId, string ip)
+        [HttpGet]
+        public Task<IActionResult> Register()
         {
-            _context.IntentosLogin.Add(new IntentosLogin
-            {
-                id_usuario = userId,
-                fecha_hora = DateTime.Now,
-                exitoso = false,
-                direccion_ip = ip
-            });
-
-            await _context.SaveChangesAsync();
-
-            // Bloquear después de 3 intentos fallidos
-            var intentos = await _context.IntentosLogin
-                .CountAsync(i => i.direccion_ip == ip &&
-                                i.fecha_hora > DateTime.Now.AddMinutes(-15) &&
-                                !i.exitoso);
-
-            if (intentos >= 3)
-            {
-                await BloquearUsuarioTemporal(userId);
-            }
-        }
-
-        private string GenerarMFACode(int userId)
-        {
-            var clave = KeyGeneration.GenerateRandomKey(20);
-            var totp = new Totp(clave, step: 300);
-            var code = totp.ComputeTotp();
-
-            _context.MFA.Add(new MFA
-            {
-                id_usuario = userId,
-                codigo = BCrypt.Net.BCrypt.HashPassword(code),
-                fecha_generacion = DateTime.Now,
-                usado = false
-            });
-
-            _context.SaveChanges();
-
-            return code;
-        }
-
-        public async Task<bool> ValidarMFA(int userId, string code)
-        {
-            var mfaActivo = await _context.MFA
-                .Where(m => m.id_usuario == userId &&
-                           !m.usado &&
-                           m.fecha_generacion > DateTime.Now.AddMinutes(-5))
-                .OrderByDescending(m => m.fecha_generacion)
-                .FirstOrDefaultAsync();
-
-            if (mfaActivo == null) return false;
-
-            var isValid = BCrypt.Net.BCrypt.Verify(code, mfaActivo.codigo);
-
-            if (isValid)
-            {
-                mfaActivo.usado = true;
-                await _context.SaveChangesAsync();
-            }
-
-            return isValid;
+            return Task.FromResult<IActionResult>(View());
         }
 
         [HttpPost]
-        public async Task<IActionResult> Register(RegisterModel model)
+        public async Task<IActionResult> Register(RegisterViewModel model)
         {
             if (!ModelState.IsValid)
                 return View(model);
 
-            var existingUser = await _context.Usuarios.FirstOrDefaultAsync(u => u.NombreUsuario == model.NombreUsuario);
-            if (existingUser != null)
+            if (await _userService.IsEmailExistAsync(model.Email))
             {
-                ModelState.AddModelError(string.Empty, "El nombre de usuario ya existe.");
+                ModelState.AddModelError("Email", "Este correo electrónico ya está registrado.");
                 return View(model);
             }
 
-            var hashedPassword = BCrypt.Net.BCrypt.HashPassword(model.Password);
-            var newUser = new Usuario
+            var result = await _userService.RegisterAsync(model);
+            if (!result)
             {
-                NombreUsuario = model.NombreUsuario,
-                Email = model.Email,
-                Contrasena = hashedPassword
-            };
+                ModelState.AddModelError("", "Error al registrar el usuario. Por favor, intente nuevamente.");
+                return View(model);
+            }
 
-            _context.Usuarios.Add(newUser);
-            await _context.SaveChangesAsync();
+            TempData["SuccessMessage"] = "Registro exitoso. Ahora puede iniciar sesión.";
 
-            return RedirectToAction("Login");
+            return RedirectToAction("Index");
         }
 
-
         [HttpPost]
-        public async Task<IActionResult> RestablecerContrasena(ResetPasswordModel model)
+        public async Task<IActionResult> Logout()
         {
-            if (!ModelState.IsValid)
-                return View(model);
-
-            var user = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email == model.Email);
-            if (user == null)
-            {
-                ModelState.AddModelError(string.Empty, "Correo electrónico no registrado.");
-                return View(model);
-            }
-
-            var token = Guid.NewGuid().ToString();
-            user.TokenRecuperacion = token;
-            user.ExpiracionToken = DateTime.UtcNow.AddHours(1);
-
-            await _context.SaveChangesAsync();
-
-            var resetLink = Url.Action("ResetPassword", "Login", new { email = model.Email, token }, Request.Scheme);
-            await _emailservice.EnviarCorreoAsync(model.Email, "Restablecimiento de Contraseña",
-                $"Haz clic en el siguiente enlace para restablecer tu contraseña: <a href='{resetLink}'>Restablecer</a>");
-
-            return View("RestablecimientoEnviado");
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            HttpContext.Session.Clear();
+            return RedirectToAction("Index");
         }
 
         [HttpGet]
-        public IActionResult ResetPassword(string email, string token)
-        {
-            return View(new ResetPasswordModel { Email = email, Token = token });
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> ResetPassword(ResetPasswordModel model)
-        {
-            if (!ModelState.IsValid)
-                return View(model);
-
-            var user = await _context.Usuarios.FirstOrDefaultAsync(u => u.Email == model.Email && u.Token == model.Token);
-            if (user == null || user.ExpiracionToken < DateTime.UtcNow)
-            {
-                ModelState.AddModelError(string.Empty, "Token inválido o expirado.");
-                return View(model);
-            }
-
-            user.Contrasena = BCrypt.Net.BCrypt.HashPassword(model.NewPassword);
-            user.TokenRecuperacion = null;
-            user.ExpiracionToken = null;
-
-            await _context.SaveChangesAsync();
-
-            return RedirectToAction("Login");
-        }
-
-
-
-
-
-
-        public IActionResult MFA()
+        public IActionResult AccessDenied()
         {
             return View();
         }
 
-
-
-
-        public async Task<IActionResult> CerrarSesiones()
+        [HttpGet]
+        public IActionResult ResetPassword(string token, string email)
         {
-            await HttpContext.SignOutAsync();
-            return RedirectToAction("Login");
+            var model = new ResetPasswordViewModel { Codigo = token, Email = email };
+            return View(model);
         }
-
 
         [HttpPost]
-        public async Task<IActionResult> PerfilConfiguracion(Usuario model)
+        public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
         {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
-            var user = await _context.Usuarios.FindAsync(userId);
+            if (!ModelState.IsValid)
+                return View(model);
 
-            if (user == null)
-                return NotFound();
-
-            user.NombreUsuario = model.NombreUsuario;
-            user.Email = model.Email;
-
-            if (!string.IsNullOrEmpty(model.Contrasena))
+            var result = await _userService.ResetPasswordAsync(model.Email, model.Codigo, model.NewPassword);
+            if (!result)
             {
-                user.Contrasena = BCrypt.Net.BCrypt.HashPassword(model.Contrasena);
+                ModelState.AddModelError("", "Token inválido o expirado.");
+                return View(model);
             }
 
-            await _context.SaveChangesAsync();
-
-            return RedirectToAction("PerfilConfiguracion");
+            TempData["SuccessMessage"] = "Contraseña actualizada exitosamente.";
+            return RedirectToAction("Index");
         }
 
+        //[Authorize]
+        public async Task<IActionResult> Profile()
+        {
+            
+            return View();
+        }
+
+        [HttpGet]
+        public IActionResult ForgotPassword()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ForgotPassword(string email)
+        {
+            if (string.IsNullOrEmpty(email))
+            {
+                ModelState.AddModelError("", "Ingrese su correo electrónico.");
+                return View();
+            }
+
+            var user = await _userService.AuthenticateAsync(email, "");
+            if (user == null)
+            {
+                TempData["SuccessMessage"] = "Si su correo está registrado, recibirá instrucciones.";
+                return RedirectToAction("Index");
+            }
+
+            // Generar token y enviar correo
+            var token = await _userService.GeneratePasswordResetTokenAsync(user.id_usuario);
+            var resetLink = Url.Action("ResetPassword", "Login", new { token, email }, Request.Scheme);
+
+            //await _emailService.SendEmailAsync(
+            //    email,
+            //    "Restablecer Contraseña",
+            //    $"Haga clic <a href='{resetLink}'>aquí</a> para restablecer su contraseña.");
+
+            TempData["SuccessMessage"] = "Correo enviado con instrucciones.";
+            return RedirectToAction("Index");
+        }
     }
 }

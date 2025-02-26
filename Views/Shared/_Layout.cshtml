@@ -55,12 +55,12 @@
                 </a>
                 <div id="collapseLogin" class="collapse" aria-labelledby="headingLogin" data-parent="#accordionSidebar">
                     <div class="bg-white py-2 collapse-inner rounded">
-                        <a class="collapse-item" href="@Url.Action("Login", "Login")">Iniciar Sesión</a>
+                        <a class="collapse-item" href="@Url.Action("Index", "Login")">Iniciar Sesión</a>
                         <a class="collapse-item" href="@Url.Action("Register", "Login")">Registrar Usuario</a>
-                        <a class="collapse-item" href="@Url.Action("RestablecerContrasena", "Login")">Restablecer Contraseña</a>
-                        <a class="collapse-item" href="@Url.Action("MFA", "Login")">Autenticación MFA</a>
-                        <a class="collapse-item" href="@Url.Action("CerrarSesiones", "Login")">Cerrar Sesión</a>                        
-                        <a class="collapse-item" href="@Url.Action("PerfilConfiguracion", "Login")">Perfil</a>
+                        <a class="collapse-item" href="@Url.Action("ForgotPassword", "Login")">Restablecer Contraseña</a>
+                        <a class="collapse-item" href="@Url.Action("AccessDenied", "Login")">Acceso Denegado</a>
+                        <a class="collapse-item" href="@Url.Action("VerifyOtp", "Login")">Autenticación MFA</a>
+                        <a class="collapse-item" href="@Url.Action("Profile", "Login")">Perfil</a>
                     </div>
                 </div>
             </li>
@@ -72,13 +72,13 @@
                 </a>
                 <div id="collapseChoferes" class="collapse" aria-labelledby="headingChoferes" data-parent="#accordionSidebar">
                     <div class="bg-white py-2 collapse-inner rounded">
-                        <a class="collapse-item" href="@Url.Action("RegistrarChofer", "Choferes")">Registrar Chofer</a>
-                        <a class="collapse-item" href="@Url.Action("ActualizarDocumentos", "Choferes")">Actualizar Documentos</a>
-                        <a class="collapse-item" href="@Url.Action("MonitorearVencimientos", "Choferes")">Monitorear Vencimientos</a>
-                        <a class="collapse-item" href="@Url.Action("ActualizarDatosChofer", "Choferes")">Actualizar Datos</a>
-                        <a class="collapse-item" href="@Url.Action("DesactivarChofer", "Choferes")">Desactivar Chofer</a>
-                        <a class="collapse-item" href="@Url.Action("AsignarDocumentos", "Choferes")">Asignar Documentos</a>
-                        <a class="collapse-item" href="@Url.Action("EliminarChofer", "Choferes")">Eliminar Chofer</a>
+                        <a class="collapse-item" href="@Url.Action("RegistrarChofer", "Admin")">Registrar Chofer</a>
+                        <a class="collapse-item" href="@Url.Action("ActualizarDocumentos", "Admin")">Actualizar Documentos</a>
+                        <a class="collapse-item" href="@Url.Action("MonitorearVencimientos", "Admin")">Monitorear Vencimientos</a>
+                        <a class="collapse-item" href="@Url.Action("ActualizarDatosChofer", "Admin")">Actualizar Datos</a>
+                        <a class="collapse-item" href="@Url.Action("DesactivarChofer", "Admin")">Desactivar Chofer</a>
+                        <a class="collapse-item" href="@Url.Action("AsignarDocumentos", "Admin")">Asignar Documentos</a>
+                        <a class="collapse-item" href="@Url.Action("EliminarChofer", "Admin")">Eliminar Chofer</a>
                     </div>
                 </div>
             </li>
@@ -90,13 +90,13 @@
                 </a>
                 <div id="collapseCamiones" class="collapse" aria-labelledby="headingCamiones" data-parent="#accordionSidebar">
                     <div class="bg-white py-2 collapse-inner rounded">
-                        <a class="collapse-item" href="@Url.Action("RegistrarCamion", "Camiones")">Registrar Camión</a>
-                        <a class="collapse-item" href="@Url.Action("ActualizarCamion", "Camiones")">Actualizar Camión</a>
-                        <a class="collapse-item" href="@Url.Action("HistorialMantenimiento", "Camiones")">Historial de <br> Mantenimiento</a>
-                        <a class="collapse-item" href="@Url.Action("NotificacionesMantenimiento", "Camiones")">Notificaciones de <br> Mantenimiento</a>
-                        <a class="collapse-item" href="@Url.Action("DesactivarCamion", "Camiones")">Desactivar Camión</a>
-                        <a class="collapse-item" href="@Url.Action("AsignarChofer", "Camiones")">Asignar Chofer</a>
-                        <a class="collapse-item" href="@Url.Action("EliminarCamion", "Camiones")">Eliminar Camión</a>
+                        <a class="collapse-item" href="@Url.Action("RegistrarCamion", "Admin")">Registrar Camión</a>
+                        <a class="collapse-item" href="@Url.Action("ActualizarCamion", "Admin")">Actualizar Camión</a>
+                        <a class="collapse-item" href="@Url.Action("HistorialMantenimiento", "Admin")">Historial de <br> Mantenimiento</a>
+                        <a class="collapse-item" href="@Url.Action("NotificacionesMantenimiento", "Admin")">Notificaciones de <br> Mantenimiento</a>
+                        <a class="collapse-item" href="@Url.Action("DesactivarCamion", "Admin")">Desactivar Camión</a>
+                        <a class="collapse-item" href="@Url.Action("AsignarChofer", "Admin")">Asignar Chofer</a>
+                        <a class="collapse-item" href="@Url.Action("EliminarCamion", "Admin")">Eliminar Camión</a>
                     </div>
                 </div>
             </li>
@@ -231,7 +231,7 @@
                 <div class="modal-body">Selecciona "Cerrar Sesión" abajo si quieres cerrar esta sesion solamente.</div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancelar</button>
-                    <a class="btn btn-primary" href="@Url.Action("Login", "Login")">Cerrar Sesión</a>
+                    <a class="btn btn-primary" href="@Url.Action("Index", "Login")">Cerrar Sesión</a>
                 </div>
             </div>
         </div>
