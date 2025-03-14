@@ -247,6 +247,23 @@ namespace COMAVI_SA.Models
         public DateTime? UltimoIngreso { get; set; }
     }
 
+    public class ChoferViewModel
+    {
+        public int id_chofer { get; set; }
+        public string nombreCompleto { get; set; }
+        public int edad { get; set; }
+        public string numero_cedula { get; set; }
+        public string licencia { get; set; }
+        public DateTime fecha_venc_licencia { get; set; }
+        public string estado { get; set; }
+        public string genero { get; set; }
+        public string estado_licencia { get; set; }
+        public int? id_camion { get; set; }
+        public string camion_asignado { get; set; }
+        public int total_documentos { get; set; }
+        public int numero_registro { get; set; }
+    }
+
     public class Choferes
     {
         [Key]
@@ -354,5 +371,13 @@ namespace COMAVI_SA.Models
 
         [Required]
         public DateTime fecha_vencimiento { get; set; }
+    }
+    public class PaginacionViewModel
+    {
+        public int total_registros { get; set; }
+        public int registro_inicio { get; set; }
+        public int registro_fin { get; set; }
+        public int total_paginas { get; set; }
+        public int pagina_actual { get; set; }
     }
 }

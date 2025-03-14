@@ -113,7 +113,7 @@ GO
 CREATE TABLE Mantenimiento_Camiones (
     id_mantenimiento INT PRIMARY KEY IDENTITY,
     id_camion INT FOREIGN KEY REFERENCES Camiones(id_camion),
-    descripcion TEXT NOT NULL,
+    descripcion VARCHAR(MAX) NOT NULL,
     fecha_mantenimiento DATE NOT NULL,
     costo DECIMAL(10, 2) NOT NULL
 )
@@ -146,6 +146,117 @@ CREATE TABLE Asignacion_Choferes_Camiones (
 )
 GO
 
+CREATE OR ALTER PROCEDURE sp_ActualizarDocumento
+    @id_documento INT = NULL,
+    @id_chofer INT,
+    @tipo_documento NVARCHAR(50),
+    @fecha_emision DATE,
+    @fecha_vencimiento DATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    IF @id_documento IS NULL OR @id_documento = 0
+    BEGIN
+        INSERT INTO Documentos (id_chofer, tipo_documento, fecha_emision, fecha_vencimiento)
+        VALUES (@id_chofer, @tipo_documento, @fecha_emision, @fecha_vencimiento);
+    END
+    ELSE
+    BEGIN
+        UPDATE Documentos
+        SET tipo_documento = @tipo_documento,
+            fecha_emision = @fecha_emision,
+            fecha_vencimiento = @fecha_vencimiento
+        WHERE id_documento = @id_documento AND id_chofer = @id_chofer;
+    END
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_MonitorearVencimientos
+    @dias_previos INT = 30
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    DECLARE @fecha_limite DATE = DATEADD(DAY, @dias_previos, GETDATE());
+    
+    SELECT 
+        d.id_documento,
+        d.tipo_documento,
+        d.fecha_emision,
+        d.fecha_vencimiento,
+        ch.id_chofer,
+        ch.nombreCompleto AS nombre_chofer,
+        DATEDIFF(DAY, GETDATE(), d.fecha_vencimiento) AS dias_para_vencimiento,
+        'Documento' AS tipo_vencimiento
+    FROM 
+        Documentos d
+    INNER JOIN 
+        Choferes ch ON d.id_chofer = ch.id_chofer
+    WHERE 
+        d.fecha_vencimiento BETWEEN GETDATE() AND @fecha_limite
+        AND ch.estado = 'activo'
+    
+    UNION
+    
+    SELECT 
+        NULL AS id_documento,
+        'Licencia de conducir' AS tipo_documento,
+        NULL AS fecha_emision,
+        ch.fecha_venc_licencia AS fecha_vencimiento,
+        ch.id_chofer,
+        ch.nombreCompleto AS nombre_chofer,
+        DATEDIFF(DAY, GETDATE(), ch.fecha_venc_licencia) AS dias_para_vencimiento,
+        'Licencia' AS tipo_vencimiento
+    FROM 
+        Choferes ch
+    WHERE 
+        ch.fecha_venc_licencia BETWEEN GETDATE() AND @fecha_limite
+        AND ch.estado = 'activo'
+    
+    ORDER BY 
+        dias_para_vencimiento;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_RegistrarDocumento
+    @id_chofer INT,
+    @tipo_documento NVARCHAR(50),
+    @fecha_emision DATE,
+    @fecha_vencimiento DATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    INSERT INTO Documentos (id_chofer, tipo_documento, fecha_emision, fecha_vencimiento)
+    VALUES (@id_chofer, @tipo_documento, @fecha_emision, @fecha_vencimiento);
+    
+    DECLARE @mensaje NVARCHAR(MAX);
+    DECLARE @usuario_admin INT;
+    
+    SELECT TOP 1 @usuario_admin = id_usuario FROM Usuario WHERE rol = 'admin';
+    
+    IF @usuario_admin IS NOT NULL
+    BEGIN
+        SELECT @mensaje = 'Documento ' + @tipo_documento + ' registrado para chofer ' +
+                         (SELECT nombreCompleto FROM Choferes WHERE id_chofer = @id_chofer);
+        
+        INSERT INTO Notificaciones_Usuario (id_usuario, tipo_notificacion, fecha_hora, mensaje)
+        VALUES (@usuario_admin, 'documento_registrado', GETDATE(), @mensaje);
+    END
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_EliminarDocumento
+    @id_documento INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    DELETE FROM Documentos
+    WHERE id_documento = @id_documento;
+END;
+GO
 
 CREATE PROCEDURE sp_RegistrarCamion
     @marca VARCHAR(50),
@@ -175,15 +286,76 @@ BEGIN
 END
 GO
 
-CREATE PROCEDURE sp_ObtenerHistorialMantenimiento
+CREATE OR ALTER PROCEDURE sp_RegistrarMantenimiento
+    @id_camion INT,
+    @descripcion NVARCHAR(MAX),
+    @fecha_mantenimiento DATE,
+    @costo DECIMAL(10, 2)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    INSERT INTO Mantenimiento_Camiones (id_camion, descripcion, fecha_mantenimiento, costo)
+    VALUES (@id_camion, @descripcion, @fecha_mantenimiento, @costo);
+    
+    IF @fecha_mantenimiento = CAST(GETDATE() AS DATE)
+    BEGIN
+        UPDATE Camiones
+        SET estado = 'mantenimiento'
+        WHERE id_camion = @id_camion;
+    END
+    
+    DECLARE @mensaje NVARCHAR(MAX);
+    DECLARE @usuario_admin INT;
+    DECLARE @info_camion NVARCHAR(100);
+    
+    SELECT @info_camion = marca + ' ' + modelo + ' (' + numero_placa + ')'
+    FROM Camiones
+    WHERE id_camion = @id_camion;
+    
+    SELECT TOP 1 @usuario_admin = id_usuario FROM Usuario WHERE rol = 'admin';
+    
+    IF @usuario_admin IS NOT NULL
+    BEGIN
+        SET @mensaje = 'Mantenimiento registrado para ' + @info_camion + 
+                      ': ' + @descripcion + '. Costo: $' + CAST(@costo AS NVARCHAR(20));
+        
+        INSERT INTO Notificaciones_Usuario (id_usuario, tipo_notificacion, fecha_hora, mensaje)
+        VALUES (@usuario_admin, 'mantenimiento_registrado', GETDATE(), @mensaje);
+    END
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_ObtenerHistorialMantenimiento
     @id_camion INT
 AS
 BEGIN
-    SELECT * FROM Mantenimiento_Camiones 
-    WHERE id_camion = @id_camion 
-    ORDER BY fecha_mantenimiento DESC;
-END
+    SET NOCOUNT ON;
+    
+    SELECT 
+        m.id_mantenimiento,
+        m.id_camion,
+        m.descripcion,
+        m.fecha_mantenimiento,
+        m.costo,
+        c.marca,
+        c.modelo,
+        c.numero_placa,
+        ch.nombreCompleto AS nombre_chofer
+    FROM 
+        Mantenimiento_Camiones m
+    INNER JOIN 
+        Camiones c ON m.id_camion = c.id_camion
+    LEFT JOIN 
+        Choferes ch ON c.chofer_asignado = ch.id_chofer
+    WHERE 
+        m.id_camion = @id_camion
+    ORDER BY 
+        m.fecha_mantenimiento DESC;
+END;
 GO
+
+
 
 CREATE PROCEDURE sp_DesactivarCamion
     @id_camion INT
@@ -235,14 +407,7 @@ BEGIN
 END
 GO
 
-CREATE PROCEDURE sp_MonitorearVencimientos
-    @dias_previos INT = 30
-AS
-BEGIN
-    SELECT * FROM Documentos 
-    WHERE DATEDIFF(DAY, GETDATE(), fecha_vencimiento) <= @dias_previos;
-END
-GO
+
 
 CREATE PROCEDURE sp_ActualizarDatosChofer
     @id_chofer INT,
@@ -302,3 +467,150 @@ BEGIN
     END CATCH
 END
 GO
+
+CREATE OR ALTER PROCEDURE sp_ObtenerDocumentosChofer
+    @id_chofer INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    SELECT 
+        d.id_documento,
+        d.id_chofer,
+        d.tipo_documento,
+        d.fecha_emision,
+        d.fecha_vencimiento,
+        ch.nombreCompleto AS nombre_chofer,
+        CASE 
+            WHEN d.fecha_vencimiento < GETDATE() THEN 'Vencido'
+            WHEN d.fecha_vencimiento < DATEADD(DAY, 30, GETDATE()) THEN 'Por vencer'
+            ELSE 'Vigente'
+        END AS estado
+    FROM 
+        Documentos d
+    INNER JOIN 
+        Choferes ch ON d.id_chofer = ch.id_chofer
+    WHERE 
+        d.id_chofer = @id_chofer
+    ORDER BY 
+        d.fecha_vencimiento;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_ObtenerNotificacionesMantenimiento
+    @dias_antelacion INT = 30
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    DECLARE @fecha_limite DATE = DATEADD(DAY, @dias_antelacion, GETDATE());
+    
+    SELECT 
+        c.id_camion,
+        c.marca,
+        c.modelo,
+        c.numero_placa,
+        m.id_mantenimiento,
+        m.descripcion,
+        m.fecha_mantenimiento,
+        ch.nombreCompleto AS nombre_chofer,
+        DATEDIFF(DAY, GETDATE(), m.fecha_mantenimiento) AS dias_para_mantenimiento,
+        'Programado' AS tipo_notificacion
+    FROM 
+        Camiones c
+    INNER JOIN 
+        Mantenimiento_Camiones m ON c.id_camion = m.id_camion
+    LEFT JOIN 
+        Choferes ch ON c.chofer_asignado = ch.id_chofer
+    WHERE 
+        c.estado = 'activo'
+        AND m.fecha_mantenimiento BETWEEN GETDATE() AND @fecha_limite
+    
+    UNION
+    
+    SELECT 
+        c.id_camion,
+        c.marca,
+        c.modelo,
+        c.numero_placa,
+        NULL AS id_mantenimiento,
+        'Mantenimiento preventivo requerido' AS descripcion,
+        GETDATE() AS fecha_mantenimiento,
+        ch.nombreCompleto AS nombre_chofer,
+        0 AS dias_para_mantenimiento,
+        'Requerido' AS tipo_notificacion
+    FROM 
+        Camiones c
+    LEFT JOIN 
+        Choferes ch ON c.chofer_asignado = ch.id_chofer
+    LEFT JOIN 
+        (SELECT id_camion, MAX(fecha_mantenimiento) AS ultima_fecha
+         FROM Mantenimiento_Camiones
+         GROUP BY id_camion) ultimo ON c.id_camion = ultimo.id_camion
+    WHERE 
+        c.estado = 'activo'
+        AND (ultimo.ultima_fecha IS NULL 
+             OR DATEDIFF(MONTH, ultimo.ultima_fecha, GETDATE()) >= 6)
+    
+    ORDER BY 
+        dias_para_mantenimiento;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE sp_ObtenerChoferesRango
+    @inicio INT = 1,
+    @cantidad INT = 10,
+    @total INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    IF @inicio < 1 SET @inicio = 1;
+    IF @cantidad < 1 SET @cantidad = 10;
+    
+    SELECT @total = COUNT(*) FROM Choferes;
+    
+    IF @inicio > @total
+    BEGIN
+        SET @inicio = 1;
+    END
+    
+    DECLARE @offset INT = @inicio - 1;
+    
+    SELECT 
+        c.id_chofer,
+        c.nombreCompleto,
+        c.edad,
+        c.numero_cedula,
+        c.licencia,
+        c.fecha_venc_licencia,
+        c.estado,
+        c.genero,
+        CASE WHEN c.fecha_venc_licencia < GETDATE() THEN 'Vencida' 
+             WHEN c.fecha_venc_licencia < DATEADD(MONTH, 1, GETDATE()) THEN 'Por vencer'
+             ELSE 'Vigente' END AS estado_licencia,
+        cam.id_camion,
+        CONCAT(cam.marca, ' ', cam.modelo, ' (', cam.numero_placa, ')') AS camion_asignado,
+        (SELECT COUNT(*) FROM Documentos WHERE id_chofer = c.id_chofer) AS total_documentos,
+        ROW_NUMBER() OVER (ORDER BY c.nombreCompleto) AS numero_registro
+    FROM 
+        Choferes c
+    LEFT JOIN 
+        Camiones cam ON c.id_chofer = cam.chofer_asignado
+    ORDER BY 
+        c.nombreCompleto
+    OFFSET @offset ROWS 
+    FETCH NEXT @cantidad ROWS ONLY;
+    
+    SELECT 
+        @total AS total_registros,
+        @inicio AS registro_inicio,
+        CASE WHEN @inicio + @cantidad - 1 > @total 
+             THEN @total 
+             ELSE @inicio + @cantidad - 1 
+        END AS registro_fin,
+        CEILING(CAST(@total AS FLOAT) / @cantidad) AS total_paginas,
+        CEILING(CAST(@inicio AS FLOAT) / @cantidad) AS pagina_actual;
+END;
+GO
+

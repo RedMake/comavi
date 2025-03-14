@@ -1,6 +1,6 @@
 ﻿@model COMAVI_SA.Models.PerfilViewModel
 @{
-    ViewData["Title"] = "Perfil - Sistema Administrativo";
+    ViewData["Title"] = "Perfil";
 }
 
 <div class="container mt-4">
@@ -22,54 +22,54 @@
 
             <div class="form-group mt-3">
                 <label for="profileName" class="floating-label">Nombre del Usuario</label>
-                <input type="text" id="profileName" class="form-control"  value="@Model.NombreUsuario" readonly>
+                <input type="text" id="profileName" class="form-control"  @* value="@Model.NombreUsuario" *@ readonly>
             </div>
 
             <div class="form-group mt-3">
                 <label for="profileEmail" class="floating-label">Correo Electrónico</label>
-                <input type="email" id="profileEmail" class="form-control"value="@Model.Email" readonly >
+                <input type="email" id="profileEmail" class="form-control" @* value="@Model.Email"  *@readonly >
             </div>
 
             <div class="form-group mt-3">
                 <label for="profileAge" class="floating-label">Edad</label>
-                <input type="number" id="profileAge" class="form-control" value="@Model.Edad" readonly >
+                <input type="number" id="profileAge" class="form-control" @* value="@Model.Edad" *@ readonly >
             </div>
             <div class="form-group mt-3">
                 <label for="profileRol" class="floating-label">Rol</label>
-                <input type="text" id="profileRol" class="form-control" value="@Model.Rol" readonly >
+                <input type="text" id="profileRol" class="form-control" @* value="@Model.Rol" *@ readonly >
             </div>
             <div class="form-group mt-3">
                 <label for="profileCedula" class="floating-label">Cedula de Identidad</label>
-                <input type="number" id="profileCedula" class="form-control" value="@Model.Numero_Cedula" readonly >
+                <input type="number" id="profileCedula" class="form-control" @* value="@Model.Numero_Cedula" *@ readonly >
             </div>
              <div class="form-group mt-3">
                 <label for="profileLincencia" class="floating-label">Licencia</label>
-                <input type="text" id="profileLincencia" class="form-control" value="@Model.Licencia" readonly >
+                <input type="text" id="profileLincencia" class="form-control"@*  value="@Model.Licencia" *@ readonly >
             </div>
             <div class="form-group mt-3">
                 <label for="profileLincenciaVencimiento" class="floating-label">Fecha de vencimiento de Licencia</label>
-                <input type="text" id="profileLincenciaVencimiento" class="form-control" value="@Model.Fecha_Venc_Licencia" readonly >
+                <input type="text" id="profileLincenciaVencimiento" class="form-control" @* value="@Model.Fecha_Venc_Licencia"  *@readonly >
             </div>
             <div class="form-group mt-3">
                 <label for="profileEstate" class="floating-label">Estado</label>
-                <input type="text" id="profileEstate" class="form-control" value="@Model.Estado" readonly >
+                <input type="text" id="profileEstate" class="form-control" @* value="@Model.Estado" *@ readonly >
             </div>
 
             <div class="form-group mt-3">
                 <label for="profileIngreso" class="floating-label">Ultimo Ingreso</label>
-                <textarea type="text" id="profileIngreso" class="form-control" value="@Model.UltimoIngreso" readonly></textarea>
+                <textarea type="text" id="profileIngreso" class="form-control" @* value="@Model.UltimoIngreso" *@ readonly></textarea>
             </div>
 
             <div class="form-group mt-3">
                 <label for="genderSelect">Género:</label>
-                @if (Model.Genero == "masculino")
+                @* @if (Model.Genero == "masculino")
                 {
                     <p id="genderSelect" class="form-control w-50 mx-auto" onchange="updateAvatar()" value="male">Hombre</p>
                 }
                 else
                 {
                     <p id="genderSelect" class="form-control w-50 mx-auto" onchange="updateAvatar()" value="female">Mujer</p>
-                }
+                } *@
             </div>
              <div class="text-center mt-4">
                 <p>

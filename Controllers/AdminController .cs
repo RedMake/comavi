@@ -1,10 +1,9 @@
-﻿using COMAVI_SA.Data;
-using COMAVI_SA.Models;
+﻿using COMAVI_SA.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
 using System.Data;
+using Dapper;
 
 namespace COMAVI_SA.Controllers
 {
@@ -12,168 +11,487 @@ namespace COMAVI_SA.Controllers
     public class AdminController : Controller
     {
 
-        private readonly ComaviDbContext _context;
-        private readonly IConfiguration _configuration;
+        private readonly string _connectionString;
+        private readonly ILogger<AdminController> _logger;
 
-        public AdminController(ComaviDbContext context, IConfiguration configuration)
+        public AdminController(IConfiguration configuration, ILogger<AdminController> logger)
         {
-            _context = context;
-            _configuration = configuration;
+            _connectionString = configuration.GetConnectionString("DefaultConnection");
+            _logger = logger;
         }
 
-        private int ExecuteStoredProcedure(string spName, params SqlParameter[] parameters)
+        private IDbConnection CreateConnection()
         {
-            using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
-            {
-                connection.Open();
-                var command = new SqlCommand(spName, connection);
-                command.CommandType = CommandType.StoredProcedure;
-                command.Parameters.AddRange(parameters);
-                return command.ExecuteNonQuery();
-            }
+            var connection = new SqlConnection(_connectionString);
+            connection.Open();
+            return connection;
         }
 
         [HttpPost]
         public IActionResult RegistrarCamion(Camiones camion)
         {
-            var parameters = new[]
+            try
             {
-                new SqlParameter("@marca", camion.marca),
-                new SqlParameter("@modelo", camion.modelo),
-                new SqlParameter("@anio", camion.anio),
-                new SqlParameter("@numero_placa", camion.numero_placa),
-                new SqlParameter("@estado", camion.estado),
-                new SqlParameter("@chofer_asignado", camion.chofer_asignado ?? (object)DBNull.Value)
-            };
-            ExecuteStoredProcedure("sp_RegistrarCamion", parameters);
-            return RedirectToAction("Index");
+                using (var connection = CreateConnection())
+                {
+                    var parameters = new
+                    {
+                        marca = camion.marca,
+                        modelo = camion.modelo,
+                        anio = camion.anio,
+                        numero_placa = camion.numero_placa,
+                        estado = camion.estado,
+                        chofer_asignado = camion.chofer_asignado ?? (object)DBNull.Value
+                    };
+
+                    connection.Execute("sp_RegistrarCamion", parameters, commandType: CommandType.StoredProcedure);
+                }
+                return RedirectToAction("Index");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al registrar camión");
+                TempData["Error"] = "Error al registrar el camión";
+                return RedirectToAction("Index");
+            }
         }
 
+        [HttpPost]
         public IActionResult ActualizarCamion(int id, Camiones camion)
         {
-            var parameters = new[]
+            try
             {
-                new SqlParameter("@id_camion", id),
-                new SqlParameter("@marca", camion.marca),
-                new SqlParameter("@modelo", camion.modelo),
-                new SqlParameter("@anio", camion.anio),
-                new SqlParameter("@estado", camion.estado)
-            };
-            ExecuteStoredProcedure("sp_ActualizarCamion", parameters);
-            return RedirectToAction("Index");
+                using (var connection = CreateConnection())
+                {
+                    var parameters = new
+                    {
+                        id_camion = id,
+                        marca = camion.marca,
+                        modelo = camion.modelo,
+                        anio = camion.anio,
+                        estado = camion.estado
+                    };
+
+                    connection.Execute("sp_ActualizarCamion", parameters, commandType: CommandType.StoredProcedure);
+                }
+                return RedirectToAction("Index");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al actualizar camión");
+                TempData["Error"] = "Error al actualizar el camión";
+                return RedirectToAction("Index");
+            }
         }
 
-
+        [HttpGet]
         public IActionResult HistorialMantenimiento(int idCamion)
         {
-            var historial = _context.Mantenimiento_Camiones
-                .FromSqlRaw("EXEC sp_ObtenerHistorialMantenimiento @id_camion", idCamion)
-                .ToList();
-            return View(historial);
+            try
+            {
+                using (var connection = CreateConnection())
+                {
+                    var historial = connection.Query<Mantenimiento_Camiones>(
+                        "sp_ObtenerHistorialMantenimiento",
+                        new { id_camion = idCamion },
+                        commandType: CommandType.StoredProcedure
+                    ).ToList();
+
+                    return View(historial);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener historial de mantenimiento");
+                TempData["Error"] = "Error al obtener el historial de mantenimiento";
+                return RedirectToAction("Index");
+            }
         }
 
-        //TODO: Implementar
+        [HttpGet]
         public IActionResult NotificacionesMantenimiento()
         {
-            return View();
+            try
+            {
+                using (var connection = CreateConnection())
+                {
+                    var diasAntelacion = 30;
+                    var notificaciones = connection.Query<Mantenimiento_Camiones>(
+                        "sp_ObtenerNotificacionesMantenimiento",
+                        new { dias_antelacion = diasAntelacion },
+                        commandType: CommandType.StoredProcedure
+                    ).ToList();
+
+                    return View(notificaciones);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener notificaciones de mantenimiento");
+                TempData["Error"] = "Error al obtener las notificaciones de mantenimiento";
+                return RedirectToAction("Index");
+            }
         }
 
         [HttpPost]
         public IActionResult DesactivarCamion(int id)
         {
-            ExecuteStoredProcedure("sp_DesactivarCamion", new SqlParameter("@id_camion", id));
-            return RedirectToAction("Index");
+            try
+            {
+                using (var connection = CreateConnection())
+                {
+                    connection.Execute(
+                        "sp_DesactivarCamion",
+                        new { id_camion = id },
+                        commandType: CommandType.StoredProcedure
+                    );
+                }
+                return RedirectToAction("Index");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al desactivar camión");
+                TempData["Error"] = "Error al desactivar el camión";
+                return RedirectToAction("Index");
+            }
         }
 
         [HttpPost]
         public IActionResult AsignarChofer(int idCamion, int idChofer)
         {
-            var parameters = new[]
+            try
             {
-                new SqlParameter("@id_camion", idCamion),
-                new SqlParameter("@id_chofer", idChofer)
-            };
-            ExecuteStoredProcedure("sp_AsignarChofer", parameters);
-            return RedirectToAction("Index");
+                using (var connection = CreateConnection())
+                {
+                    var parameters = new
+                    {
+                        id_camion = idCamion,
+                        id_chofer = idChofer
+                    };
+
+                    connection.Execute("sp_AsignarChofer", parameters, commandType: CommandType.StoredProcedure);
+                }
+                return RedirectToAction("Index");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al asignar chofer");
+                TempData["Error"] = "Error al asignar el chofer";
+                return RedirectToAction("Index");
+            }
         }
 
         [HttpPost]
         public IActionResult EliminarCamion(int id)
         {
-            var result = ExecuteStoredProcedure("sp_EliminarCamion", new SqlParameter("@id_camion", id));
-            if (result == 0) TempData["Error"] = "No se puede eliminar por dependencias";
-            return RedirectToAction("Index");
+            try
+            {
+                using (var connection = CreateConnection())
+                {
+                    var result = connection.Execute(
+                        "sp_EliminarCamion",
+                        new { id_camion = id },
+                        commandType: CommandType.StoredProcedure
+                    );
+
+                    if (result == 0)
+                        TempData["Error"] = "No se puede eliminar por dependencias";
+                }
+                return RedirectToAction("Index");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al eliminar camión");
+                TempData["Error"] = "Error al eliminar el camión";
+                return RedirectToAction("Index");
+            }
         }
 
         [HttpPost]
         public IActionResult RegistrarChofer(Choferes chofer)
         {
-            var parameters = new[]
+            try
             {
-                new SqlParameter("@nombreCompleto", chofer.nombreCompleto),
-                new SqlParameter("@edad", chofer.edad),
-                new SqlParameter("@numero_cedula", chofer.numero_cedula),
-                new SqlParameter("@licencia", chofer.licencia),
-                new SqlParameter("@fecha_venc_licencia", chofer.fecha_venc_licencia),
-                new SqlParameter("@estado", chofer.estado),
-                new SqlParameter("@genero", chofer.genero)
-            };
-            ExecuteStoredProcedure("sp_RegistrarChofer", parameters);
-            return RedirectToAction("Index");
+                using (var connection = CreateConnection())
+                {
+                    var parameters = new
+                    {
+                        nombreCompleto = chofer.nombreCompleto,
+                        edad = chofer.edad,
+                        numero_cedula = chofer.numero_cedula,
+                        licencia = chofer.licencia,
+                        fecha_venc_licencia = chofer.fecha_venc_licencia,
+                        estado = chofer.estado,
+                        genero = chofer.genero
+                    };
+
+                    connection.Execute("sp_RegistrarChofer", parameters, commandType: CommandType.StoredProcedure);
+                }
+                return RedirectToAction("Index");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al registrar chofer");
+                TempData["Error"] = "Error al registrar el chofer";
+                return RedirectToAction("Index");
+            }
         }
 
-        //TODO: Implementar
-        public IActionResult ActualizarDocumentos()
+        [HttpGet]
+        public IActionResult ObtenerDocumentosChofer(int idChofer)
         {
-            return View();
+            try
+            {
+                using (var connection = CreateConnection())
+                {
+                    var documentos = connection.Query<Documentos>(
+                        "sp_ObtenerDocumentosChofer",
+                        new { id_chofer = idChofer },
+                        commandType: CommandType.StoredProcedure
+                    ).ToList();
+
+                    ViewBag.IdChofer = idChofer;
+                    return View(documentos);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener documentos del chofer");
+                TempData["Error"] = "Error al obtener los documentos del chofer";
+                return RedirectToAction("Index");
+            }
         }
 
+        [HttpPost]
+        public IActionResult ActualizarDocumentos(Documentos documento)
+        {
+            try
+            {
+                using (var connection = CreateConnection())
+                {
+                    var parameters = new
+                    {
+                        id_documento = documento.id_documento > 0 ? documento.id_documento : (object)DBNull.Value,
+                        id_chofer = documento.id_chofer,
+                        tipo_documento = documento.tipo_documento,
+                        fecha_emision = documento.fecha_emision,
+                        fecha_vencimiento = documento.fecha_vencimiento
+                    };
+
+                    connection.Execute("sp_ActualizarDocumento", parameters, commandType: CommandType.StoredProcedure);
+                }
+                return RedirectToAction("ActualizarDocumentos", new { idChofer = documento.id_chofer });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al actualizar documentos");
+                TempData["Error"] = "Error al actualizar los documentos";
+                return RedirectToAction("Index");
+            }
+        }
+
+        [HttpGet]
         public IActionResult MonitorearVencimientos(int diasPrevios = 30)
         {
-            var documentos = _context.Documentos
-                .FromSqlRaw("EXEC sp_MonitorearVencimientos @dias_previos", diasPrevios)
-                .ToList();
-            return View(documentos);
+            try
+            {
+                using (var connection = CreateConnection())
+                {
+                    var documentos = connection.Query<Documentos>(
+                        "sp_MonitorearVencimientos",
+                        new { dias_previos = diasPrevios },
+                        commandType: CommandType.StoredProcedure
+                    ).ToList();
+
+                    return View(documentos);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al monitorear vencimientos");
+                TempData["Error"] = "Error al monitorear los vencimientos";
+                return RedirectToAction("Index");
+            }
         }
 
         [HttpPost]
         public IActionResult ActualizarDatosChofer(int id, Choferes chofer)
         {
-            var parameters = new[]
+            try
             {
-        new SqlParameter("@id_chofer", id),
-        new SqlParameter("@nombreCompleto", chofer.nombreCompleto),
-        new SqlParameter("@edad", chofer.edad),
-        new SqlParameter("@numero_cedula", chofer.numero_cedula),
-        new SqlParameter("@licencia", chofer.licencia),
-        new SqlParameter("@fecha_venc_licencia", chofer.fecha_venc_licencia),
-        new SqlParameter("@genero", chofer.genero)
-    };
-            ExecuteStoredProcedure("sp_ActualizarDatosChofer", parameters);
-            return RedirectToAction("Index");
+                using (var connection = CreateConnection())
+                {
+                    var parameters = new
+                    {
+                        id_chofer = id,
+                        nombreCompleto = chofer.nombreCompleto,
+                        edad = chofer.edad,
+                        numero_cedula = chofer.numero_cedula,
+                        licencia = chofer.licencia,
+                        fecha_venc_licencia = chofer.fecha_venc_licencia,
+                        genero = chofer.genero
+                    };
+
+                    connection.Execute("sp_ActualizarDatosChofer", parameters, commandType: CommandType.StoredProcedure);
+                }
+                return RedirectToAction("Index");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al actualizar datos del chofer");
+                TempData["Error"] = "Error al actualizar los datos del chofer";
+                return RedirectToAction("Index");
+            }
         }
 
         [HttpPost]
         public IActionResult DesactivarChofer(int id)
         {
-            ExecuteStoredProcedure("sp_DesactivarChofer", new SqlParameter("@id_chofer", id));
-            return RedirectToAction("Index");
+            try
+            {
+                using (var connection = CreateConnection())
+                {
+                    connection.Execute(
+                        "sp_DesactivarChofer",
+                        new { id_chofer = id },
+                        commandType: CommandType.StoredProcedure
+                    );
+                }
+                return RedirectToAction("Index");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al desactivar chofer");
+                TempData["Error"] = "Error al desactivar el chofer";
+                return RedirectToAction("Index");
+            }
         }
 
-        //TODO: Implementar
-        public IActionResult AsignarDocumentos()
+        [HttpPost]
+        public IActionResult AsignarDocumento(Documentos documento)
         {
-            return View();
+            try
+            {
+                using (var connection = CreateConnection())
+                {
+                    var parameters = new
+                    {
+                        id_chofer = documento.id_chofer,
+                        tipo_documento = documento.tipo_documento,
+                        fecha_emision = documento.fecha_emision,
+                        fecha_vencimiento = documento.fecha_vencimiento
+                    };
+
+                    connection.Execute("sp_RegistrarDocumento", parameters, commandType: CommandType.StoredProcedure);
+                }
+                return RedirectToAction("AsignarDocumentos", new { idChofer = documento.id_chofer });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al asignar documento");
+                TempData["Error"] = "Error al asignar el documento";
+                return RedirectToAction("Index");
+            }
         }
 
+        [HttpPost]
+        public IActionResult RegistrarMantenimiento(Mantenimiento_Camiones mantenimiento)
+        {
+            try
+            {
+                using (var connection = CreateConnection())
+                {
+                    var parameters = new
+                    {
+                        id_camion = mantenimiento.id_camion,
+                        descripcion = mantenimiento.descripcion,
+                        fecha_mantenimiento = mantenimiento.fecha_mantenimiento,
+                        costo = mantenimiento.costo
+                    };
+
+                    connection.Execute("sp_RegistrarMantenimiento", parameters, commandType: CommandType.StoredProcedure);
+                }
+                return RedirectToAction("HistorialMantenimiento", new { idCamion = mantenimiento.id_camion });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al registrar mantenimiento");
+                TempData["Error"] = "Error al registrar el mantenimiento";
+                return RedirectToAction("Index");
+            }
+        }
 
         [HttpPost]
         public IActionResult EliminarChofer(int id)
         {
-            var result = ExecuteStoredProcedure("sp_EliminarChofer", new SqlParameter("@id_chofer", id));
-            if (result == 0) TempData["Error"] = "No se puede eliminar: Chofer tiene registros asociados";
-            return RedirectToAction("Index");
+            try
+            {
+                using (var connection = CreateConnection())
+                {
+                    var result = connection.Execute(
+                        "sp_EliminarChofer",
+                        new { id_chofer = id },
+                        commandType: CommandType.StoredProcedure
+                    );
+
+                    if (result == 0)
+                        TempData["Error"] = "No se puede eliminar: Chofer tiene registros asociados";
+                }
+                return RedirectToAction("Index");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al eliminar chofer");
+                TempData["Error"] = "Error al eliminar el chofer";
+                return RedirectToAction("Index");
+            }
         }
 
+        [HttpGet]
+        public IActionResult ObtenerChoferesPaginados(int pagina, int cantidadPorPagina)
+        {
+            try
+            {
+                int inicio = ((pagina - 1) * cantidadPorPagina) + 1;
+
+                using (var connection = CreateConnection())
+                {
+                    var parameters = new DynamicParameters();
+                    parameters.Add("@inicio", inicio);
+                    parameters.Add("@cantidad", cantidadPorPagina);
+                    parameters.Add("@total", dbType: DbType.Int32, direction: ParameterDirection.Output);
+
+                    var choferes = connection.Query<ChoferViewModel>(
+                        "sp_ObtenerChoferesRango",
+                        parameters,
+                        commandType: CommandType.StoredProcedure
+                    ).ToList();
+
+                    int totalRegistros = parameters.Get<int>("@total");
+
+                    var paginacion = new
+                    {
+                        PaginaActual = pagina,
+                        TotalPaginas = (int)Math.Ceiling((double)totalRegistros / cantidadPorPagina),
+                        TotalRegistros = totalRegistros
+                    };
+
+                    var resultado = new
+                    {
+                        choferes = choferes,
+                        paginacion = paginacion
+                    };
+
+                    return Ok(resultado);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener choferes paginados");
+                TempData["Error"] = "Error interno del servidor al procesar la solicitud";
+                return RedirectToAction("Index");
+
+            }
+        }
     }
 }

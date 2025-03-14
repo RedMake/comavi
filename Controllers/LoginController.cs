@@ -220,10 +220,10 @@ namespace COMAVI_SA.Controllers
         }
 
         //[Authorize]
-        public async Task<IActionResult> Profile()
+        public Task<IActionResult> Profile()
         {
             
-            return View();
+            return Task.FromResult<IActionResult>(View());
         }
 
         [HttpGet]
