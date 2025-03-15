@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace COMAVI_SA.Controllers
 {
+    [Authorize(Policy = "RequireAdminRole")]
     public class SistemaController : Controller
     {
         public IActionResult Notificaciones()

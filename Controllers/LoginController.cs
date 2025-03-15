@@ -10,6 +10,7 @@ using System.Security.Claims;
 
 namespace COMAVI_SA.Controllers
 {
+    [Authorize] 
     public class LoginController : Controller
     {
         private readonly IUserService _userService;
@@ -35,6 +36,7 @@ namespace COMAVI_SA.Controllers
             _context = context;
         }
 
+        [AllowAnonymous]
         [HttpGet]
         public IActionResult Index()
         {
@@ -44,6 +46,7 @@ namespace COMAVI_SA.Controllers
             return View();
         }
 
+        [AllowAnonymous]
         [HttpPost]
         public async Task<IActionResult> Index(LoginViewModel model)
         {
@@ -78,6 +81,7 @@ namespace COMAVI_SA.Controllers
             return RedirectToAction("VerifyOtp");
         }
 
+        [AllowAnonymous]
         [HttpGet]
         public async Task<IActionResult> VerifyOtp()
         {
@@ -103,6 +107,7 @@ namespace COMAVI_SA.Controllers
             return View(model);
         }
 
+        [AllowAnonymous]
         [HttpPost]
         public async Task<IActionResult> VerifyOtp(OtpViewModel model)
         {
@@ -181,6 +186,7 @@ namespace COMAVI_SA.Controllers
             return RedirectToAction("Index");
         }
 
+        [AllowAnonymous]
         [HttpPost]
         public async Task<IActionResult> Logout()
         {
@@ -195,6 +201,7 @@ namespace COMAVI_SA.Controllers
             return View();
         }
 
+        [AllowAnonymous]
         [HttpGet]
         public IActionResult ResetPassword(string token, string email)
         {
@@ -202,6 +209,7 @@ namespace COMAVI_SA.Controllers
             return View(model);
         }
 
+        [AllowAnonymous]
         [HttpPost]
         public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
         {
@@ -226,12 +234,15 @@ namespace COMAVI_SA.Controllers
             return Task.FromResult<IActionResult>(View());
         }
 
+        [AllowAnonymous]
         [HttpGet]
         public IActionResult ForgotPassword()
         {
             return View();
         }
 
+        
+        [AllowAnonymous]
         [HttpPost]
         public async Task<IActionResult> ForgotPassword(string email)
         {

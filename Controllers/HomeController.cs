@@ -5,6 +5,7 @@ using System.Diagnostics;
 
 namespace COMAVI_SA.Controllers
 {
+    [AllowAnonymous]
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;

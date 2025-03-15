@@ -2,6 +2,7 @@ using COMAVI_SA.Data;
 using COMAVI_SA.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -52,7 +53,10 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("RequireUserRole", policy => policy.RequireRole("user"));
 });
 
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options =>
+{
+    options.Filters.Add(new AuthorizeFilter());
+});
 
 builder.Services.AddSession(options =>
 {
@@ -62,6 +66,12 @@ builder.Services.AddSession(options =>
 });
 
 var app = builder.Build();
+
+app.UseWhen(context => !context.Request.Path.StartsWithSegments("/Home"), appBuilder =>
+{
+    appBuilder.UseAuthentication();
+    appBuilder.UseAuthorization();
+});
 
 if (!app.Environment.IsDevelopment())
 {
