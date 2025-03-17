@@ -13,7 +13,7 @@ jobs:
   build:
     runs-on: windows-latest
     permissions:
-      contents: read #This is required for actions/checkout
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
@@ -24,14 +24,21 @@ jobs:
           dotnet-version: '9.0'
 
       - name: List directory contents
-        run: dir /s *.csproj
+        run: Get-ChildItem -Recurse -Filter *.csproj | Select-Object FullName
         
-      - name: Build main project
-        run: dotnet build COMAVI_SA.csproj --configuration Release
+      - name: List workspace structure
+        run: Get-ChildItem -Recurse -Depth 2 | Select-Object FullName
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build solution
+        run: dotnet build --configuration Release
 
   test:
     runs-on: windows-latest
     needs: build
+    if: success()
     
     steps:
       - uses: actions/checkout@v4
@@ -41,20 +48,30 @@ jobs:
         with:
           dotnet-version: '9.0'
 
-      - name: Run tests
-        run: dotnet test COMAVIxUnitTest/COMAVIxUnitTest.csproj --configuration Release --verbosity normal
-        continue-on-error: true  # Esto permite que el workflow continúe incluso si fallan los tests
-        
-      - name: Check test results
+      - name: List test project location
+        run: Get-ChildItem -Recurse -Filter *Test*.csproj | Select-Object FullName
+
+      - name: Run tests if project exists
+        shell: pwsh
         run: |
-          if ($LASTEXITCODE -ne 0) {
-            echo "Las pruebas fallaron. No se procederá con el deploy."
-            exit 1
+          $testProjects = Get-ChildItem -Recurse -Filter *Test*.csproj
+          if ($testProjects.Count -gt 0) {
+            foreach ($project in $testProjects) {
+              Write-Host "Running tests for $($project.FullName)"
+              dotnet test $project.FullName --configuration Release --verbosity normal
+              if ($LASTEXITCODE -ne 0) {
+                Write-Host "Tests failed for $($project.FullName)"
+                exit 1
+              }
+            }
+          } else {
+            Write-Host "No test projects found. Skipping tests."
           }
 
   publish:
     runs-on: windows-latest
     needs: test
+    if: success()
     
     steps:
       - uses: actions/checkout@v4
@@ -65,7 +82,7 @@ jobs:
           dotnet-version: '9.0'
 
       - name: dotnet publish
-        run: dotnet publish COMAVI_SA.csproj -c Release -o "${{env.DOTNET_ROOT}}/myapp"
+        run: dotnet publish -c Release -o "${{env.DOTNET_ROOT}}/myapp"
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
@@ -76,6 +93,7 @@ jobs:
   deploy:
     runs-on: windows-latest
     needs: publish
+    if: success()
     environment:
       name: 'Production'
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
