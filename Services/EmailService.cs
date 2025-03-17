@@ -1,8 +1,7 @@
-﻿using MailKit.Net.Smtp;
+﻿using COMAVI_SA.Utils;
+using MailKit.Net.Smtp;
 using MailKit.Security;
 using MimeKit;
-using Microsoft.Extensions.Configuration;
-using COMAVI_SA.Utils;
 
 namespace COMAVI_SA.Services
 {

@@ -1,6 +1,4 @@
 ﻿using OtpNet;
-using System.Text;
-using Microsoft.Extensions.Configuration;
 
 namespace COMAVI_SA.Services
 {
