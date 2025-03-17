@@ -71,6 +71,10 @@ namespace COMAVI_SA.Data
                 .HasForeignKey(m => m.id_camion)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<Mantenimiento_Camiones>()
+                .Property(m => m.costo)
+                .HasColumnType("decimal(18,2)"); 
+
             // Datos semilla para usuario administrador
             var hashedPassword = BCrypt.Net.BCrypt.HashPassword("Admin123!"); // Contraseña inicial para el administrador
 

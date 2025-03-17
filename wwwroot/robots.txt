@@ -1,0 +1,6 @@
+﻿User-agent: *
+Allow: /
+Allow: /Home
+Disallow: /Sistema
+Disallow: /Admin
+Disallow: /Login

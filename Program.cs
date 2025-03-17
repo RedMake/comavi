@@ -25,16 +25,19 @@ if (builder.Environment.IsDevelopment())
 else
 {
     // En producción, usar la cadena de conexión del servicio de App
-    connectionString = builder.Configuration.GetConnectionString("SQLAZURECONNSTR_DefaultConnection")
+    connectionString = builder.Configuration.GetConnectionString("AZURE_SQL_CONNECTIONSTRING")
                        ?? builder.Configuration.GetConnectionString("DefaultConnection");
 }
-
 
 builder.Services.AddDbContext<ComaviDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddScoped<IOtpService, OtpService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<IOtpService, OtpService>();
+builder.Services.AddScoped<IPasswordService, PasswordService>();
+builder.Services.AddScoped<IUserService, UserService>();
+
 
 builder.Services.AddMemoryCache();
 builder.Services.AddAuthentication(options =>
@@ -71,17 +74,13 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("RequireAdminRole", policy => policy.RequireRole("admin"));
     options.AddPolicy("RequireUserRole", policy => policy.RequireRole("user"));
 });
 
-builder.Services.AddControllersWithViews(options =>
-{
-    options.Filters.Add(new AuthorizeFilter());
-});
+builder.Services.AddControllersWithViews();
 
 builder.Services.AddSession(options =>
 {
@@ -115,12 +114,6 @@ else
     await DbInitializer.Initialize(app.Services, logger);
 }
 
-app.UseWhen(context => !context.Request.Path.StartsWithSegments("/Home"), appBuilder =>
-{
-    appBuilder.UseAuthentication();
-    appBuilder.UseAuthorization();
-});
-
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
@@ -139,6 +132,6 @@ app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
-
+    pattern: "{controller=Home}/{action=Index}/{id?}")
+    .AllowAnonymous();
 app.Run();

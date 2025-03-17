@@ -10,7 +10,8 @@ using Dapper;
 
 namespace COMAVI_SA.Controllers
 {
-    [Authorize]
+    [AllowAnonymous]
+
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
