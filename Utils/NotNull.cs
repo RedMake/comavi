@@ -37,19 +37,19 @@ namespace COMAVI_SA.Utils
         /// <returns>La cadena original si no es nula ni vacía</returns>
         /// <exception cref="ArgumentNullException">Lanzada cuando la cadena es nula</exception>
         /// <exception cref="ArgumentException">Lanzada cuando la cadena está vacía</exception>
-        public static string CheckNotNullOrEmpty(string value, [CallerArgumentExpression("value")] string paramName = null, string message = null)
+        public static string CheckNotNullOrEmpty(string value, [CallerArgumentExpression("value")] string? paramName = null, string? message = null)
         {
             if (value == null)
             {
                 throw new ArgumentNullException(
                     paramName,
-                    message ?? $"La cadena '{paramName}' no puede ser nula.");
+                    message ?? $"La cadena '{paramName ?? "desconocido"}' no puede ser nula.");
             }
 
             if (string.IsNullOrWhiteSpace(value))
             {
                 throw new ArgumentException(
-                    message ?? $"La cadena '{paramName}' no puede estar vacía o contener solo espacios.",
+                    message ?? $"La cadena '{paramName ?? "desconocido"}' no puede estar vacía o contener solo espacios.",
                     paramName);
             }
 
