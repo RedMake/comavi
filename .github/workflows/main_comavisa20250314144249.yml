@@ -39,7 +39,7 @@ jobs:
     runs-on: windows-latest
     needs: build
     environment:
-      name: 'Development'
+      name: 'Production'
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
     
     steps:
@@ -53,6 +53,6 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'COMAVISA20250314144249'
-          slot-name: 'Development'
+          slot-name: 'Production'
           package: .
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_5EDE184A2476400889942253C74CEBFF }}
