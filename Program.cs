@@ -1,3 +1,4 @@
+using Azure.Identity;
 using COMAVI_SA.Data;
 using COMAVI_SA.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -9,13 +10,30 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+if (!builder.Environment.IsDevelopment())
+{
+    var keyVaultEndpoint = new Uri(builder.Configuration["KeyVault:Endpoint"]);
+    builder.Configuration.AddAzureKeyVault(keyVaultEndpoint, new DefaultAzureCredential());
+}
+
+string connectionString;
+if (builder.Environment.IsDevelopment())
+{
+    // Cadena de conexión de desarrollo
+    connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+}
+else
+{
+    // En producción, usar la cadena de conexión del servicio de App
+    connectionString = builder.Configuration.GetConnectionString("SQLAZURECONNSTR_DefaultConnection")
+                       ?? builder.Configuration.GetConnectionString("DefaultConnection");
+}
+
+
 builder.Services.AddDbContext<ComaviDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IOtpService, OtpService>();
-builder.Services.AddScoped<IPasswordService, PasswordService>();
-builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 
 builder.Services.AddMemoryCache();
@@ -28,12 +46,18 @@ builder.Services.AddAuthentication(options =>
 {
     options.LoginPath = "/Login/Index";
     options.AccessDeniedPath = "/Login/AccessDenied";
-    options.ExpireTimeSpan = TimeSpan.FromDays(7); 
-    options.SlidingExpiration = true; 
-
+    options.ExpireTimeSpan = TimeSpan.FromDays(7);
+    options.SlidingExpiration = true;
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.Cookie.SameSite = SameSiteMode.Strict;
 })
 .AddJwtBearer(options =>
 {
+    var jwtSecret = builder.Environment.IsDevelopment()
+        ? builder.Configuration["JwtSettings:SecretKey"]
+        : builder.Configuration["JwtSecret"];
+
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -43,9 +67,10 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
         ValidAudience = builder.Configuration["JwtSettings:Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:SecretKey"]))
+            Encoding.UTF8.GetBytes(jwtSecret ?? "DefaultDevSecretKey"))
     };
 });
+
 
 builder.Services.AddAuthorization(options =>
 {
@@ -63,9 +88,32 @@ builder.Services.AddSession(options =>
     options.IdleTimeout = TimeSpan.FromMinutes(30);
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+});
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecificOrigins",
+        builder => builder
+            .WithOrigins("https://docktrack.lat", "https://www.docktrack.lat")
+            .AllowAnyMethod()
+            .AllowAnyHeader());
 });
 
 var app = builder.Build();
+
+if (builder.Environment.IsProduction())
+{
+    // En producción, migramos la base de datos de forma automática
+    app.MigrateDatabase();
+}
+else
+{
+    // En desarrollo, mostramos información más detallada del proceso
+    using var scope = app.Services.CreateScope();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    await DbInitializer.Initialize(app.Services, logger);
+}
 
 app.UseWhen(context => !context.Request.Path.StartsWithSegments("/Home"), appBuilder =>
 {
@@ -83,6 +131,7 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
+app.UseCors("AllowSpecificOrigins");
 
 app.UseSession();
 app.UseAuthentication();
