@@ -1,9 +1,9 @@
 ﻿using COMAVI_SA.Models;
+using Dapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using System.Data;
-using Dapper;
 
 namespace COMAVI_SA.Controllers
 {
@@ -248,7 +248,7 @@ namespace COMAVI_SA.Controllers
             }
         }
 
-        
+
 
         [HttpPost]
         public IActionResult AsignarChofer(int idCamion, int idChofer)
@@ -333,7 +333,7 @@ namespace COMAVI_SA.Controllers
                 return RedirectToAction("Index");
             }
         }
-      
+
 
         [HttpPost]
         public IActionResult RegistrarChofer(Choferes chofer)
@@ -596,7 +596,7 @@ namespace COMAVI_SA.Controllers
             }
         }
 
-       
+
 
         [HttpPost]
         public IActionResult AsignarDocumento(Documentos documento)
@@ -729,7 +729,7 @@ namespace COMAVI_SA.Controllers
             }
         }
 
-        
+
 
         [HttpGet]
         public IActionResult ObtenerChoferesPaginados(int pagina = 1, int cantidadPorPagina = 10)

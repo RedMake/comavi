@@ -15,21 +15,15 @@ if (!builder.Environment.IsDevelopment())
     builder.Configuration.AddAzureKeyVault(keyVaultEndpoint, new DefaultAzureCredential());
 }
 
-string connectionString;
-if (builder.Environment.IsDevelopment())
-{
-    // Cadena de conexión de desarrollo
-    connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-}
-else
-{
-    // En producción, usar la cadena de conexión del servicio de App
-    connectionString = builder.Configuration.GetConnectionString("AZURE_SQL_CONNECTIONSTRING")
-                       ?? builder.Configuration.GetConnectionString("DefaultConnection");
-}
+// Obtener la cadena de conexión
+var connectionString = builder.Environment.IsDevelopment()
+    ? builder.Configuration.GetConnectionString("DefaultConnection")
+    : builder.Configuration.GetConnectionString("AZURE_SQL_CONNECTIONSTRING")
+        ?? builder.Configuration.GetConnectionString("DefaultConnection");
 
+// Usar la misma variable al registrar el DbContext
 builder.Services.AddDbContext<ComaviDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(connectionString));
 
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
@@ -103,7 +97,7 @@ var app = builder.Build();
 if (builder.Environment.IsProduction())
 {
     // En producción, migramos la base de datos de forma automática
-    app.MigrateDatabase();
+    app.MigrateDatabase();  
 }
 else
 {
@@ -111,6 +105,7 @@ else
     using var scope = app.Services.CreateScope();
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
     await DbInitializer.Initialize(app.Services, logger);
+
 }
 
 if (!app.Environment.IsDevelopment())

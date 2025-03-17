@@ -2,7 +2,6 @@
 using COMAVI_SA.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
-using System.Text;
 
 namespace COMAVI_SA.Services
 {

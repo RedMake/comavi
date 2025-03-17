@@ -1,12 +1,12 @@
 using COMAVI_SA.Data;
 using COMAVI_SA.Models;
+using Dapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
 using System.Diagnostics;
-using Dapper;
 
 namespace COMAVI_SA.Controllers
 {
@@ -51,11 +51,11 @@ namespace COMAVI_SA.Controllers
                 if (esAdmin)
                 {
                     // Cargar datos para administradores
-                    
+
                     // Próximos vencimientos de documentos
                     viewModel.ProximosVencimientos = await _context.Documentos
                         .Include(d => d.Chofer)
-                        .Where(d => d.fecha_vencimiento.Date >= DateTime.Today.Date && 
+                        .Where(d => d.fecha_vencimiento.Date >= DateTime.Today.Date &&
                                    d.fecha_vencimiento.Date <= DateTime.Today.AddDays(30).Date)
                         .OrderBy(d => d.fecha_vencimiento)
                         .Take(5)
@@ -149,24 +149,24 @@ namespace COMAVI_SA.Controllers
         public int CamionesActivos { get; set; }
         public int TotalChoferes { get; set; }
         public int ChoferesActivos { get; set; }
-        
+
         // Indicador de rol
         public bool EsUsuarioAdmin { get; set; }
-        
+
         // Datos para administradores
         public IEnumerable<Documentos> ProximosVencimientos { get; set; } = Enumerable.Empty<Documentos>();
         public IEnumerable<Mantenimiento_Camiones> ProximosMantenimientos { get; set; } = Enumerable.Empty<Mantenimiento_Camiones>();
-        
+
         // Datos para gráficos
         public IEnumerable<EstadisticaDto> EstadoCamiones { get; set; } = Enumerable.Empty<EstadisticaDto>();
         public IEnumerable<EstadisticaDto> CamionesPorMarca { get; set; } = Enumerable.Empty<EstadisticaDto>();
         public IEnumerable<EstadisticaDto> ChoferesPorGenero { get; set; } = Enumerable.Empty<EstadisticaDto>();
         public IEnumerable<EstadisticaDto> DocumentosPorTipo { get; set; } = Enumerable.Empty<EstadisticaDto>();
-        
+
         // Más datos para administradores
         public int CamionesSinChofer { get; set; }
         public int UsuariosActivos { get; set; }
-        
+
         // Datos para choferes
         public Choferes InformacionChofer { get; set; }
         public Camiones CamionAsignado { get; set; }
