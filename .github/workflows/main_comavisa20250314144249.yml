@@ -97,6 +97,8 @@ jobs:
     needs: test
     steps:
       - uses: actions/checkout@v4
+        with:
+          repository: RedMake/comavi
       
       - name: Set up .NET Core
         uses: actions/setup-dotnet@v4
@@ -118,8 +120,11 @@ jobs:
           key: ${{ runner.os }}-build-${{ github.sha }}
           fail-on-cache-miss: false
       
+      - name: Restore dependencies
+        run: dotnet restore
+      
       - name: dotnet publish
-        run: dotnet publish -c Release -o "${{env.DOTNET_ROOT}}/myapp" --no-restore
+        run: dotnet publish -c Release -o "${{env.DOTNET_ROOT}}/myapp"
       
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
