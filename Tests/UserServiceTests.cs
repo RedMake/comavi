@@ -234,5 +234,94 @@ namespace COMAVIxUnitTest
             var updatedMfa = await _context.MFA.FindAsync(2);
             Assert.False(updatedMfa.usado);
         }
+
+
+        [Fact]
+        public async Task VerifyUserAsync_WithValidToken_ReturnsTrue()
+        {
+            // Arrange
+            var tokenExpiration = DateTime.Now.AddDays(1);
+            var user = new Usuario
+            {
+                correo_electronico = "verificacion@example.com",
+                nombre_usuario = "Usuario Verificación",
+                contrasena = "hashedpassword",
+                rol = "user",
+                estado_verificacion = "pendiente",
+                token_verificacion = "valid_verification_token",
+                fecha_expiracion_token = tokenExpiration
+            };
+
+            _context.Usuarios.Add(user);
+            await _context.SaveChangesAsync();
+
+            // Act
+            var result = await _userService.VerifyUserAsync("verificacion@example.com", "valid_verification_token");
+
+            // Assert
+            Assert.True(result);
+
+            // Verificar que el usuario se ha actualizado correctamente
+            var updatedUser = await _context.Usuarios.FindAsync(user.id_usuario);
+            Assert.Equal("verificado", updatedUser.estado_verificacion);
+            Assert.Null(updatedUser.token_verificacion);
+            Assert.Null(updatedUser.fecha_expiracion_token);
+            Assert.NotNull(updatedUser.fecha_verificacion);
+        }
+
+        [Fact]
+        public async Task VerifyUserAsync_WithInvalidToken_ReturnsFalse()
+        {
+            // Arrange
+            var user = new Usuario
+            {
+                correo_electronico = "test2@example.com",
+                nombre_usuario = "Test User 2",
+                contrasena = "hashedpassword",
+                rol = "user",
+                estado_verificacion = "pendiente",
+                token_verificacion = "correct_token",
+                fecha_expiracion_token = DateTime.Now.AddDays(1)
+            };
+
+            _context.Usuarios.Add(user);
+            await _context.SaveChangesAsync();
+
+            // Act
+            var result = await _userService.VerifyUserAsync("test2@example.com", "wrong_token");
+
+            // Assert
+            Assert.False(result);
+
+            // Verificar que el usuario no ha cambiado
+            var unchangedUser = await _context.Usuarios.FindAsync(user.id_usuario);
+            Assert.Equal("pendiente", unchangedUser.estado_verificacion);
+            Assert.Equal("correct_token", unchangedUser.token_verificacion);
+        }
+
+        [Fact]
+        public async Task VerifyUserAsync_WithExpiredToken_ReturnsFalse()
+        {
+            // Arrange
+            var user = new Usuario
+            {
+                correo_electronico = "test3@example.com",
+                nombre_usuario = "Test User 3",
+                contrasena = "hashedpassword",
+                rol = "user",
+                estado_verificacion = "pendiente",
+                token_verificacion = "expired_token",
+                fecha_expiracion_token = DateTime.Now.AddDays(-1) // Token expirado
+            };
+
+            _context.Usuarios.Add(user);
+            await _context.SaveChangesAsync();
+
+            // Act
+            var result = await _userService.VerifyUserAsync("test3@example.com", "expired_token");
+
+            // Assert
+            Assert.False(result);
+        }
     }
 }

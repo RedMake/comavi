@@ -52,6 +52,23 @@ namespace COMAVI_SA.Data
                 .HasIndex(c => c.numero_cedula)
                 .IsUnique();
 
+            modelBuilder.Entity<Usuario>()
+                .Property(u => u.estado_verificacion)
+                .HasDefaultValue("pendiente");
+
+            modelBuilder.Entity<Documentos>()
+                .Property(d => d.estado_validacion)
+                .HasDefaultValue("pendiente");
+
+            modelBuilder.Entity<Documentos>()
+                .Property(d => d.tipo_mime)
+                .HasDefaultValue("application/pdf");
+
+            modelBuilder.Entity<Usuario>()
+                .HasIndex(u => u.token_verificacion);
+
+            modelBuilder.Entity<Documentos>()
+                .HasIndex(d => d.estado_validacion);
             // Relaciones que no están explícitamente definidas en las propiedades
             modelBuilder.Entity<Camiones>()
                 .HasOne(c => c.Chofer)
@@ -75,20 +92,6 @@ namespace COMAVI_SA.Data
                 .Property(m => m.costo)
                 .HasColumnType("decimal(18,2)");
 
-            // Datos semilla para usuario administrador
-            var hashedPassword = BCrypt.Net.BCrypt.HashPassword("Admin123!"); // Contraseña inicial para el administrador
-
-            modelBuilder.Entity<Usuario>().HasData(
-                new Usuario
-                {
-                    id_usuario = 1,
-                    nombre_usuario = "Administrador",
-                    correo_electronico = "admin@docktrack.lat",
-                    contrasena = hashedPassword,
-                    rol = "admin",
-                    ultimo_ingreso = null
-                }
-            );
         }
     }
 }

@@ -1,0 +1,186 @@
+﻿@model List<COMAVI_SA.Models.Documentos>
+@{
+    ViewData["Title"] = "Documentos Por Vencer";
+    int diasAnticipacion = ViewBag.DiasAnticipacion ?? 30;
+}
+
+<div class="container-fluid">
+    <h1 class="h3 mb-2 text-gray-800">Documentos Por Vencer</h1>
+    <p class="mb-4">Documentos verificados que están próximos a vencer en los próximos @diasAnticipacion días.</p>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["Success"]
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["Error"]
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    }
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+            <h6 class="m-0 font-weight-bold text-primary">Filtrar por días de anticipación</h6>
+        </div>
+        <div class="card-body">
+            <form asp-action="DocumentosPorVencer" asp-controller="Documentos" method="get" class="form-inline mb-4">
+                <div class="form-group mr-2">
+                    <label for="diasAnticipacion" class="mr-2">Mostrar documentos que vencen en los próximos:</label>
+                    <select id="diasAnticipacion" name="diasAnticipacion" class="form-control">
+                        <option value="7" selected="@(diasAnticipacion == 7)">7 días</option>
+                        <option value="15" selected="@(diasAnticipacion == 15)">15 días</option>
+                        <option value="30" selected="@(diasAnticipacion == 30)">30 días</option>
+                        <option value="60" selected="@(diasAnticipacion == 60)">60 días</option>
+                        <option value="90" selected="@(diasAnticipacion == 90)">90 días</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Aplicar Filtro</button>
+            </form>
+
+            @if (Model == null || !Model.Any())
+            {
+                <div class="text-center py-4">
+                    <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+                    <p class="lead">¡No hay documentos próximos a vencer en los próximos @diasAnticipacion días!</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>Chofer</th>
+                                <th>Tipo Documento</th>
+                                <th>Fecha Vencimiento</th>
+                                <th>Días Restantes</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var documento in Model)
+                            {
+                                var diasRestantes = (documento.fecha_vencimiento - DateTime.Now).Days;
+                                var estadoClase = diasRestantes <= 7 ? "danger" : (diasRestantes <= 15 ? "warning" : "info");
+                                
+                                <tr>
+                                    <td>@documento.Chofer.nombreCompleto</td>
+                                    <td>@documento.tipo_documento</td>
+                                    <td>@documento.fecha_vencimiento.ToString("dd/MM/yyyy")</td>
+                                    <td>
+                                        <span class="badge badge-@estadoClase">@diasRestantes días</span>
+                                    </td>
+                                    <td>
+                                        @if (diasRestantes < 0)
+                                        {
+                                            <span class="badge badge-danger">Vencido</span>
+                                        }
+                                        else if (diasRestantes <= 7)
+                                        {
+                                            <span class="badge badge-danger">Crítico</span>
+                                        }
+                                        else if (diasRestantes <= 15)
+                                        {
+                                            <span class="badge badge-warning">Próximo a vencer</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge badge-info">Por vencer</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="@Url.Action("VerDocumento", "Documentos", new { id = documento.id_documento })" class="btn btn-primary btn-sm" target="_blank">
+                                                <i class="fas fa-eye"></i> Ver
+                                            </a>
+                                            <button type="button" class="btn btn-warning btn-sm" data-toggle="modal" data-target="#recordatorioModal" 
+                                                    data-id="@documento.id_documento" data-chofer="@documento.Chofer.nombreCompleto" 
+                                                    data-tipo="@documento.tipo_documento" data-fecha="@documento.fecha_vencimiento.ToString("dd/MM/yyyy")">
+                                                <i class="fas fa-bell"></i> Enviar Recordatorio
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="mt-4">
+                    <a href="@Url.Action("GenerarReporteDocumentos", "Documentos", new { estado = "porVencer", diasAnticipacion = diasAnticipacion })" class="btn btn-secondary">
+                        <i class="fas fa-file-pdf"></i> Generar Reporte PDF
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Modal Enviar Recordatorio -->
+<div class="modal fade" id="recordatorioModal" tabindex="-1" role="dialog" aria-labelledby="recordatorioModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="recordatorioModalLabel">Enviar Recordatorio</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form asp-action="EnviarRecordatorio" asp-controller="Documentos" method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="id" id="documentoIdRecordatorio" />
+                    <p>¿Está seguro de que desea enviar un recordatorio al chofer <strong id="choferRecordatorio"></strong> sobre el vencimiento de su documento <strong id="tipoDocumentoRecordatorio"></strong> que vence el <strong id="fechaVencimientoRecordatorio"></strong>?</p>
+                    <p>Se enviará un email de recordatorio y una notificación en el sistema.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Enviar Recordatorio</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('#dataTable').DataTable({
+                language: {
+                    url: "//cdn.datatables.net/plug-ins/1.10.25/i18n/Spanish.json"
+                },
+                order: [[3, 'asc']] // Ordenar por días restantes
+            });
+            
+            // Modal Enviar Recordatorio
+            $('#recordatorioModal').on('show.bs.modal', function (event) {
+                var button = $(event.relatedTarget);
+                var id = button.data('id');
+                var chofer = button.data('chofer');
+                var tipo = button.data('tipo');
+                var fecha = button.data('fecha');
+                
+                var modal = $(this);
+                modal.find('#documentoIdRecordatorio').val(id);
+                modal.find('#choferRecordatorio').text(chofer);
+                modal.find('#tipoDocumentoRecordatorio').text(tipo);
+                modal.find('#fechaVencimientoRecordatorio').text(fecha);
+            });
+            
+            // Cambiar filtro de días automáticamente
+            $('#diasAnticipacion').change(function() {
+                $(this).closest('form').submit();
+            });
+        });
+    </script>
+}

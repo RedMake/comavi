@@ -1,0 +1,109 @@
+﻿@model COMAVI_SA.Models.PerfilViewModel
+@{
+    ViewData["Title"] = "Completar Perfil";
+}
+
+<div class="container mt-4">
+    <div class="card mb-4 shadow">
+        <div class="card-header py-3 bg-primary">
+            <h6 class="m-0 font-weight-bold text-white">Completar Perfil</h6>
+        </div>
+        <div class="card-body">
+            @if (TempData["PerfilMessage"] != null)
+            {
+                <div class="alert alert-info">
+                    @TempData["PerfilMessage"]
+                </div>
+            }
+
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i> Por favor, complete toda la información a continuación para poder acceder completamente al sistema. Si no completa su perfil, algunas funcionalidades estarán restringidas.
+            </div>
+
+            <form asp-action="CompletarPerfil" method="post" class="user">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                <div class="form-group row">
+                    <div class="col-sm-6 mb-3 mb-sm-0">
+                        <label asp-for="Edad" class="form-label">Edad</label>
+                        <input asp-for="Edad" type="number" class="form-control" min="18" max="99" required />
+                        <span asp-validation-for="Edad" class="text-danger"></span>
+                    </div>
+                    <div class="col-sm-6">
+                        <label asp-for="Genero" class="form-label">Género</label>
+                        <select asp-for="Genero" class="form-control" required>
+                            <option value="">Seleccionar...</option>
+                            <option value="masculino">Masculino</option>
+                            <option value="femenino">Femenino</option>
+                        </select>
+                        <span asp-validation-for="Genero" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="form-group row">
+                    <div class="col-sm-6 mb-3 mb-sm-0">
+                        <label asp-for="Numero_Cedula" class="form-label">Número de Cédula</label>
+                        <input asp-for="Numero_Cedula" type="text" class="form-control"
+                               required maxlength="20"
+                               pattern="[0-9]{6,15}"
+                               title="El número de cédula debe contener entre 6 y 15 dígitos" />
+                        <span asp-validation-for="Numero_Cedula" class="text-danger"></span>
+                    </div>
+                    <div class="col-sm-6">
+                        <label asp-for="Licencia" class="form-label">Número de Licencia</label>
+                        <input asp-for="Licencia" type="text" class="form-control"
+                               required maxlength="50" />
+                        <span asp-validation-for="Licencia" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="Fecha_Venc_Licencia" class="form-label">Fecha de Vencimiento de Licencia</label>
+                    <input asp-for="Fecha_Venc_Licencia" type="date" class="form-control" required />
+                    <span asp-validation-for="Fecha_Venc_Licencia" class="text-danger"></span>
+                </div>
+
+                <div class="form-group d-grid mt-4">
+                    <button type="submit" class="btn btn-primary btn-block">
+                        Guardar y Continuar
+                    </button>
+                </div>
+            </form>
+
+            <div class="mt-3">
+                <p class="text-muted small text-center">
+                    Después de completar su perfil, se le solicitará cargar los documentos requeridos en formato PDF.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        // Validación de fecha de vencimiento (debe ser futura)
+        document.addEventListener('DOMContentLoaded', function () {
+            const fechaInput = document.getElementById('Fecha_Venc_Licencia');
+            if (fechaInput) {
+                // Establecer fecha mínima como hoy
+                const today = new Date();
+                const minDate = today.toISOString().split('T')[0];
+                fechaInput.min = minDate;
+
+                // Validación adicional
+                fechaInput.addEventListener('change', function() {
+                    const selectedDate = new Date(this.value);
+                    if (selectedDate <= today) {
+                        this.setCustomValidity('La fecha de vencimiento debe ser posterior a hoy');
+                    } else {
+                        this.setCustomValidity('');
+                    }
+                });
+            }
+        });
+    </script>
+}

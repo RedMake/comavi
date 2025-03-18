@@ -4,100 +4,352 @@
 }
 
 <div class="container mt-4">
-    <div class="card mb-4" style="
-            top: 0;
-            left: 0;
-            bottom: 0;
-            right: 0;
-            margin: auto;
-            max-width: 60%;">
-        <div class="card-header">
-            <h3>Perfil del Usuario</h3>
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["SuccessMessage"]
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
         </div>
-        <div class="card-body text-center">
+    }
 
-            <div id="profile-avatar">
-                <i id="avatar-icon" class="fas fa-male fa-5x"></i>
-            </div>
+    <div class="row">
+        <!-- Información de Perfil -->
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Perfil del Usuario</h6>
+                    @if (ViewBag.PerfilIncompleto == true)
+                    {
+                        <div class="badge badge-warning">Perfil Incompleto</div>
+                    }
+                    else
+                    {
+                        <div class="badge badge-success">Perfil Completo</div>
+                    }
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <div id="profile-avatar">
+                            @if (Model.Genero == "masculino")
+                            {
+                                <i class="fas fa-male fa-5x"></i>
+                            }
+                            else if (Model.Genero == "femenino")
+                            {
+                                <i class="fas fa-female fa-5x"></i>
+                            }
+                            else
+                            {
+                                <i class="fas fa-user fa-5x"></i>
+                            }
+                        </div>
+                    </div>
 
-            <div class="form-group mt-3">
-                <label for="profileName" class="floating-label">Nombre del Usuario</label>
-                <input type="text" id="profileName" class="form-control"  @* value="@Model.NombreUsuario" *@ readonly>
-            </div>
+                    <div class="row">
+                        <div class="col-sm-6 mb-3">
+                            <h6 class="font-weight-bold">Nombre del Usuario</h6>
+                            <p>@Model.NombreUsuario</p>
+                        </div>
+                        <div class="col-sm-6 mb-3">
+                            <h6 class="font-weight-bold">Correo Electrónico</h6>
+                            <p>@Model.Email</p>
+                        </div>
+                    </div>
 
-            <div class="form-group mt-3">
-                <label for="profileEmail" class="floating-label">Correo Electrónico</label>
-                <input type="email" id="profileEmail" class="form-control" @* value="@Model.Email"  *@readonly >
-            </div>
+                    <div class="row">
+                        <div class="col-sm-6 mb-3">
+                            <h6 class="font-weight-bold">Rol</h6>
+                            <p>@Model.Rol</p>
+                        </div>
+                        <div class="col-sm-6 mb-3">
+                            <h6 class="font-weight-bold">Último Ingreso</h6>
+                            <p>@(Model.UltimoIngreso.HasValue ? Model.UltimoIngreso.Value.ToString("dd/MM/yyyy HH:mm") : "No disponible")</p>
+                        </div>
+                    </div>
 
-            <div class="form-group mt-3">
-                <label for="profileAge" class="floating-label">Edad</label>
-                <input type="number" id="profileAge" class="form-control" @* value="@Model.Edad" *@ readonly >
-            </div>
-            <div class="form-group mt-3">
-                <label for="profileRol" class="floating-label">Rol</label>
-                <input type="text" id="profileRol" class="form-control" @* value="@Model.Rol" *@ readonly >
-            </div>
-            <div class="form-group mt-3">
-                <label for="profileCedula" class="floating-label">Cedula de Identidad</label>
-                <input type="number" id="profileCedula" class="form-control" @* value="@Model.Numero_Cedula" *@ readonly >
-            </div>
-             <div class="form-group mt-3">
-                <label for="profileLincencia" class="floating-label">Licencia</label>
-                <input type="text" id="profileLincencia" class="form-control"@*  value="@Model.Licencia" *@ readonly >
-            </div>
-            <div class="form-group mt-3">
-                <label for="profileLincenciaVencimiento" class="floating-label">Fecha de vencimiento de Licencia</label>
-                <input type="text" id="profileLincenciaVencimiento" class="form-control" @* value="@Model.Fecha_Venc_Licencia"  *@readonly >
-            </div>
-            <div class="form-group mt-3">
-                <label for="profileEstate" class="floating-label">Estado</label>
-                <input type="text" id="profileEstate" class="form-control" @* value="@Model.Estado" *@ readonly >
-            </div>
+                    @if (Model.Rol == "user" && Model.Numero_Cedula != null)
+                    {
+                        <div class="row">
+                            <div class="col-sm-6 mb-3">
+                                <h6 class="font-weight-bold">Edad</h6>
+                                <p>@Model.Edad años</p>
+                            </div>
+                            <div class="col-sm-6 mb-3">
+                                <h6 class="font-weight-bold">Género</h6>
+                                <p>@(Model.Genero == "masculino" ? "Masculino" : "Femenino")</p>
+                            </div>
+                        </div>
 
-            <div class="form-group mt-3">
-                <label for="profileIngreso" class="floating-label">Ultimo Ingreso</label>
-                <textarea type="text" id="profileIngreso" class="form-control" @* value="@Model.UltimoIngreso" *@ readonly></textarea>
-            </div>
+                        <div class="row">
+                            <div class="col-sm-6 mb-3">
+                                <h6 class="font-weight-bold">Número de Cédula</h6>
+                                <p>@Model.Numero_Cedula</p>
+                            </div>
+                            <div class="col-sm-6 mb-3">
+                                <h6 class="font-weight-bold">Licencia</h6>
+                                <p>@Model.Licencia</p>
+                            </div>
+                        </div>
 
-            <div class="form-group mt-3">
-                <label for="genderSelect">Género:</label>
-                @* @if (Model.Genero == "masculino")
-                {
-                    <p id="genderSelect" class="form-control w-50 mx-auto" onchange="updateAvatar()" value="male">Hombre</p>
-                }
-                else
-                {
-                    <p id="genderSelect" class="form-control w-50 mx-auto" onchange="updateAvatar()" value="female">Mujer</p>
-                } *@
+                        <div class="row">
+                            <div class="col-sm-6 mb-3">
+                                <h6 class="font-weight-bold">Fecha Venc. Licencia</h6>
+                                <p class="@(Model.Fecha_Venc_Licencia < DateTime.Now.AddMonths(1) ? "text-danger" : "")">
+                                    @Model.Fecha_Venc_Licencia?.ToString("dd/MM/yyyy")
+                                    @if (Model.Fecha_Venc_Licencia < DateTime.Now)
+                                    {
+                                        <span class="badge badge-danger">Vencida</span>
+                                    }
+                                    else if (Model.Fecha_Venc_Licencia < DateTime.Now.AddMonths(1))
+                                    {
+                                        <span class="badge badge-warning">Pronto a vencer</span>
+                                    }
+                                </p>
+                            </div>
+                            <div class="col-sm-6 mb-3">
+                                <h6 class="font-weight-bold">Estado</h6>
+                                <p>
+                                    @if (Model.Estado == "activo")
+                                    {
+                                        <span class="badge badge-success">Activo</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-danger">Inactivo</span>
+                                    }
+                                </p>
+                            </div>
+                        </div>
+
+                        @if (ViewBag.TieneCamionAsignado == true)
+                        {
+                            <div class="row">
+                                <div class="col-12 mb-3">
+                                    <h6 class="font-weight-bold">Camión Asignado</h6>
+                                    <p>@ViewBag.InfoCamion</p>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else if (Model.Rol == "user" && ViewBag.PerfilIncompleto == true)
+                    {
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Debe completar su perfil para acceder a todas las funcionalidades.
+                            <div class="mt-2">
+                                <a href="@Url.Action("CompletarPerfil", "Login")" class="btn btn-sm btn-warning">
+                                    Completar Perfil
+                                </a>
+                            </div>
+                        </div>
+                    }
+                </div>
             </div>
-             <div class="text-center mt-4">
-                <p>
-                    Archivo conteniendo los datos del chofer y su camion
-                </p>
-                <a href="@Url.Action("DescargarPDF", "Perfil")" class="btn btn-danger">
-                    <i class="fas fa-file-pdf"></i> Descargar PDF
-                </a>
+        </div>
+
+        <!-- Documentos y Acciones -->
+        <div class="col-lg-6">
+            @if (Model.Rol == "user" && Model.Numero_Cedula != null)
+            {
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">Documentos</h6>
+                    </div>
+                    <div class="card-body">
+                        @if (ViewBag.Documentos != null && ((List<COMAVI_SA.Models.Documentos>)ViewBag.Documentos).Any())
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-bordered" width="100%" cellspacing="0">
+                                    <thead>
+                                        <tr>
+                                            <th>Tipo</th>
+                                            <th>Vencimiento</th>
+                                            <th>Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var documento in (List<COMAVI_SA.Models.Documentos>)ViewBag.Documentos)
+                                        {
+                                            <tr>
+                                                <td>@documento.tipo_documento</td>
+                                                <td>@documento.fecha_vencimiento.ToString("dd/MM/yyyy")</td>
+                                                <td>
+                                                    @if (documento.estado_validacion == "verificado")
+                                                    {
+                                                        <span class="badge badge-success">Verificado</span>
+                                                    }
+                                                    else if (documento.estado_validacion == "rechazado")
+                                                    {
+                                                        <span class="badge badge-danger">Rechazado</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge badge-warning">Pendiente</span>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            @if (ViewBag.TieneDocumentosPendientes == true)
+                            {
+                                <div class="alert alert-info mt-3">
+                                    <i class="fas fa-info-circle"></i>
+                                    Uno o más documentos están pendientes de verificación. Un administrador los revisará pronto.
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="text-center py-4">
+                                <i class="fas fa-file-upload fa-4x text-gray-300 mb-3"></i>
+                                <p>No ha subido ningún documento aún.</p>
+                            </div>
+                        }
+
+                        <div class="text-center mt-3">
+                            <a href="@Url.Action("SubirDocumentos", "Login")" class="btn btn-primary">
+                                <i class="fas fa-upload"></i> Subir Nuevo Documento
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">Recursos</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <a href="#" class="btn btn-danger btn-block">
+                                <i class="fas fa-file-pdf"></i> Generar Reporte de Conductor PDF
+                            </a>
+                        </div>
+
+                        <div class="mb-3">
+                            <a href="#" class="btn btn-info btn-block">
+                                <i class="fas fa-calendar-alt"></i> Ver Calendario de Vencimientos
+                            </a>
+                        </div>
+
+                        <div class="mb-3">
+                            <a href="#" class="btn btn-secondary btn-block">
+                                <i class="fas fa-cog"></i> Configurar Notificaciones
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (Model.Rol == "admin")
+            {
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">Administración</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <a href="@Url.Action("Index", "Admin")" class="btn btn-primary btn-block">
+                                <i class="fas fa-tachometer-alt"></i> Panel de Administración
+                            </a>
+                        </div>
+
+                        <div class="mb-3">
+                            <a href="@Url.Action("Usuarios", "Sistema")" class="btn btn-info btn-block">
+                                <i class="fas fa-users"></i> Gestionar Usuarios
+                            </a>
+                        </div>
+
+                        <div class="mb-3">
+                            <a href="@Url.Action("Register", "Login")" class="btn btn-success btn-block">
+                                <i class="fas fa-user-plus"></i> Registrar Nuevo Usuario
+                            </a>
+                        </div>
+
+                        <div class="mb-3">
+                            <a href="@Url.Action("Notificaciones", "Sistema")" class="btn btn-warning btn-block">
+                                <i class="fas fa-bell"></i> Notificaciones del Sistema
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (Model.Rol == "admin")
+    {
+        <div class="row">
+            <div class="col-12">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">Documentos Pendientes de Verificación</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                                <thead>
+                                    <tr>
+                                        <th>Chofer</th>
+                                        <th>Tipo Documento</th>
+                                        <th>Fecha Subida</th>
+                                        <th>Vencimiento</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Datos de ejemplo - En producción se reemplazaría con datos reales -->
+                                    <tr>
+                                        <td>Juan Pérez</td>
+                                        <td>Licencia</td>
+                                        <td>10/03/2025</td>
+                                        <td>15/12/2025</td>
+                                        <td>
+                                            <a href="#" class="btn btn-primary btn-sm">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="#" class="btn btn-success btn-sm">
+                                                <i class="fas fa-check"></i>
+                                            </a>
+                                            <a href="#" class="btn btn-danger btn-sm">
+                                                <i class="fas fa-times"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>María López</td>
+                                        <td>Cédula</td>
+                                        <td>11/03/2025</td>
+                                        <td>N/A</td>
+                                        <td>
+                                            <a href="#" class="btn btn-primary btn-sm">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="#" class="btn btn-success btn-sm">
+                                                <i class="fas fa-check"></i>
+                                            </a>
+                                            <a href="#" class="btn btn-danger btn-sm">
+                                                <i class="fas fa-times"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <p class="small mt-3">
-                Renovacion de licencia automatica
-            </p>
-        </div> 
-    </div> 
+        </div>
+    }
 </div>
 
-<script>
-    function updateAvatar() {
-        const genderSelect = document.getElementById('genderSelect');
-        const avatarIcon = document.getElementById('avatar-icon');
-
-        if (genderSelect.value === 'male') {
-            avatarIcon.className = 'fas fa-male fa-5x';
-        } else if (genderSelect.value === 'female') {
-            avatarIcon.className = 'fas fa-female fa-5x';
-        }
-    }
-</script>
 @section Scripts {
-
+    <script>
+        $(document).ready(function () {
+            $('#dataTable').DataTable();
+        });
+    </script>
 }
