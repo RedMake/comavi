@@ -1,0 +1,182 @@
+﻿@model List<COMAVI_SA.Models.Documentos>
+@{
+    ViewData["Title"] = "Documentos Pendientes de Validación";
+}
+
+<div class="container-fluid">
+    <h1 class="h3 mb-2 text-gray-800">Documentos Pendientes de Validación</h1>
+    <p class="mb-4">Verifique y valide los documentos subidos por los choferes.</p>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["Success"]
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["Error"]
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    }
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Documentos pendientes de validación</h6>
+        </div>
+        <div class="card-body">
+            @if (Model == null || !Model.Any())
+            {
+                <div class="text-center py-4">
+                    <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+                    <p class="lead">¡No hay documentos pendientes de validación!</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>Chofer</th>
+                                <th>Tipo Documento</th>
+                                <th>Fecha Emisión</th>
+                                <th>Fecha Vencimiento</th>
+                                <th>Fecha Subida</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var documento in Model)
+                            {
+                                <tr>
+                                    <td>@documento.Chofer.nombreCompleto</td>
+                                    <td>@documento.tipo_documento</td>
+                                    <td>@documento.fecha_emision.ToString("dd/MM/yyyy")</td>
+                                    <td>@documento.fecha_vencimiento.ToString("dd/MM/yyyy")</td>
+                                    <td>@(documento.fecha_emision.ToString("dd/MM/yyyy"))</td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="@Url.Action("VerDocumento", "Documentos", new { id = documento.id_documento })" class="btn btn-primary btn-sm" target="_blank">
+                                                <i class="fas fa-eye"></i> Ver
+                                            </a>
+                                            <button type="button" class="btn btn-success btn-sm" data-toggle="modal" data-target="#validarModal"
+                                                    data-id="@documento.id_documento" data-chofer="@documento.Chofer.nombreCompleto" data-tipo="@documento.tipo_documento">
+                                                <i class="fas fa-check"></i> Validar
+                                            </button>
+                                            <button type="button" class="btn btn-danger btn-sm" data-toggle="modal" data-target="#rechazarModal"
+                                                    data-id="@documento.id_documento" data-chofer="@documento.Chofer.nombreCompleto" data-tipo="@documento.tipo_documento">
+                                                <i class="fas fa-times"></i> Rechazar
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Modal Validar Documento -->
+<div class="modal fade" id="validarModal" tabindex="-1" role="dialog" aria-labelledby="validarModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="validarModalLabel">Validar Documento</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form asp-action="ValidarDocumento" asp-controller="Documentos" method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="id" id="documentoIdValidar" />
+                    <p>¿Está seguro de que desea validar el documento <strong id="tipoDocumentoValidar"></strong> del chofer <strong id="choferValidar"></strong>?</p>
+                    <p>Esta acción notificará al chofer que su documento ha sido verificado.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Validar Documento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Rechazar Documento -->
+<div class="modal fade" id="rechazarModal" tabindex="-1" role="dialog" aria-labelledby="rechazarModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="rechazarModalLabel">Rechazar Documento</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form asp-action="RechazarDocumento" asp-controller="Documentos" method="post">
+                <div class="modal-body">
+                    <input type="hidden" name="id" id="documentoIdRechazar" />
+                    <p>Está a punto de rechazar el documento <strong id="tipoDocumentoRechazar"></strong> del chofer <strong id="choferRechazar"></strong>.</p>
+
+                    <div class="form-group">
+                        <label for="motivoRechazo">Motivo del rechazo:</label>
+                        <textarea class="form-control" id="motivoRechazo" name="motivoRechazo" rows="3" required></textarea>
+                        <small class="form-text text-muted">Este motivo se enviará al chofer para que pueda corregir el problema.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Rechazar Documento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            $('#dataTable').DataTable({
+                language: {
+                    url: "//cdn.datatables.net/plug-ins/1.10.25/i18n/Spanish.json"
+                }
+            });
+
+            // Modal Validar Documento
+            $('#validarModal').on('show.bs.modal', function (event) {
+                var button = $(event.relatedTarget);
+                var id = button.data('id');
+                var chofer = button.data('chofer');
+                var tipo = button.data('tipo');
+
+                var modal = $(this);
+                modal.find('#documentoIdValidar').val(id);
+                modal.find('#choferValidar').text(chofer);
+                modal.find('#tipoDocumentoValidar').text(tipo);
+            });
+
+            // Modal Rechazar Documento
+            $('#rechazarModal').on('show.bs.modal', function (event) {
+                var button = $(event.relatedTarget);
+                var id = button.data('id');
+                var chofer = button.data('chofer');
+                var tipo = button.data('tipo');
+
+                var modal = $(this);
+                modal.find('#documentoIdRechazar').val(id);
+                modal.find('#choferRechazar').text(chofer);
+                modal.find('#tipoDocumentoRechazar').text(tipo);
+                modal.find('#motivoRechazo').val('');
+            });
+        });
+    </script>
+}

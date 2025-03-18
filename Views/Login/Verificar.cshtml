@@ -1,0 +1,58 @@
+﻿@model COMAVI_SA.Models.VerificacionViewModel
+@{
+    Layout = "~/Views/Shared/_Layout_Externo.cshtml";
+    ViewData["Title"] = "Verificación de Cuenta - COMAVI S.A";
+}
+
+<div class="container" style="display:flex; justify-content:center; align-items:center">
+    <div class="row justify-content-center" style="width: 80%;">
+        <div class="col-xl-10 col-lg-12 col-md-9">
+            <div class="card o-hidden border-0 shadow-lg my-5">
+                <div class="card-body p-0">
+                    @if (TempData["SuccessMessage"] != null)
+                    {
+                        <div class="alert alert-success">
+                            @TempData["SuccessMessage"]
+                        </div>
+                    }
+
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <div class="p-5">
+                                <div class="text-center">
+                                    <h1 class="h4 text-gray-900 mb-4">Verificación de Cuenta</h1>
+                                    <p class="mb-4">
+                                        Estamos a punto de verificar su cuenta. Por favor, confirme que está utilizando
+                                        el enlace que recibió en su correo electrónico.
+                                    </p>
+                                </div>
+                                <form asp-action="Verificar" method="post">
+                                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                                    <input type="hidden" asp-for="Token" />
+                                    <input type="hidden" asp-for="Email" />
+
+                                    <div class="text-center mt-4">
+                                        <p>Estamos verificando la cuenta con el correo: <strong>@Model.Email</strong></p>
+                                        <button type="submit" class="btn btn-primary btn-user btn-block">
+                                            Confirmar Verificación
+                                        </button>
+                                    </div>
+                                </form>
+                                <div class="text-center mt-3">
+                                    <a asp-action="Index" class="small">Volver al inicio de sesión</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

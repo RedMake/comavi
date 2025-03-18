@@ -1,0 +1,186 @@
+﻿@model COMAVI_SA.Models.CargaDocumentoViewModel
+@{
+    ViewData["Title"] = "Subir Documentos";
+}
+
+<div class="container mt-4">
+    <div class="card mb-4 shadow">
+        <div class="card-header py-3 bg-primary">
+            <h6 class="m-0 font-weight-bold text-white">Subir Documentos</h6>
+        </div>
+        <div class="card-body">
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success">
+                    @TempData["SuccessMessage"]
+                </div>
+            }
+
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> Por favor, suba los documentos requeridos en formato PDF. Todos los documentos serán revisados por un administrador antes de ser aprobados.
+            </div>
+
+            <form asp-action="SubirDocumentos" method="post" enctype="multipart/form-data" class="user">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                <div class="form-group">
+                    <label asp-for="TipoDocumento" class="form-label">Tipo de Documento</label>
+                    <select asp-for="TipoDocumento" class="form-control" required>
+                        <option value="">Seleccionar tipo de documento...</option>
+                        <option value="licencia">Licencia de Conducir</option>
+                        <option value="cedula">Cédula de Identidad</option>
+                        <option value="inscripcion">Inscripción de Vehículo</option>
+                        <option value="mantenimiento">Reporte de Mantenimiento</option>
+                    </select>
+                    <span asp-validation-for="TipoDocumento" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="ArchivoPdf" class="form-label">Archivo PDF</label>
+                    <input asp-for="ArchivoPdf" type="file" class="form-control" accept=".pdf" required />
+                    <span asp-validation-for="ArchivoPdf" class="text-danger"></span>
+                    <small class="form-text text-muted">El archivo debe estar en formato PDF y no exceder 10MB.</small>
+                </div>
+
+                <div class="form-group row">
+                    <div class="col-sm-6 mb-3 mb-sm-0">
+                        <label asp-for="FechaEmision" class="form-label">Fecha de Emisión</label>
+                        <input asp-for="FechaEmision" type="date" class="form-control" required />
+                        <span asp-validation-for="FechaEmision" class="text-danger"></span>
+                    </div>
+                    <div class="col-sm-6">
+                        <label asp-for="FechaVencimiento" class="form-label">Fecha de Vencimiento</label>
+                        <input asp-for="FechaVencimiento" type="date" class="form-control" required />
+                        <span asp-validation-for="FechaVencimiento" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="form-group d-grid mt-4">
+                    <button type="submit" class="btn btn-primary btn-block">
+                        Subir Documento
+                    </button>
+                </div>
+            </form>
+
+            <div class="document-requirements mt-4">
+                <h5>Requisitos por tipo de documento:</h5>
+                <div class="accordion" id="accordionDocuments">
+                    <div class="card">
+                        <div class="card-header" id="headingLicencia">
+                            <h2 class="mb-0">
+                                <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseLicencia" aria-expanded="false" aria-controls="collapseLicencia">
+                                    Licencia de Conducir
+                                </button>
+                            </h2>
+                        </div>
+                        <div id="collapseLicencia" class="collapse" aria-labelledby="headingLicencia" data-parent="#accordionDocuments">
+                            <div class="card-body">
+                                <ul>
+                                    <li>PDF escaneado de licencia original</li>
+                                    <li>Debe ser claramente legible</li>
+                                    <li>Debe mostrar nombre completo, número de licencia, categoría y fecha de vencimiento</li>
+                                    <li>Debe estar vigente (no vencida)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header" id="headingCedula">
+                            <h2 class="mb-0">
+                                <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseCedula" aria-expanded="false" aria-controls="collapseCedula">
+                                    Cédula de Identidad
+                                </button>
+                            </h2>
+                        </div>
+                        <div id="collapseCedula" class="collapse" aria-labelledby="headingCedula" data-parent="#accordionDocuments">
+                            <div class="card-body">
+                                <ul>
+                                    <li>PDF escaneado de cédula original (ambos lados)</li>
+                                    <li>Debe ser claramente legible</li>
+                                    <li>Debe mostrar nombre completo, número de identificación y fecha de nacimiento</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header" id="headingInscripcion">
+                            <h2 class="mb-0">
+                                <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseInscripcion" aria-expanded="false" aria-controls="collapseInscripcion">
+                                    Inscripción de Vehículo
+                                </button>
+                            </h2>
+                        </div>
+                        <div id="collapseInscripcion" class="collapse" aria-labelledby="headingInscripcion" data-parent="#accordionDocuments">
+                            <div class="card-body">
+                                <ul>
+                                    <li>PDF con documento de registro o inscripción del vehículo</li>
+                                    <li>Debe incluir número de placa, marca, modelo y año</li>
+                                    <li>Debe incluir información del propietario</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header" id="headingMantenimiento">
+                            <h2 class="mb-0">
+                                <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseMantenimiento" aria-expanded="false" aria-controls="collapseMantenimiento">
+                                    Reporte de Mantenimiento
+                                </button>
+                            </h2>
+                        </div>
+                        <div id="collapseMantenimiento" class="collapse" aria-labelledby="headingMantenimiento" data-parent="#accordionDocuments">
+                            <div class="card-body">
+                                <ul>
+                                    <li>PDF con reporte de mantenimiento realizado al vehículo</li>
+                                    <li>Debe incluir fecha del mantenimiento</li>
+                                    <li>Debe detallar los servicios realizados</li>
+                                    <li>Debe incluir información del vehículo (placa, modelo)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <a href="@Url.Action("Profile", "Login")" class="btn btn-secondary">
+                    Volver a mi Perfil
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        // Validación de fechas
+        document.addEventListener('DOMContentLoaded', function () {
+            const fechaEmisionInput = document.getElementById('FechaEmision');
+            const fechaVencimientoInput = document.getElementById('FechaVencimiento');
+
+            if (fechaEmisionInput && fechaVencimientoInput) {
+                // La fecha de emisión no puede ser futura
+                const today = new Date();
+                const maxDate = today.toISOString().split('T')[0];
+                fechaEmisionInput.max = maxDate;
+
+                // La fecha de vencimiento debe ser posterior a la fecha de emisión
+                fechaEmisionInput.addEventListener('change', function() {
+                    fechaVencimientoInput.min = this.value;
+                });
+
+                fechaVencimientoInput.addEventListener('change', function() {
+                    if (this.value <= fechaEmisionInput.value) {
+                        this.setCustomValidity('La fecha de vencimiento debe ser posterior a la fecha de emisión');
+                    } else {
+                        this.setCustomValidity('');
+                    }
+                });
+            }
+        });
+    </script>
+}

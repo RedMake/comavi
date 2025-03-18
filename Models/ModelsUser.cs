@@ -24,9 +24,23 @@ namespace COMAVI_SA.Models
 
         [Required]
         [StringLength(20)]
-        public string rol { get; set; }
+        public string rol { get; set; } = "user";
 
         public DateTime? ultimo_ingreso { get; set; }
+
+        [Required]
+        [StringLength(20)]
+        public string estado_verificacion { get; set; } = "pendiente";
+
+        public DateTime? fecha_verificacion { get; set; }
+
+        [StringLength(100)]
+        public string? token_verificacion { get; set; }
+
+        public DateTime? fecha_expiracion_token { get; set; }
+
+        [Required]
+        public DateTime fecha_registro { get; set; } = DateTime.Now;
     }
 
     public class IntentosLogin
@@ -371,7 +385,25 @@ namespace COMAVI_SA.Models
 
         [Required]
         public DateTime fecha_vencimiento { get; set; }
+
+        [StringLength(255)]
+        public string? ruta_archivo { get; set; }
+
+        public byte[]? contenido_archivo { get; set; }
+
+        [StringLength(100)]
+        public string? tipo_mime { get; set; } = "application/pdf";
+
+        public int? tamano_archivo { get; set; }
+
+        [StringLength(64)]
+        public string? hash_documento { get; set; }
+
+        [Required]
+        [StringLength(20)]
+        public string estado_validacion { get; set; } = "pendiente";
     }
+
     public class PaginacionViewModel
     {
         public int total_registros { get; set; }
@@ -379,5 +411,42 @@ namespace COMAVI_SA.Models
         public int registro_fin { get; set; }
         public int total_paginas { get; set; }
         public int pagina_actual { get; set; }
+    }
+    public class VerificacionViewModel
+    {
+        [Required(ErrorMessage = "El token es requerido")]
+        public string Token { get; set; }
+
+        [Required(ErrorMessage = "El correo electrónico es requerido")]
+        [EmailAddress(ErrorMessage = "Formato de correo electrónico inválido")]
+        public string Email { get; set; }
+    }
+
+    public class CargaDocumentoViewModel
+    {
+        [Required(ErrorMessage = "Debe seleccionar un tipo de documento")]
+        public string TipoDocumento { get; set; }
+
+        [Required(ErrorMessage = "Debe seleccionar un archivo PDF")]
+        public IFormFile ArchivoPdf { get; set; }
+
+        [Required(ErrorMessage = "La fecha de emisión es requerida")]
+        [DataType(DataType.Date)]
+        public DateTime FechaEmision { get; set; }
+
+        [Required(ErrorMessage = "La fecha de vencimiento es requerida")]
+        [DataType(DataType.Date)]
+        public DateTime FechaVencimiento { get; set; }
+
+        public int? IdChofer { get; set; }
+    }
+
+    public class InstruccionesVerificacionViewModel
+    {
+        public string Email { get; set; }
+        public string NombreUsuario { get; set; }
+        public string PasosVerificacion { get; set; }
+        public string TokenVerificacion { get; set; }
+        public DateTime FechaExpiracion { get; set; }
     }
 }

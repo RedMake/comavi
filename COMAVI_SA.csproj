@@ -7,6 +7,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Hangfire.MemoryStorage" Version="1.8.1.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.3" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
     <PackageReference Include="Moq" Version="4.20.72" />
@@ -19,6 +20,12 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.3" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.3" />
     <PackageReference Include="Otp.NET" Version="1.4.0" />
+	<PackageReference Include="itext7" Version="9.1.0" />
+	<PackageReference Include="itext7.bouncy-castle-adapter" Version="9.1.0" />
+	<PackageReference Include="Hangfire.Core" Version="1.8.18" />
+	<PackageReference Include="Hangfire.SqlServer" Version="1.8.18" />
+	<PackageReference Include="Hangfire.AspNetCore" Version="1.8.18" />
+
   </ItemGroup>
   <ItemGroup>
     <Using Include="Xunit" />
@@ -28,8 +35,5 @@
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Tests\" />
   </ItemGroup>
 </Project>

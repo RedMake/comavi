@@ -8,7 +8,7 @@ namespace COMAVI_SA.Services
     public interface IUserService
     {
         Task<Usuario> AuthenticateAsync(string email, string password);
-        Task<bool> RegisterAsync(RegisterViewModel model);
+        Task<bool> RegisterAsync(RegisterViewModel model, string verificationToken = null, DateTime? tokenExpiration = null);
         Task<bool> IsEmailExistAsync(string email);
         Task<bool> IsAccountLockedAsync(string email);
         Task RecordLoginAttemptAsync(int? userId, string ipAddress, bool success);
@@ -19,6 +19,7 @@ namespace COMAVI_SA.Services
         Task<string> GeneratePasswordResetTokenAsync(int userId);
         Task<Usuario> GetUserByIdAsync(int userId);
         Task<Usuario> GetUserByEmailAsync(string email);
+        Task<bool> VerifyUserAsync(string email, string token);
     }
 
     public class UserService : IUserService
@@ -67,7 +68,7 @@ namespace COMAVI_SA.Services
             }
         }
 
-        public async Task<bool> RegisterAsync(RegisterViewModel model)
+        public async Task<bool> RegisterAsync(RegisterViewModel model, string verificationToken = null, DateTime? tokenExpiration = null)
         {
             try
             {
@@ -78,7 +79,11 @@ namespace COMAVI_SA.Services
                     nombre_usuario = model.UserName,
                     correo_electronico = model.Email,
                     contrasena = hashedPassword,
-                    rol = model.Role
+                    rol = model.Role,
+                    estado_verificacion = "pendiente",
+                    fecha_registro = DateTime.Now,
+                    token_verificacion = verificationToken,
+                    fecha_expiracion_token = tokenExpiration
                 };
 
                 _context.Usuarios.Add(newUser);
@@ -294,6 +299,36 @@ namespace COMAVI_SA.Services
         public async Task<Usuario> GetUserByEmailAsync(string email)
         {
             return await _context.Usuarios.FirstOrDefaultAsync(u => u.correo_electronico == email);
+        }
+
+        public async Task<bool> VerifyUserAsync(string email, string token)
+        {
+            try
+            {
+                var user = await _context.Usuarios
+                    .FirstOrDefaultAsync(u => u.correo_electronico == email &&
+                                             u.token_verificacion == token &&
+                                             u.fecha_expiracion_token > DateTime.Now &&
+                                             u.estado_verificacion == "pendiente");
+
+                if (user == null)
+                    return false;
+
+                // Actualizar estado de verificación
+                user.estado_verificacion = "verificado";
+                user.fecha_verificacion = DateTime.Now;
+                user.token_verificacion = null;
+                user.fecha_expiracion_token = null;
+
+                await _context.SaveChangesAsync();
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al verificar usuario");
+                return false;
+            }
         }
     }
 }

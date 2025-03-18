@@ -1,0 +1,69 @@
+﻿@model COMAVI_SA.Models.InstruccionesVerificacionViewModel
+@{
+    Layout = "~/Views/Shared/_Layout_Externo.cshtml";
+    ViewData["Title"] = "Instrucciones de Verificación - COMAVI S.A";
+}
+
+<div class="container" style="display:flex; justify-content:center; align-items:center">
+    <div class="row justify-content-center" style="width: 90%;">
+        <div class="col-xl-10 col-lg-12 col-md-12">
+            <div class="card o-hidden border-0 shadow-lg my-5">
+                <div class="card-header py-3 bg-primary">
+                    <h6 class="m-0 font-weight-bold text-white">Instrucciones de Verificación</h6>
+                </div>
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <h2 class="h3 text-gray-900">Bienvenido/a @Model.NombreUsuario</h2>
+                        <p>Siga estos pasos para completar su registro en el sistema COMAVI S.A.</p>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <strong>¡Importante!</strong> Si no completa el proceso de verificación dentro de 3 días, su cuenta será eliminada automáticamente.
+                    </div>
+
+                    <div class="instruction-content">
+                        @Html.Raw(Model.PasosVerificacion)
+                    </div>
+
+                    <div class="border p-3 mt-4 bg-light rounded">
+                        <h4 class="h5 text-gray-900">Ejemplo de documento PDF válido para licencia de conducir:</h4>
+                        <img src="~/img/pdf_ejemplo.png" alt="Ejemplo de PDF" class="img-fluid border mb-2" />
+                        <p class="mb-0 small">El documento debe ser legible y mostrar claramente la información requerida.</p>
+                    </div>
+
+                    <div class="text-center mt-4">
+                        <a href="@Url.Action("Index", "Login")" class="btn btn-primary">
+                            Volver a Inicio de Sesión
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .instruction-content {
+        text-align: left;
+    }
+
+        .instruction-content h3 {
+            color: #4e73df;
+            margin-top: 1.5rem;
+        }
+
+        .instruction-content ol {
+            padding-left: 1.5rem;
+        }
+
+        .instruction-content li {
+            margin-bottom: 1rem;
+        }
+
+        .instruction-content ul {
+            padding-left: 1.5rem;
+        }
+</style>
+
+@section Scripts {
+}
