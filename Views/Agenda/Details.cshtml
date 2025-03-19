@@ -1,0 +1,154 @@
+﻿@model EventoAgenda
+@{
+    ViewData["Title"] = "Detalles del Evento";
+}
+
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Detalles del Evento</h1>
+        <div>
+            <a href="@Url.Action("Edit", "Agenda", new { id = Model.id_evento })" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm mr-2">
+                <i class="fas fa-edit fa-sm text-white-50"></i> Editar
+            </a>
+            <a href="@Url.Action("Index", "Agenda")" class="d-none d-sm-inline-block btn btn-sm btn-secondary shadow-sm">
+                <i class="fas fa-arrow-left fa-sm text-white-50"></i> Volver a la Agenda
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-xl-12 col-lg-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">@Model.titulo</h6>
+                    <div>
+                        @switch (Model.estado)
+                        {
+                            case "Pendiente":
+                                <span class="badge badge-warning">Pendiente</span>
+                                break;
+                            case "Completado":
+                                <span class="badge badge-success">Completado</span>
+                                break;
+                            case "Cancelado":
+                                <span class="badge badge-danger">Cancelado</span>
+                                break;
+                            default:
+                                <span class="badge badge-secondary">@Model.estado</span>
+                                break;
+                        }
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">Tipo de Evento:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge @GetBadgeClass(Model.tipo_evento)">@Model.tipo_evento</span>
+                                </dd>
+
+                                <dt class="col-sm-4">Fecha de Inicio:</dt>
+                                <dd class="col-sm-8">@Model.fecha_inicio.ToString("dd/MM/yyyy HH:mm")</dd>
+
+                                <dt class="col-sm-4">Fecha de Fin:</dt>
+                                <dd class="col-sm-8">@(Model.fecha_fin.HasValue ? Model.fecha_fin.Value.ToString("dd/MM/yyyy HH:mm") : "No especificada")</dd>
+
+                                <dt class="col-sm-4">Estado:</dt>
+                                <dd class="col-sm-8">@Model.estado</dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">Chofer:</dt>
+                                <dd class="col-sm-8">
+                                    @if (Model.Chofer != null)
+                                    {
+                                        <a href="@Url.Action("Details", "Choferes", new { id = Model.id_chofer })">@Model.Chofer.nombreCompleto</a>
+                                    }
+                                    else
+                                    {
+                                        <span>No asignado</span>
+                                    }
+                                </dd>
+
+                                <dt class="col-sm-4">Notificación:</dt>
+                                <dd class="col-sm-8">
+                                    @if (Model.requiere_notificacion)
+                                    {
+                                        <span>Activada (@Model.dias_anticipacion_notificacion días antes)</span>
+                                        @if (Model.notificacion_enviada)
+                                        {
+                                            <span class="badge badge-success">Enviada</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge badge-warning">Pendiente</span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span>Desactivada</span>
+                                    }
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <h5>Descripción</h5>
+                            <p class="mb-0">@(string.IsNullOrEmpty(Model.descripcion) ? "Sin descripción" : Model.descripcion)</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <small class="text-muted">ID del evento: @Model.id_evento</small>
+                        </div>
+                        <div class="col-md-6 text-right">
+                            @{
+                                string diasRestantes = string.Empty;
+                                if (Model.fecha_inicio > DateTime.Now && Model.estado == "Pendiente")
+                                {
+                                    int dias = (Model.fecha_inicio - DateTime.Now).Days;
+                                    diasRestantes = $"Faltan {dias} día(s)";
+                                }
+                                else if (Model.fecha_inicio < DateTime.Now && Model.estado == "Pendiente")
+                                {
+                                    diasRestantes = "¡Evento vencido!";
+                                }
+                            }
+                            @if (!string.IsNullOrEmpty(diasRestantes))
+                            {
+                                <span class="badge badge-info">@diasRestantes</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    private string GetBadgeClass(string tipoEvento)
+    {
+        switch (tipoEvento)
+        {
+            case "Renovación":
+                return "badge-warning";
+            case "Mantenimiento":
+                return "badge-info";
+            case "Reunión":
+                return "badge-primary";
+            case "Vencimiento":
+                return "badge-danger";
+            default:
+                return "badge-success";
+        }
+    }
+}

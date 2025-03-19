@@ -4,7 +4,6 @@
     ViewData["Title"] = "Login - Sistema Administrativo";
 }
 
-
 <div class="container" style="display:flex; justify-content:center; align-items:center">
 
     <div class="row justify-content-center" style="width: 80%;">
@@ -31,41 +30,37 @@
                                 <div class="text-center">
                                     <h1 class="h4 text-gray-900 mb-4">Bienvenido de vuelta!</h1>
                                 </div>
-                                <form asp-action="Index" class="user" method="post">
+                                <form asp-controller="Login" asp-action="Index" method="post">
+                                    <div asp-validation-summary="All" class="text-danger"></div>
                                     <div class="form-group">
                                         <label asp-for="Email" class="form-label">Correo Electrónico</label>
-                                        <input asp-for="Email" type="email" class="form-control form-control-user" aria-describedby="emailHelp" 
-                                               required
-                                               maxlength="100"
-                                               pattern="^[a-zA-Z0-9._%+-]+@@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
-                                               title="Por favor ingrese un correo electrónico válido (ejemplo@dominio.com)">
+                                        <input asp-for="Email" type="email" class="form-control form-control-user" autocomplete="email" />
+                                        <span asp-validation-for="Email" class="text-danger"></span>
                                     </div>
-                                    <div class="form-group ">
+
+                                    <div class="form-group">
                                         <label asp-for="Password" class="form-label">Contraseña</label>
-                                        <input asp-for="Password" type="password" class="form-control form-control-user"
-                                               required
-                                               minlength="8"
-                                               maxlength="100"
-                                               pattern="^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?!.*\s).*$"
-                                               title="La contraseña debe tener al menos 8 caracteres, 1 letra mayúscula, 1 minúscula y 1 número" />
+                                        <input asp-for="Password" type="password" class="form-control form-control-user" autocomplete="current-password" />
+                                        <span asp-validation-for="Password" class="text-danger"></span>
                                     </div>
+
                                     <div class="form-group form-check">
                                         <div class="custom-control custom-checkbox small">
                                             <input asp-for="RememberMe" type="checkbox" class="custom-control-input" id="customCheck">
                                             <label asp-for="RememberMe" class="custom-control-label" for="customCheck">
-                                                Recuerdame
+                                                Recuérdame
                                             </label>
                                         </div>
                                     </div>
                                     <div class="form-group d-grid">
                                         <button type="submit" class="btn btn-primary btn-user btn-block">Iniciar Sesión</button>
-                                    </div>                                   
+                                    </div>
                                 </form>
                                 <div class="text-center">
-                                    <a asp-action="ForgotPassword" class="small" >Olvido la contraseña?</a>
+                                    <a asp-action="ForgotPassword" class="small">Olvido la contraseña?</a>
                                 </div>
                                 <div class="text-center">
-                                    <a asp-action="Register" class="small" >Crea una cuenta!</a>
+                                    <a asp-action="Register" class="small">Crea una cuenta!</a>
                                 </div>
                             </div>
                         </div>

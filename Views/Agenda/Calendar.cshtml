@@ -1,0 +1,82 @@
+﻿@{
+    ViewData["Title"] = "Calendario de Agenda";
+}
+
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Calendario de Agenda</h1>
+        <a href="@Url.Action("Create", "Agenda")" class="d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+            <i class="fas fa-plus fa-sm text-white-50"></i> Nuevo Evento
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-xl-12 col-lg-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Eventos Programados</h6>
+                </div>
+                <div class="card-body">
+                    <div id="calendar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para detalles del evento -->
+<div class="modal fade" id="eventModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="eventModalLabel">Detalles del Evento</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Título:</strong> <span id="eventTitle"></span></p>
+                <p><strong>Fecha inicio:</strong> <span id="eventStart"></span></p>
+                <p><strong>Fecha fin:</strong> <span id="eventEnd"></span></p>
+                <p><strong>Descripción:</strong> <span id="eventDescription"></span></p>
+            </div>
+            <div class="modal-footer">
+                <a href="#" id="editEventLink" class="btn btn-primary">Editar</a>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.css" rel="stylesheet" />
+}
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/locales-all.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var calendarEl = document.getElementById('calendar');
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth'
+                },
+                locale: 'es',
+                events: @Html.Raw(ViewBag.Events),
+                eventClick: function(info) {
+                    $('#eventTitle').text(info.event.title);
+                    $('#eventStart').text(info.event.startStr);
+                    $('#eventEnd').text(info.event.endStr || 'N/A');
+                    $('#eventDescription').text(info.event.extendedProps.description || 'Sin descripción');
+                    $('#editEventLink').attr('href', '/Agenda/Edit/' + info.event.id);
+                    $('#eventModal').modal('show');
+                }
+            });
+            calendar.render();
+        });
+    </script>
+}

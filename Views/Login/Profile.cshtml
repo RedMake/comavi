@@ -1,4 +1,5 @@
 ﻿@model COMAVI_SA.Models.PerfilViewModel
+
 @{
     ViewData["Title"] = "Perfil";
 }
@@ -65,7 +66,8 @@
                         </div>
                         <div class="col-sm-6 mb-3">
                             <h6 class="font-weight-bold">Último Ingreso</h6>
-                            <p>@(Model.UltimoIngreso.HasValue ? Model.UltimoIngreso.Value.ToString("dd/MM/yyyy HH:mm") : "No disponible")</p>
+                            <p>@(Model.UltimoIngreso.HasValue ? Model.UltimoIngreso.Value.ToString("dd/MM/yyyy HH:mm") :
+                                "No disponible")</ p >
                         </div>
                     </div>
 
@@ -158,7 +160,16 @@
                         <h6 class="m-0 font-weight-bold text-primary">Documentos</h6>
                     </div>
                     <div class="card-body">
-                        @if (ViewBag.Documentos != null && ((List<COMAVI_SA.Models.Documentos>)ViewBag.Documentos).Any())
+                        @{
+                            var documentos = ViewBag.Documentos as List<COMAVI_SA.Models.Documentos>;
+                            bool hasDocs = documentos != null && documentos.Any();
+                            bool allPending = hasDocs && documentos.All(d => d.estado_validacion == "pendiente");
+                            bool hasVerifiedOrRejected = hasDocs && documentos.Any(d =>
+                            d.estado_validacion == "verificado" ||
+                            d.estado_validacion == "rechazado");
+                        }
+
+                        @if (hasDocs)
                         {
                             <div class="table-responsive">
                                 <table class="table table-bordered" width="100%" cellspacing="0">
@@ -170,7 +181,7 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @foreach (var documento in (List<COMAVI_SA.Models.Documentos>)ViewBag.Documentos)
+                                        @foreach (var documento in documentos)
                                         {
                                             <tr>
                                                 <td>@documento.tipo_documento</td>
@@ -195,7 +206,15 @@
                                 </table>
                             </div>
 
-                            @if (ViewBag.TieneDocumentosPendientes == true)
+                            @if (!allPending)
+                            {
+                                <div class="alert alert-success mt-3">
+                                    <i class="fas fa-check-circle"></i>
+                                    Todos sus documentos han sido recibidos y están verificados. No se requiere
+                                    ninguna acción adicional por el momento.
+                                </div>
+                            }
+                            else if (ViewBag.TieneDocumentosPendientes == true)
                             {
                                 <div class="alert alert-info mt-3">
                                     <i class="fas fa-info-circle"></i>
@@ -211,10 +230,78 @@
                             </div>
                         }
 
-                        <div class="text-center mt-3">
-                            <a href="@Url.Action("SubirDocumentos", "Login")" class="btn btn-primary">
-                                <i class="fas fa-upload"></i> Subir Nuevo Documento
-                            </a>
+                        @if (allPending)
+                        {
+                            <div class="text-center mt-3">
+                                <a href="@Url.Action("SubirDocumentos", "Login")" class="btn btn-primary">
+                                    <i class="fas fa-upload"></i> Subir Nuevo Documento
+                                </a>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">Seguridad de la cuenta</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <h6 class="font-weight-bold">Autenticación de dos factores</h6>
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="me-3">
+                                    @if (Model.MfaHabilitado)
+                                    {
+                                        <span class="badge badge-success">Habilitada</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-warning">No habilitada</span>
+                                    }
+                                </div>
+
+                                @if (Model.MfaHabilitado == true)
+                                {
+                                    <a href="@Url.Action("ConfigurarMFA", "Login")" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-cog"></i> Gestionar
+                                    </a>
+                                }
+                                else
+                                {
+                                    <a href="@Url.Action("ConfigurarMFA", "Login")" class="btn btn-outline-success btn-sm">
+                                        <i class="fas fa-shield-alt"></i> Activar
+                                    </a>
+                                }
+                            </div>
+                            <p class="text-muted small">
+                                La autenticación de dos factores agrega una capa adicional de seguridad a su cuenta,
+                                requiriendo un código generado por su dispositivo móvil además de su contraseña.
+                            </p>
+                        </div>
+
+                        <div class="mb-3">
+                            <h6 class="font-weight-bold">Contraseña</h6>
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <span class="text-muted">
+                                        Última actualización:
+                                        @if (Model.FechaActualizacionPassword.HasValue)
+                                        {
+                                            @Model.FechaActualizacionPassword.Value.ToString("dd/MM/yyyy HH:mm")
+                                        }
+                                        else
+                                        {
+                                            <span>No disponible</span>
+                                        }
+                                    </span>
+                                </div>
+                                <a href="@Url.Action("CambiarContrasena", "Login")" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-key"></i> Cambiar
+                                </a>
+                            </div>
+                            <p class="text-muted small mt-2">
+                                Se recomienda cambiar su contraseña regularmente y utilizar contraseñas fuertes y únicas.
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -225,19 +312,17 @@
                     </div>
                     <div class="card-body">
                         <div class="mb-3">
-                            <a href="#" class="btn btn-danger btn-block">
+                            <a href="@Url.Action("DriverReport", "Reports")" class="btn btn-danger btn-block">
                                 <i class="fas fa-file-pdf"></i> Generar Reporte de Conductor PDF
                             </a>
                         </div>
-
                         <div class="mb-3">
-                            <a href="#" class="btn btn-info btn-block">
+                            <a href="@Url.Action("Index", "Calendar")" class="btn btn-info btn-block">
                                 <i class="fas fa-calendar-alt"></i> Ver Calendario de Vencimientos
                             </a>
                         </div>
-
                         <div class="mb-3">
-                            <a href="#" class="btn btn-secondary btn-block">
+                            <a href="@Url.Action("Index", "Notifications")" class="btn btn-secondary btn-block">
                                 <i class="fas fa-cog"></i> Configurar Notificaciones
                             </a>
                         </div>
@@ -260,12 +345,6 @@
                         <div class="mb-3">
                             <a href="@Url.Action("Usuarios", "Sistema")" class="btn btn-info btn-block">
                                 <i class="fas fa-users"></i> Gestionar Usuarios
-                            </a>
-                        </div>
-
-                        <div class="mb-3">
-                            <a href="@Url.Action("Register", "Login")" class="btn btn-success btn-block">
-                                <i class="fas fa-user-plus"></i> Registrar Nuevo Usuario
                             </a>
                         </div>
 
@@ -345,6 +424,8 @@
         </div>
     }
 </div>
+
+
 
 @section Scripts {
     <script>

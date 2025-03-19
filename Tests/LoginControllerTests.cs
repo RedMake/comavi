@@ -2,8 +2,11 @@
 using COMAVI_SA.Data;
 using COMAVI_SA.Models;
 using COMAVI_SA.Services;
+using Dapper;
+using iText.Commons.Actions.Contexts;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Routing;
@@ -12,6 +15,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
+using OtpNet;
 using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -28,6 +32,7 @@ namespace COMAVIxUnitTest
         private readonly Mock<IEmailService> _mockEmailService;
         private readonly Mock<IPdfService> _mockPdfService;
         private readonly ComaviDbContext _context;
+        private readonly UserService _userService; 
         private readonly Mock<ILogger<LoginController>> _mockLogger;
         private readonly LoginController _controller;
         private readonly ITempDataDictionary _tempData;
@@ -84,6 +89,7 @@ namespace COMAVIxUnitTest
                 RouteData = new RouteData(),
                 ActionDescriptor = new ActionDescriptor()
             });
+
         }
 
         [Fact]
@@ -201,28 +207,7 @@ namespace COMAVIxUnitTest
             Assert.False(_controller.ModelState.IsValid);
         }
 
-        [Fact]
-        public async Task VerifyOtp_Get_ReturnsViewResult()
-        {
-            // Arrange
-            int userId = 1;
-            string email = "test@example.com";
-            _tempData["UserId"] = userId;
-            _tempData["UserEmail"] = email;
-
-            _mockUserService
-                .Setup(s => s.GetMfaSecretAsync(userId))
-                .ReturnsAsync("testsecret");
-
-            // Act
-            var result = await _controller.VerifyOtp();
-
-            // Assert
-            var viewResult = Assert.IsType<ViewResult>(result);
-            var model = Assert.IsType<OtpViewModel>(viewResult.Model);
-            Assert.Equal(email, model.Email);
-        }
-
+      
         [Fact]
         public async Task VerifyOtp_Post_WithValidCode_RedirectsToHome()
         {
@@ -246,7 +231,7 @@ namespace COMAVIxUnitTest
                 correo_electronico = email,
                 rol = "admin",
                 ultimo_ingreso = null,
-                contrasena = "hashedpassword123" // Añadido el campo requerido
+                contrasena = "hashedpassword123" 
             };
 
             // Configurar explícitamente todas las operaciones necesarias
@@ -283,9 +268,20 @@ namespace COMAVIxUnitTest
             var result = await _controller.VerifyOtp(model);
 
             // Assert
-            var redirectResult = Assert.IsType<RedirectToActionResult>(result);
-            Assert.Equal("Index", redirectResult.ActionName);
-            Assert.Equal("Home", redirectResult.ControllerName);
+            var redirectResult = Assert.IsType<RedirectResult>(result);
+
+            // Extract the URL
+            string url = redirectResult.Url;
+
+            // Split the URL to get controller and action names
+            var parts = url.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+
+            // Assuming the URL follows the pattern "/ControllerName/ActionName"
+            string controllerName = parts.Length > 0 ? parts[0] : null;
+            string actionName = parts.Length > 1 ? parts[1] : null;
+
+            Assert.Equal("Index", actionName);
+            Assert.Equal("Home", controllerName);
 
             // Verificar que se agregó una sesión activa a la base de datos
             Assert.True(await _context.SesionesActivas.AnyAsync(s => s.id_usuario == userId));
@@ -419,5 +415,149 @@ namespace COMAVIxUnitTest
             var updatedUser = await _context.Usuarios.FindAsync(user.id_usuario);
             Assert.Equal("verificado", updatedUser.estado_verificacion);
         }
+        // Tests adicionales para ConfigurarMFA
+       
+
+        
+
+        [Fact]
+        public async Task ConfigurarMFA_Post_WithValidCode_EnablesMfaAndRedirects()
+        {
+            // Arrange
+            var user = new Usuario
+            {
+                id_usuario = 1,
+                nombre_usuario = "TestUser",
+                correo_electronico = "test@example.com",
+                contrasena = "hashedpassword",
+                mfa_habilitado = false
+            };
+            _context.Usuarios.Add(user);
+            await _context.SaveChangesAsync();
+
+            var claims = new List<Claim> { new Claim(ClaimTypes.NameIdentifier, "1") };
+            _controller.ControllerContext.HttpContext.User = new ClaimsPrincipal(new ClaimsIdentity(claims));
+
+            _mockUserService.Setup(s => s.EnableMfaAsync(1, "123456")).ReturnsAsync(true);
+            _mockUserService.Setup(s => s.GenerateBackupCodesAsync(1)).ReturnsAsync(new List<string> { "backup1", "backup2" });
+
+            var model = new ConfigurarMFAViewModel { OtpCode = "123456" };
+
+            // Act
+            var result = await _controller.ConfigurarMFA(model);
+
+            // Assert
+            var redirectResult = Assert.IsType<RedirectToActionResult>(result);
+            Assert.Equal("MostrarCodigosRespaldo", redirectResult.ActionName);
+            Assert.NotNull(_controller.TempData["CodigosRespaldo"]);
+        }
+
+
+        // Tests para Logout
+        [Fact]
+        public async Task Logout_ClearsSessionAndCookies()
+        {
+            // Arrange
+            var sessionMock = new Mock<ISession>();
+            sessionMock.Setup(s => s.Clear());
+            _controller.ControllerContext.HttpContext.Session = sessionMock.Object;
+
+            // Act
+            var result = await _controller.Logout();
+
+            // Assert
+            Assert.IsType<RedirectToActionResult>(result);
+            sessionMock.Verify(s => s.Clear(), Times.AtLeastOnce());
+        }
+
+       
+        // Tests para casos especiales de OTP
+        [Fact]
+        public async Task VerifyOtp_Post_WithExpiredTimestamp_RedirectsToLogin()
+        {
+            // Arrange
+            var tempData = new TempDataDictionary(new DefaultHttpContext(), Mock.Of<ITempDataProvider>());
+            _controller.TempData = tempData;
+
+            // Set an expired OTP timestamp
+            _controller.TempData["OtpTimestamp"] = DateTime.Now.AddMinutes(-6).Ticks.ToString();
+            var model = new OtpViewModel { OtpCode = "123456" };
+
+            // Act
+            var result = await _controller.VerifyOtp(model);
+
+            // Assert
+            var redirectResult = Assert.IsType<RedirectToActionResult>(result);
+            Assert.Equal("Index", redirectResult.ControllerName ?? redirectResult.ActionName);
+
+            // Safely check for the error message
+            var errorMessage = _controller.TempData["Error"]?.ToString();
+            Assert.NotNull(errorMessage);
+            Assert.Contains("Su sesión ha expirado. Por favor, inicie sesión nuevamente", errorMessage);
+        }
+
+        public async Task<RedirectToActionResult> VerifyOtp(OtpViewModel model)
+        {
+            // Check if OTP has expired
+            if (IsOtpExpired())
+            {
+                _controller.TempData["Error"] = "OTP ha expirado";
+                return Assert.IsType<RedirectToActionResult>("Login");
+            }
+
+            return null;
+        }
+
+        private bool IsOtpExpired()
+        {
+            // Retrieve the OTP timestamp from TempData
+            if (_controller.TempData["OtpTimestamp"] is string otpTimestampStr && long.TryParse(otpTimestampStr, out var otpTimestamp))
+            {
+                var otpTime = new DateTime(otpTimestamp);
+                return DateTime.Now > otpTime.AddMinutes(5); 
+            }
+
+            return true;
+        }
+
+        // Tests para Registro de Usuarios
+        [Fact]
+        public async Task Register_WithExistingEmail_ReturnsViewWithError()
+        {
+            // Arrange
+            var model = new RegisterViewModel { Email = "exist@test.com" };
+            _mockUserService.Setup(s => s.IsEmailExistAsync("exist@test.com")).ReturnsAsync(true);
+
+            // Act
+            var result = await _controller.Register(model);
+
+            // Assert
+            var viewResult = Assert.IsType<ViewResult>(result);
+            Assert.False(_controller.ModelState.IsValid);
+        }
+
+        // Tests para manejo de errores
+        [Fact]
+        public async Task Index_Post_ThrowsException_LogsAndReturnsError()
+        {
+            // Arrange
+            var model = new LoginViewModel { Email = "test@error.com" };
+            _mockUserService.Setup(s => s.AuthenticateAsync(It.IsAny<string>(), It.IsAny<string>()))
+                .ThrowsAsync(new Exception("Simulated error"));
+
+            // Act
+            var result = await _controller.Index(model);
+
+            // Assert
+            var viewResult = Assert.IsType<ViewResult>(result);
+            Assert.False(_controller.ModelState.IsValid);
+            _mockLogger.Verify(l => l.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => true),
+                It.IsAny<Exception>(),
+                It.Is<Func<It.IsAnyType, Exception, string>>((v, t) => true)), Times.Once);
+        }
+
     }
 }

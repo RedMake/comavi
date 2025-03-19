@@ -1,4 +1,5 @@
 ﻿using OtpNet;
+using System.Security.Cryptography;
 
 namespace COMAVI_SA.Services
 {
@@ -7,6 +8,8 @@ namespace COMAVI_SA.Services
         string GenerateSecret();
         string GenerateQrCodeUri(string secret, string email);
         bool VerifyOtp(string secret, string code);
+        List<string> GenerateBackupCodes(int cantidad = 8);
+
     }
 
     public class OtpService : IOtpService
@@ -58,6 +61,28 @@ namespace COMAVI_SA.Services
             {
                 return false;
             }
+        }
+
+        public List<string> GenerateBackupCodes(int cantidad = 8)
+        {
+            var backupCodes = new List<string>();
+
+            using (var rng = RandomNumberGenerator.Create())
+            {
+                for (int i = 0; i < cantidad; i++)
+                {
+                    var codeBytes = new byte[5]; // 10 caracteres hexadecimales (5 bytes)
+                    rng.GetBytes(codeBytes);
+
+                    // Convertir a hexadecimal y formatear como XXXXX-XXXXX
+                    var codeHex = BitConverter.ToString(codeBytes).Replace("-", "");
+                    var formattedCode = $"{codeHex.Substring(0, 5)}-{codeHex.Substring(5, 5)}";
+
+                    backupCodes.Add(formattedCode);
+                }
+            }
+
+            return backupCodes;
         }
     }
 }

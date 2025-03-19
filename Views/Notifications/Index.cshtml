@@ -1,0 +1,239 @@
+﻿@model NotificacionesViewModel
+@{
+    ViewData["Title"] = "Notificaciones";
+}
+
+<div class="container-fluid">
+    <!-- Page Heading -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Configurar Notificaciones</h1>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <strong>¡Éxito!</strong> @TempData["SuccessMessage"]
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <strong>¡Error!</strong> @TempData["Error"]
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    }
+
+    <div class="row">
+        <!-- Configuración de Notificaciones -->
+        <div class="col-xl-6 col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Preferencias de Notificación</h6>
+                </div>
+                <div class="card-body">
+                    <form asp-action="GuardarPreferencias" method="post">
+                        <div class="form-group">
+                            <div class="custom-control custom-switch">
+                                <input type="checkbox" class="custom-control-input" id="notificarPorCorreo"
+                                       asp-for="Preferencias.notificar_por_correo">
+                                <label class="custom-control-label" for="notificarPorCorreo">
+                                    Notificar por correo electrónico
+                                </label>
+                            </div>
+                            <small class="form-text text-muted">
+                                Recibirá notificaciones por correo electrónico sobre vencimientos próximos.
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <label asp-for="Preferencias.dias_anticipacion" class="control-label">Días de anticipación</label>
+                            <input asp-for="Preferencias.dias_anticipacion" class="form-control" min="1" max="60" type="number" />
+                            <span asp-validation-for="Preferencias.dias_anticipacion" class="text-danger"></span>
+                            <small class="form-text text-muted">
+                                Recibir notificaciones con esta cantidad de días de anticipación al vencimiento.
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="custom-control custom-switch">
+                                <input type="checkbox" class="custom-control-input" id="notificarLicencia"
+                                       asp-for="Preferencias.notificar_vencimiento_licencia">
+                                <label class="custom-control-label" for="notificarLicencia">
+                                    Notificar vencimiento de licencia
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="custom-control custom-switch">
+                                <input type="checkbox" class="custom-control-input" id="notificarDocumentos"
+                                       asp-for="Preferencias.notificar_vencimiento_documentos">
+                                <label class="custom-control-label" for="notificarDocumentos">
+                                    Notificar vencimiento de documentos
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Guardar Preferencias
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notificaciones Recibidas -->
+        <div class="col-xl-6 col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Notificaciones Recientes</h6>
+                </div>
+                <div class="card-body">
+                    @if (Model.Notificaciones != null && Model.Notificaciones.Any())
+                    {
+                        <div class="list-group notifications-list">
+                            @foreach (var notificacion in Model.Notificaciones.Take(10))
+                            {
+                                <div class="list-group-item list-group-item-action @(notificacion.leida == true ? "bg-light" : "")"
+                                     data-id="@notificacion.id_notificacion">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <h5 class="mb-1">@notificacion.tipo_notificacion</h5>
+                                        <small class="text-muted">@notificacion.fecha_hora.ToString("dd/MM/yyyy HH:mm")</small>
+                                    </div>
+                                    <p class="mb-1">@notificacion.mensaje</p>
+                                    <div class="d-flex justify-content-end">
+                                        @if (notificacion.leida != true)
+                                        {
+                                            <button class="btn btn-sm btn-outline-success mr-2 btn-mark-read">
+                                                <i class="fas fa-check"></i> Marcar como leída
+                                            </button>
+                                        }
+                                        <button class="btn btn-sm btn-outline-danger btn-delete">
+                                            <i class="fas fa-trash"></i> Eliminar
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        @if (Model.Notificaciones.Count > 10)
+                        {
+                            <div class="mt-3 text-center">
+                                <a href="#" class="btn btn-link">Ver todas las notificaciones</a>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-center py-4">
+                            <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                            <p>No hay notificaciones recientes.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Información de Alertas -->
+    <div class="row">
+        <div class="col-xl-12 col-lg-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Acerca de las Notificaciones</h6>
+                </div>
+                <div class="card-body">
+                    <p>El sistema de notificaciones le alertará sobre los siguientes eventos:</p>
+                    <ul>
+                        <li><strong>Vencimiento de licencia:</strong> Recordatorio cuando su licencia de conducir esté próxima a vencer.</li>
+                        <li><strong>Vencimiento de documentos:</strong> Alertas sobre documentos que requieren renovación.</li>
+                        <li><strong>Actualizaciones del sistema:</strong> Notificaciones sobre cambios importantes en el sistema.</li>
+                        <li><strong>Asignación de vehículos:</strong> Información cuando le asignen un nuevo vehículo.</li>
+                    </ul>
+                    <p class="mb-0">Puede configurar qué tipo de notificaciones desea recibir y con cuánta anticipación.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script>
+        $(document).ready(function() {
+            // Marcar como leída
+            $('.btn-mark-read').click(function(e) {
+                e.preventDefault();
+                var btn = $(this);
+                var notificationId = btn.closest('.list-group-item').data('id');
+
+                $.ajax({
+                    url: '@Url.Action("MarcarLeida", "Notifications")',
+                    type: 'POST',
+                    data: {
+                        id: notificationId,
+                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function(result) {
+                        if (result.success) {
+                            btn.closest('.list-group-item').addClass('bg-light');
+                            btn.remove();
+                        } else {
+                            alert('Error al marcar como leída: ' + result.message);
+                        }
+                    },
+                    error: function() {
+                        alert('Error al marcar como leída');
+                    }
+                });
+            });
+
+            // Eliminar notificación
+            $('.btn-delete').click(function(e) {
+                e.preventDefault();
+                var btn = $(this);
+                var notificationId = btn.closest('.list-group-item').data('id');
+
+                if (confirm('¿Está seguro de eliminar esta notificación?')) {
+                    $.ajax({
+                        url: '@Url.Action("EliminarNotificacion", "Notifications")',
+                        type: 'POST',
+                        data: {
+                            id: notificationId,
+                            __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                        },
+                        success: function(result) {
+                            if (result.success) {
+                                btn.closest('.list-group-item').fadeOut(300, function() {
+                                    $(this).remove();
+                                    if ($('.list-group-item').length === 0) {
+                                        $('.notifications-list').html(
+                                            '<div class="text-center py-4">' +
+                                            '<i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>' +
+                                            '<p>No hay notificaciones recientes.</p>' +
+                                            '</div>'
+                                        );
+                                    }
+                                });
+                            } else {
+                                alert('Error al eliminar: ' + result.message);
+                            }
+                        },
+                        error: function() {
+                            alert('Error al eliminar notificación');
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+}

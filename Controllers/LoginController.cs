@@ -3,12 +3,15 @@ using COMAVI_SA.Models;
 using COMAVI_SA.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using static COMAVI_SA.Middleware.SessionValidationMiddleware;
 
 namespace COMAVI_SA.Controllers
 {
@@ -123,31 +126,245 @@ namespace COMAVI_SA.Controllers
             }
         }
 
+        
+
+        [Authorize]
+        [HttpGet]
+        public async Task<IActionResult> ConfigurarMFA()
+        {
+            try
+            {
+                int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                string userEmail = User.Identity?.Name;
+
+                // Verificar si MFA ya está habilitado
+                var user = await _userService.GetUserByIdAsync(userId);
+                if (user == null)
+                {
+                    TempData["Error"] = "Error al cargar los datos del usuario";
+                    return RedirectToAction("Profile");
+                }
+
+                // Si MFA ya está habilitado, mostrar vista para desactivarlo
+                if (user.mfa_habilitado)
+                {
+                    ViewBag.MfaHabilitado = true;
+                    return View(new ConfigurarMFAViewModel());
+                }
+
+                // Si MFA no está habilitado, configurar nuevo MFA
+                await _userService.SetupMfaAsync(userId);
+                var secret = await _userService.GetMfaSecretAsync(userId);
+
+                if (string.IsNullOrEmpty(secret))
+                {
+                    TempData["Error"] = "Error al generar el código de autenticación";
+                    return RedirectToAction("Profile");
+                }
+
+                var model = new ConfigurarMFAViewModel
+                {
+                    Secret = secret,
+                    QrCodeUrl = _otpService.GenerateQrCodeUri(secret, userEmail)
+                };
+
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al configurar MFA");
+                TempData["Error"] = "Error al configurar la autenticación de dos factores";
+                return RedirectToAction("Profile");
+            }
+        }
+
+        [Authorize]
+        [HttpPost]
+        public async Task<IActionResult> ConfigurarMFA(ConfigurarMFAViewModel model)
+        {
+            if (!ModelState.IsValid)
+                return View(model);
+
+            try
+            {
+                int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+
+                // Verificar si MFA ya está habilitado
+                if (await _userService.IsMfaEnabledAsync(userId))
+                {
+                    TempData["Error"] = "La autenticación de dos factores ya está habilitada.";
+                    return RedirectToAction("Profile");
+                }
+
+                // Activar MFA y verificar código
+                bool activado = await _userService.EnableMfaAsync(userId, model.OtpCode);
+
+                if (!activado)
+                {
+                    ModelState.AddModelError("OtpCode", "Código OTP inválido. Verifique que lo haya ingresado correctamente.");
+
+                    // Volver a cargar datos para el QR
+                    string userEmail = User.FindFirstValue(ClaimTypes.Email);
+                    var secret = await _userService.GetMfaSecretAsync(userId);
+                    model.Secret = secret;
+                    model.QrCodeUrl = _otpService.GenerateQrCodeUri(secret, userEmail);
+
+                    return View(model);
+                }
+
+                // Generar códigos de respaldo
+                var codigosRespaldo = await _userService.GenerateBackupCodesAsync(userId);
+
+                // Almacenar códigos en TempData para mostrarlos
+                TempData["CodigosRespaldo"] = codigosRespaldo;
+
+                TempData["SuccessMessage"] = "Autenticación de dos factores activada exitosamente.";
+                return RedirectToAction("MostrarCodigosRespaldo");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al configurar MFA");
+                TempData["Error"] = "Error al configurar la autenticación de dos factores";
+                return RedirectToAction("Profile");
+            }
+        }
+
+        [Authorize]
+        [HttpGet]
+        public IActionResult MostrarCodigosRespaldo()
+        {
+            // Try to get backup codes from TempData
+            var codigos = TempData["CodigosRespaldo"] as List<string>;
+
+            // If not found in TempData, try to generate new ones
+            if (codigos == null || !codigos.Any())
+            {
+                try
+                {
+                    int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+
+                    // Try to regenerate backup codes
+                    Task<List<string>> taskCodigos = _userService.GenerateBackupCodesAsync(userId);
+                    taskCodigos.Wait(); // Since we're in a synchronous method
+                    codigos = taskCodigos.Result;
+
+                    if (codigos == null || !codigos.Any())
+                    {
+                        TempData["Error"] = "No se pudieron generar códigos de respaldo.";
+                        return RedirectToAction("Profile");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error al regenerar códigos de respaldo");
+                    TempData["Error"] = "No hay códigos de respaldo disponibles";
+                    return RedirectToAction("Profile");
+                }
+            }
+
+            var model = new CodigosRespaldoViewModel
+            {
+                Codigos = codigos
+            };
+
+            return View(model);
+        }
+
         [AllowAnonymous]
         [HttpGet]
         public async Task<IActionResult> VerifyOtp()
         {
             try
             {
+                // Si ya está autenticado completamente, verificar si ha completado MFA
+                if (User.Identity.IsAuthenticated)
+                {
+                    // Verificar si el usuario tiene el claim MfaCompleted
+                    bool mfaCompleted = User.HasClaim(c => c.Type == "MfaCompleted" && c.Value == "true");
+
+                    if (mfaCompleted)
+                    {
+                        _logger.LogInformation("Usuario ya autenticado con MFA completo, redirigiendo a Home");
+                        return RedirectToAction("Index", "Home");
+                    }
+
+                    // Si está autenticado pero no ha completado MFA, limpiar su autenticación
+                    _logger.LogWarning("Usuario autenticado sin MFA completado. Limpiando autenticación.");
+                    await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                    HttpContext.Session.Clear();
+                    foreach (var cookie in Request.Cookies.Keys)
+                    {
+                        Response.Cookies.Delete(cookie);
+                    }
+                    return RedirectToAction("Index");
+                }
+
+                // Verificar que tenemos datos de usuario en TempData
                 var userId = TempData.Peek("UserId") as int?;
                 var email = TempData.Peek("UserEmail") as string;
 
+                _logger.LogInformation("VerifyOtp: UserId={UserId}, Email={Email}", userId, email);
+
                 if (!userId.HasValue || string.IsNullOrEmpty(email))
-                    return RedirectToAction("Index");
-
-                var mfaSecret = await _userService.GetMfaSecretAsync(userId.Value);
-                if (string.IsNullOrEmpty(mfaSecret))
                 {
-                    await _userService.SetupMfaAsync(userId.Value);
-                    mfaSecret = await _userService.GetMfaSecretAsync(userId.Value);
-
-                    var qrCode = _otpService.GenerateQrCodeUri(mfaSecret, email);
-                    ViewBag.QrCode = qrCode;
-                    ViewBag.Secret = mfaSecret;
-                    ViewBag.IsFirstTimeSetup = true;
+                    _logger.LogWarning("VerifyOtp: No hay datos de usuario en TempData");
+                    TempData["Error"] = "Su sesión ha expirado. Por favor, inicie sesión nuevamente.";
+                    return RedirectToAction("Index");
                 }
 
-                var model = new OtpViewModel { Email = email };
+                // Verificar si el usuario existe
+                var user = await _userService.GetUserByIdAsync(userId.Value);
+                if (user == null)
+                {
+                    _logger.LogWarning("VerifyOtp: Usuario no encontrado");
+                    TempData["Error"] = "Usuario no encontrado. Por favor, inicie sesión nuevamente.";
+                    return RedirectToAction("Index");
+                }
+
+                // Si el usuario no tiene MFA habilitado, pasar directamente al login
+                if (!user.mfa_habilitado)
+                {
+                    _logger.LogInformation("VerifyOtp: Usuario no tiene MFA habilitado, pasando directamente");
+
+                    // Crear un modelo OtpViewModel con un código ficticio "bypass"
+                    var bypassModel = new OtpViewModel { Email = email, OtpCode = "bypass" };
+
+                    // Llamar directamente al método POST de VerifyOtp
+                    return await VerifyOtp(bypassModel);
+                }
+
+                var mfaSecret = await _userService.GetMfaSecretAsync(userId.Value);
+                _logger.LogInformation("VerifyOtp: MFA Secret obtenido={HasSecret}", !string.IsNullOrEmpty(mfaSecret));
+
+                // Verificar límite máximo de intentos global (no solo de la sesión actual)
+                int intentosFallidos = await _userService.GetFailedMfaAttemptsAsync(userId.Value);
+
+                // Si excede el límite máximo (por ejemplo, 10 intentos), bloquear temporalmente la cuenta
+                if (intentosFallidos >= 10)
+                {
+                    _logger.LogWarning("Usuario {Email} ha excedido el límite máximo de intentos de MFA", email);
+                    TempData["Error"] = "Ha excedido el número máximo de intentos. Su cuenta ha sido bloqueada temporalmente. Contacte al administrador.";
+                    return RedirectToAction("Index");
+                }
+
+                var model = new OtpViewModel { Email = email, IntentosFallidos = intentosFallidos };
+
+                // Si hay 3 o más intentos fallidos, mostrar opción de código de respaldo
+                if (intentosFallidos >= 3)
+                {
+                    model.UsarCodigoRespaldo = true;
+                    ViewBag.MostrarCodigoRespaldo = true;
+                }
+
+                // Guardar timestamp para calcular tiempo de expiración
+                TempData["OtpTimestamp"] = DateTime.Now.Ticks.ToString();
+
+                // Guardar la URL actual para poder redirigir después de la verificación
+                if (TempData["ReturnUrl"] == null)
+                {
+                    TempData["ReturnUrl"] = "/Home/Index"; // URL predeterminada
+                }
+
                 return View(model);
             }
             catch (Exception ex)
@@ -158,6 +375,7 @@ namespace COMAVI_SA.Controllers
             }
         }
 
+        // Eliminar el método VerifyOtp duplicado y mantener solo esta versión completa
         [AllowAnonymous]
         [HttpPost]
         public async Task<IActionResult> VerifyOtp(OtpViewModel model)
@@ -172,28 +390,127 @@ namespace COMAVI_SA.Controllers
                 var rememberMe = TempData["RememberMe"] as bool? ?? false;
 
                 if (!userId.HasValue || string.IsNullOrEmpty(email))
-                    return RedirectToAction("Index");
-
-                if (!await _userService.VerifyMfaCodeAsync(userId.Value, model.OtpCode))
                 {
-                    ModelState.AddModelError("", "Código OTP inválido. Intente nuevamente.");
-                    return View(model);
+                    _logger.LogWarning("VerifyOtp POST: Faltan datos de usuario en TempData");
+                    TempData["Error"] = "Su sesión ha expirado. Por favor, inicie sesión nuevamente.";
+                    return RedirectToAction("Index");
+                }
+
+                if (TempData["OtpTimestamp"] != null)
+                {
+                    long timestamp = long.Parse(TempData["OtpTimestamp"].ToString());
+                    TimeSpan elapsed = TimeSpan.FromTicks(DateTime.Now.Ticks - timestamp);
+
+                    if (elapsed.TotalMinutes > 5)
+                    {
+                        _logger.LogWarning("OTP expirado para usuario {Email}", email);
+                        TempData["Error"] = "El código OTP ha expirado. Por favor, inicie sesión nuevamente.";
+                        return RedirectToAction("Index");
+                    }
+                }
+
+                bool verificacionExitosa = false;
+
+                // Verificar si el usuario está utilizando código de respaldo
+                if (model.UsarCodigoRespaldo)
+                {
+                    verificacionExitosa = await _userService.VerifyBackupCodeAsync(userId.Value, model.OtpCode);
+
+                    if (!verificacionExitosa)
+                    {
+                        await _userService.RecordMfaAttemptAsync(userId.Value, false);
+
+                        // Actualizar contador de intentos fallidos
+                        model.IntentosFallidos = await _userService.GetFailedMfaAttemptsAsync(userId.Value);
+
+                        // Verificar si excedió el límite máximo
+                        if (model.IntentosFallidos >= 10)
+                        {
+                            _logger.LogWarning("Usuario {Email} ha excedido el límite máximo de intentos de MFA", email);
+                            TempData["Error"] = "Ha excedido el número máximo de intentos. Su cuenta ha sido bloqueada temporalmente.";
+                            return RedirectToAction("Index");
+                        }
+
+                        ModelState.AddModelError("", "Código de respaldo inválido. Intente nuevamente.");
+                        ViewBag.MostrarCodigoRespaldo = true;
+                        return View(model);
+                    }
+                }
+                else if (model.OtpCode == "bypass")
+                {
+                    // Código especial para bypass cuando MFA no está habilitado
+                    var currentUser = await _userService.GetUserByIdAsync(userId.Value);
+                    verificacionExitosa = currentUser != null && !currentUser.mfa_habilitado;
+
+                    if (!verificacionExitosa)
+                    {
+                        _logger.LogWarning("Intento de bypass de MFA no autorizado para usuario {Email}", email);
+                        TempData["Error"] = "Error de autenticación. Por favor, inicie sesión nuevamente.";
+                        return RedirectToAction("Index");
+                    }
+                }
+                else
+                {
+                    // Verificación normal de OTP
+                    verificacionExitosa = await _userService.VerifyMfaCodeAsync(userId.Value, model.OtpCode);
+
+                    if (!verificacionExitosa)
+                    {
+                        // Incrementar intentos fallidos
+                        await _userService.RecordMfaAttemptAsync(userId.Value, false);
+
+                        // Obtener número de intentos fallidos
+                        var intentosFallidos = await _userService.GetFailedMfaAttemptsAsync(userId.Value);
+
+                        ModelState.AddModelError("", "Código OTP inválido. Intente nuevamente.");
+
+                        // Si hay 3 o más intentos fallidos, mostrar opción de código de respaldo
+                        if (intentosFallidos >= 3)
+                        {
+                            ViewBag.MostrarCodigoRespaldo = true;
+                            ModelState.AddModelError("", "Ha excedido el número máximo de intentos. Puede usar un código de respaldo para continuar.");
+                        }
+
+                        // Si excedió el límite máximo, bloquear temporalmente
+                        if (intentosFallidos >= 10)
+                        {
+                            _logger.LogWarning("Usuario {Email} ha excedido el límite máximo de intentos de MFA", email);
+                            TempData["Error"] = "Ha excedido el número máximo de intentos. Su cuenta ha sido bloqueada temporalmente.";
+                            return RedirectToAction("Index");
+                        }
+
+                        model.IntentosFallidos = intentosFallidos;
+
+                        // Actualizar timestamp para extender el tiempo
+                        TempData["OtpTimestamp"] = DateTime.Now.Ticks;
+
+                        return View(model);
+                    }
                 }
 
                 var user = await _userService.GetUserByIdAsync(userId.Value);
                 if (user == null)
+                {
+                    _logger.LogWarning("VerifyOtp POST: Usuario no encontrado después de verificación");
+                    TempData["Error"] = "Usuario no encontrado. Por favor, inicie sesión nuevamente.";
                     return RedirectToAction("Index");
+                }
 
                 // Actualizar último ingreso
                 user.ultimo_ingreso = DateTime.Now;
                 await _context.SaveChangesAsync();
+
+                // Reiniciar contador de intentos fallidos MFA
+                await _userService.ResetMfaFailedAttemptsAsync(userId.Value);
 
                 var claims = new List<Claim>
                 {
                     new Claim(ClaimTypes.NameIdentifier, user.id_usuario.ToString()),
                     new Claim(ClaimTypes.Name, user.nombre_usuario),
                     new Claim(ClaimTypes.Email, user.correo_electronico),
-                    new Claim(ClaimTypes.Role, user.rol)
+                    new Claim(ClaimTypes.Role, user.rol),
+                    // Añadir un claim específico para indicar que MFA ha sido completado
+                    new Claim("MfaCompleted", "true")
                 };
 
                 var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
@@ -223,6 +540,10 @@ namespace COMAVI_SA.Controllers
                 _context.SesionesActivas.Add(sessionInfo);
                 await _context.SaveChangesAsync();
 
+                // Establecer indicador de MFA completado en TempData
+                TempData["MfaCompleted"] = true;
+                _logger.LogInformation("Verificación OTP completada con éxito para usuario {Email}", email);
+
                 // Si es chofer y no ha completado su perfil, redirigir a completar perfil
                 if (user.rol == "user")
                 {
@@ -240,17 +561,93 @@ namespace COMAVI_SA.Controllers
                     if (chofer == null)
                     {
                         TempData["PerfilMessage"] = "Por favor, complete su perfil para continuar.";
-                        return RedirectToAction("CompletarPerfil");
+                        return RedirectToAction("Profile");
                     }
                 }
 
-                return RedirectToAction("Index", "Home");
+                // Redireccionar a la URL de retorno o a Home/Index
+                string returnUrl = TempData["ReturnUrl"]?.ToString() ?? "/Home/Index";
+                return Redirect(returnUrl);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error durante la verificación OTP");
                 ModelState.AddModelError("", "Error en el servidor. Por favor, intente más tarde.");
                 return View(model);
+            }
+        }
+
+        [Authorize]
+        [HttpGet]
+        public async Task<IActionResult> RegenerarCodigosRespaldo()
+        {
+            try
+            {
+                int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+
+                // Verificar si MFA está habilitado
+                if (!await _userService.IsMfaEnabledAsync(userId))
+                {
+                    TempData["Error"] = "Debe habilitar la autenticación de dos factores primero";
+                    return RedirectToAction("Profile");
+                }
+
+                // Generar nuevos códigos de respaldo
+                var codigosRespaldo = await _userService.GenerateBackupCodesAsync(userId);
+
+                // Almacenar códigos en TempData para mostrarlos
+                TempData["CodigosRespaldo"] = codigosRespaldo;
+                TempData["SuccessMessage"] = "Se han generado nuevos códigos de respaldo. Los anteriores ya no son válidos.";
+
+                return RedirectToAction("MostrarCodigosRespaldo");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al regenerar códigos de respaldo");
+                TempData["Error"] = "Error al regenerar los códigos de respaldo";
+                return RedirectToAction("Profile");
+            }
+        }
+
+        [Authorize]
+        [HttpGet]
+        public IActionResult DesactivarMFA()
+        {
+            return View();
+        }
+
+        [Authorize]
+        [HttpPost]
+        public async Task<IActionResult> DesactivarMFA(string codigoRespaldo)
+        {
+            try
+            {
+                int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+
+                // Verificar si MFA está habilitado
+                if (!await _userService.IsMfaEnabledAsync(userId))
+                {
+                    TempData["Error"] = "La autenticación de dos factores ya está desactivada";
+                    return RedirectToAction("Profile");
+                }
+
+                // Desactivar MFA
+                bool desactivado = await _userService.DisableMfaAsync(userId, codigoRespaldo);
+
+                if (!desactivado)
+                {
+                    TempData["Error"] = "Código de respaldo inválido. No se pudo desactivar la autenticación de dos factores.";
+                    return View();
+                }
+
+                TempData["SuccessMessage"] = "Autenticación de dos factores desactivada exitosamente.";
+                return RedirectToAction("Profile");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al desactivar MFA");
+                TempData["Error"] = "Error al desactivar la autenticación de dos factores";
+                return RedirectToAction("Profile");
             }
         }
 
@@ -367,43 +764,105 @@ namespace COMAVI_SA.Controllers
             return View(model);
         }
 
+        [Authorize(Roles = "admin,user")]
         [HttpGet]
-        public IActionResult CompletarPerfil()
+        public async Task<IActionResult> CompletarPerfil()
         {
+            _logger.LogInformation("Iniciando método CompletarPerfil (GET)");
+
             if (!User.Identity.IsAuthenticated)
+            {
+                _logger.LogWarning("Intento de acceso sin autenticación a CompletarPerfil");
                 return RedirectToAction("Index");
-
-            return View();
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> CompletarPerfil(PerfilViewModel model)
-        {
-            if (!ModelState.IsValid)
-                return View(model);
+            }
 
             try
             {
+                // Obtener el ID del usuario actual
                 int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+                _logger.LogInformation("CompletarPerfil: Usuario autenticado con ID {UserId}", userId);
+
                 var usuario = await _context.Usuarios.FindAsync(userId);
 
                 if (usuario == null)
+                {
+                    _logger.LogWarning("No se encontró el usuario con ID {UserId} en la base de datos", userId);
                     return RedirectToAction("Index");
+                }
+
+                // Verificar si ya existe un perfil para este usuario usando la relación directa
+                var choferExistente = await _context.Choferes
+                    .FirstOrDefaultAsync(c => c.id_usuario == userId);
+
+                // Si ya existe un perfil, redirigir a SubirDocumentos
+                if (choferExistente != null)
+                {
+                    _logger.LogInformation("Se encontró un perfil existente para el usuario. ID de chofer: {IdChofer}, ID usuario: {IdUsuario}",
+                        choferExistente.id_chofer, choferExistente.id_usuario);
+                    TempData["SuccessMessage"] = "Su perfil ya está completo. Ahora puede subir sus documentos.";
+                    _logger.LogInformation("Redirigiendo a SubirDocumentos, ya que el perfil está completo");
+                    return RedirectToAction("SubirDocumentos");
+                }
+
+                _logger.LogInformation("No se encontró un perfil existente para el usuario con ID: {UserId}. Mostrando vista para completar el perfil", userId);
+                // Si no existe perfil, mostrar la vista para completarlo
+                return View();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al verificar el perfil del usuario: {Message}", ex.Message);
+                TempData["Error"] = "Error al verificar su perfil. Por favor, intente más tarde.";
+                return RedirectToAction("Index", "Home");
+            }
+        }
+
+        [Authorize(Roles = "admin,user")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CompletarPerfil(PerfilViewModel model)
+        {
+            try
+            {
+                _logger.LogInformation("CompletarPerfil POST recibido. IsValid: {IsValid}", ModelState.IsValid);
+
+                if (!ModelState.IsValid && model.Estado != null)
+                {
+                    // Registrar errores específicos de validación
+                    foreach (var error in ModelState.Values.SelectMany(v => v.Errors))
+                    {
+                        _logger.LogWarning("Error de validación: {Error}", error.ErrorMessage);
+                    }
+                    return View(model);
+                }
+
+                _logger.LogInformation("Datos del modelo: Edad={Edad}, Cedula={Cedula}, Licencia={Licencia}",
+                    model.Edad, model.Numero_Cedula, model.Licencia);
+
+                int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+                _logger.LogInformation("UserId obtenido: {UserId}", userId);
+
+                var usuario = await _context.Usuarios.FindAsync(userId);
+                if (usuario == null)
+                {
+                    _logger.LogWarning("No se encontró el usuario con ID {UserId}", userId);
+                    return RedirectToAction("Index");
+                }
 
                 // Verificar si existe un registro de chofer para este usuario
-                string cedula = model.Numero_Cedula;
                 var choferExistente = await _context.Choferes
-                    .FirstOrDefaultAsync(c => c.numero_cedula == cedula);
+                    .FirstOrDefaultAsync(c => c.id_usuario == userId);
 
                 if (choferExistente != null)
                 {
-                    ModelState.AddModelError("Numero_Cedula", "Este número de cédula ya está registrado para otro chofer.");
-                    return View(model);
+                    _logger.LogInformation("Ya existe un perfil para este usuario con ID: {IdUsuario}", userId);
+                    TempData["SuccessMessage"] = "Su perfil ya está completo. Ahora puede subir sus documentos.";
+                    return RedirectToAction("SubirDocumentos");
                 }
 
                 // Crear nuevo registro de chofer
                 var nuevoChofer = new Choferes
                 {
+                    id_usuario = userId,  // Establecemos la relación con el usuario actual
                     nombreCompleto = usuario.nombre_usuario,
                     edad = model.Edad.Value,
                     numero_cedula = model.Numero_Cedula,
@@ -414,37 +873,110 @@ namespace COMAVI_SA.Controllers
                 };
 
                 _context.Choferes.Add(nuevoChofer);
+
+                _logger.LogInformation("Guardando cambios en la base de datos para el usuario con ID: {UserId}", userId);
                 await _context.SaveChangesAsync();
+                _logger.LogInformation("Cambios guardados exitosamente. Redirigiendo a SubirDocumentos");
 
                 TempData["SuccessMessage"] = "Perfil completado exitosamente.";
                 return RedirectToAction("SubirDocumentos");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al completar perfil de usuario");
+                _logger.LogError(ex, "Error al completar perfil de usuario: {Message}", ex.Message);
+
+                // Intentar obtener más información sobre la excepción
+                if (ex.InnerException != null)
+                {
+                    _logger.LogError(ex.InnerException, "Inner Exception: {Message}", ex.InnerException.Message);
+                }
+
                 ModelState.AddModelError("", "Error en el servidor. Por favor, intente más tarde.");
                 return View(model);
             }
         }
 
+        [Authorize(Roles = "admin,user")]
         [HttpGet]
-        public IActionResult SubirDocumentos()
+        public async Task<IActionResult> SubirDocumentos()
         {
             if (!User.Identity.IsAuthenticated)
                 return RedirectToAction("Index");
 
-            return View(new CargaDocumentoViewModel());
+            try
+            {
+                int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+                var chofer = await _context.Choferes
+                    .FirstOrDefaultAsync(c => c.id_usuario == userId);
+
+                if (chofer == null)
+                {
+                    TempData["Error"] = "Debe completar su perfil primero.";
+                    return RedirectToAction("CompletarPerfil");
+                }
+
+                // Obtener documentos existentes
+                var documentosExistentes = await _context.Documentos
+                    .Where(d => d.id_chofer == chofer.id_chofer)
+                    .ToListAsync();
+
+                var model = new CargaDocumentoViewModel
+                {
+                    DocumentosExistentes = documentosExistentes
+                };
+
+                // Verificar si todos los documentos están verificados
+                bool todosVerificados = documentosExistentes.All(d => d.estado_validacion == "verificado");
+
+                if (todosVerificados)
+                {
+                    TempData["InfoMessage"] = "Todos sus documentos ya están verificados.";
+                    return RedirectToAction("Profile");
+                }
+
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar página de subir documentos");
+                TempData["Error"] = "Ocurrió un error al cargar la página.";
+                return RedirectToAction("Profile");
+            }
         }
 
+        [Authorize(Roles = "admin,user")]
         [HttpPost]
         public async Task<IActionResult> SubirDocumentos(CargaDocumentoViewModel model)
         {
-            if (!ModelState.IsValid)
-                return View(model);
-
             try
             {
-                // Validar PDF
+                int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+                var chofer = await _context.Choferes
+                    .FirstOrDefaultAsync(c => c.id_usuario == userId);
+
+                if (chofer == null)
+                {
+                    TempData["Error"] = "Debe completar su perfil primero.";
+                    return RedirectToAction("CompletarPerfil");
+                }
+
+                // Validar si el documento ya está verificado
+                var documentosExistentes = await _context.Documentos
+                    .Where(d => d.id_chofer == chofer.id_chofer &&
+                                d.tipo_documento == model.TipoDocumento)
+                    .ToListAsync();
+
+                var documentoVerificado = documentosExistentes
+                    .FirstOrDefault(d => d.estado_validacion == "verificado");
+
+                if (documentoVerificado != null)
+                {
+                    ModelState.AddModelError("TipoDocumento",
+                        "Este tipo de documento ya ha sido verificado y no puede ser modificado.");
+                    return View(model);
+                }
+
+                // Validar PDF (códigos anteriores siguen igual)
                 var (isValid, errorMessage) = await _pdfService.ValidatePdfAsync(model.ArchivoPdf);
                 if (!isValid)
                 {
@@ -456,50 +988,52 @@ namespace COMAVI_SA.Controllers
                 string pdfText = await _pdfService.ExtractTextFromPdfAsync(model.ArchivoPdf);
                 if (!_pdfService.ContainsRequiredInformation(pdfText, model.TipoDocumento))
                 {
-                    ModelState.AddModelError("ArchivoPdf", $"El documento no parece contener la información necesaria para un documento tipo '{model.TipoDocumento}'.");
+                    ModelState.AddModelError("ArchivoPdf",
+                        $"El documento no parece contener la información necesaria para un documento tipo '{model.TipoDocumento}'.");
                     return View(model);
                 }
 
                 // Guardar archivo
                 var (filePath, fileHash) = await _pdfService.SavePdfAsync(model.ArchivoPdf);
 
-                // Obtener ID del chofer actual
-                int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-                var usuario = await _context.Usuarios.FindAsync(userId);
-                string cedula = string.Empty;
+                // Manejar documentos pendientes o rechazados
+                var documentoPendiente = documentosExistentes
+                    .FirstOrDefault(d => d.estado_validacion == "pendiente" ||
+                                         d.estado_validacion == "rechazado");
 
-                if (usuario.correo_electronico.Contains("@"))
+                if (documentoPendiente != null)
                 {
-                    cedula = usuario.correo_electronico.Substring(0, usuario.correo_electronico.IndexOf('@'));
+                    // Actualizar documento existente
+                    documentoPendiente.fecha_emision = model.FechaEmision;
+                    documentoPendiente.fecha_vencimiento = model.FechaVencimiento;
+                    documentoPendiente.ruta_archivo = filePath;
+                    documentoPendiente.hash_documento = fileHash;
+                    documentoPendiente.tipo_mime = "application/pdf";
+                    documentoPendiente.tamano_archivo = (int)model.ArchivoPdf.Length;
+                    documentoPendiente.estado_validacion = "pendiente";
+                }
+                else
+                {
+                    // Crear nuevo documento si no existe
+                    var documento = new Documentos
+                    {
+                        id_chofer = chofer.id_chofer,
+                        tipo_documento = model.TipoDocumento,
+                        fecha_emision = model.FechaEmision,
+                        fecha_vencimiento = model.FechaVencimiento,
+                        ruta_archivo = filePath,
+                        tipo_mime = "application/pdf",
+                        tamano_archivo = (int)model.ArchivoPdf.Length,
+                        hash_documento = fileHash,
+                        estado_validacion = "pendiente"
+                    };
+
+                    _context.Documentos.Add(documento);
                 }
 
-                var chofer = await _context.Choferes
-                    .FirstOrDefaultAsync(c => c.numero_cedula == cedula);
-
-                if (chofer == null)
-                {
-                    ModelState.AddModelError("", "No se encontró información del chofer asociado a su cuenta.");
-                    return View(model);
-                }
-
-                // Guardar información del documento
-                var documento = new Documentos
-                {
-                    id_chofer = chofer.id_chofer,
-                    tipo_documento = model.TipoDocumento,
-                    fecha_emision = model.FechaEmision,
-                    fecha_vencimiento = model.FechaVencimiento,
-                    ruta_archivo = filePath,
-                    tipo_mime = "application/pdf",
-                    tamano_archivo = (int)model.ArchivoPdf.Length,
-                    hash_documento = fileHash,
-                    estado_validacion = "pendiente"
-                };
-
-                _context.Documentos.Add(documento);
                 await _context.SaveChangesAsync();
 
-                // Notificar a administradores
+                // Notificar a administradores (código anterior)
                 var admins = await _context.Usuarios
                     .Where(u => u.rol == "admin")
                     .ToListAsync();
@@ -536,26 +1070,125 @@ namespace COMAVI_SA.Controllers
         {
             try
             {
-                // Remover sesión activa
+                string sessionId = HttpContext.Session.Id;
+                _logger.LogInformation("Iniciando proceso de logout para sesión {SessionId}", sessionId);
+
+                // Limpiar token JWT de la sesión
+                string jwtToken = HttpContext.Session.GetString("JwtToken");
+                if (!string.IsNullOrEmpty(jwtToken))
+                {
+                    // Añadir el token a la lista negra si existe un servicio para ello
+                    var blacklistService = HttpContext.RequestServices.GetService<IJwtBlacklistService>();
+                    if (blacklistService != null)
+                    {
+                        // Añadir a la lista negra por 24 horas
+                        blacklistService.AddToBlacklist(jwtToken, TimeSpan.FromHours(24));
+                        _logger.LogInformation("Token JWT añadido a la lista negra");
+                    }
+                }
+
+                HttpContext.Session.Remove("JwtToken");
+
+                // Limpiar todos los TempData relacionados con la autenticación
+                TempData.Remove("UserEmail");
+                TempData.Remove("UserId");
+                TempData.Remove("RememberMe");
+                TempData.Remove("MfaCompleted");
+                TempData.Remove("OtpTimestamp");
+                TempData.Remove("ReturnUrl");
+
+                // Eliminar sesiones activas de la base de datos
                 if (User.Identity.IsAuthenticated)
                 {
                     var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+                    _logger.LogInformation("Eliminando sesiones activas para usuario {UserId}", userId);
+
                     var sesionesActivas = await _context.SesionesActivas
                         .Where(s => s.id_usuario == userId)
                         .ToListAsync();
 
-                    _context.SesionesActivas.RemoveRange(sesionesActivas);
-                    await _context.SaveChangesAsync();
+                    if (sesionesActivas.Any())
+                    {
+                        _context.SesionesActivas.RemoveRange(sesionesActivas);
+                        await _context.SaveChangesAsync();
+                        _logger.LogInformation("Eliminadas {Count} sesiones activas de la base de datos", sesionesActivas.Count);
+                    }
                 }
 
-                await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                // Eliminar todas las cookies con configuración exhaustiva
+                _logger.LogInformation("Eliminando todas las cookies");
+                foreach (var cookie in Request.Cookies.Keys)
+                {
+                    Response.Cookies.Delete(cookie, new CookieOptions
+                    {
+                        Expires = DateTime.Now.AddDays(-1),
+                        SameSite = SameSiteMode.Strict,
+                        Secure = true,
+                        HttpOnly = true,
+                        Path = "/"
+                    });
+                    _logger.LogDebug("Cookie eliminada: {CookieName}", cookie);
+                }
+
+                // Asegurar que se eliminan las cookies de autenticación específicas
+                Response.Cookies.Delete(".AspNetCore.Cookies", new CookieOptions
+                {
+                    Expires = DateTime.Now.AddDays(-1),
+                    SameSite = SameSiteMode.Strict,
+                    Secure = true,
+                    HttpOnly = true,
+                    Path = "/"
+                });
+
+                Response.Cookies.Delete("COMAVI.Auth", new CookieOptions
+                {
+                    Expires = DateTime.Now.AddDays(-1),
+                    SameSite = SameSiteMode.Strict,
+                    Secure = true,
+                    HttpOnly = true,
+                    Path = "/"
+                });
+
+                Response.Cookies.Delete("COMAVI.Session", new CookieOptions
+                {
+                    Expires = DateTime.Now.AddDays(-1),
+                    SameSite = SameSiteMode.Strict,
+                    Secure = true,
+                    HttpOnly = true,
+                    Path = "/"
+                });
+
+                // Limpiar datos de sesión
+                _logger.LogInformation("Limpiando datos de sesión");
                 HttpContext.Session.Clear();
-                return RedirectToAction("Index");
+
+                // Cerrar autenticación 
+                _logger.LogInformation("Cerrando autenticación por cookies");
+                await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                await HttpContext.SignOutAsync(JwtBearerDefaults.AuthenticationScheme);
+                await HttpContext.SignOutAsync("Identity.Application"); // Para asegurarnos
+
+                // Limpiar el principal de autenticación
+                HttpContext.User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity());
+
+                _logger.LogInformation("Proceso de logout completado correctamente");
+
+                // Forzar nueva sesión con parámetros para evitar cacheo
+                return RedirectToAction("Index", new { t = DateTime.Now.Ticks, clean = true, forceNew = true });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error durante el cierre de sesión");
-                return RedirectToAction("Index");
+                _logger.LogError(ex, "Error grave durante el cierre de sesión");
+
+                try
+                {
+                    // Intento de limpieza de emergencia
+                    HttpContext.Session.Clear();
+                    await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                }
+                catch { /* Absorber cualquier error adicional */ }
+
+                return RedirectToAction("Index", new { t = DateTime.Now.Ticks, error = true });
             }
         }
 
@@ -601,6 +1234,7 @@ namespace COMAVI_SA.Controllers
             }
         }
 
+        [Authorize(Roles = "admin,user")]
         [HttpGet]
         public async Task<IActionResult> Profile()
         {
@@ -620,7 +1254,9 @@ namespace COMAVI_SA.Controllers
                     NombreUsuario = user.nombre_usuario,
                     Email = user.correo_electronico,
                     Rol = user.rol,
-                    UltimoIngreso = user.ultimo_ingreso
+                    UltimoIngreso = user.ultimo_ingreso,
+                    MfaHabilitado = user.mfa_habilitado,
+                    FechaActualizacionPassword = user.fecha_actualizacion_password 
                 };
 
                 // Si el usuario es chofer, cargar información adicional
@@ -637,7 +1273,7 @@ namespace COMAVI_SA.Controllers
 
                     // Consultar la base de datos con el valor extraído
                     var chofer = await _context.Choferes
-                        .FirstOrDefaultAsync(c => c.numero_cedula == cedula);
+                        .FirstOrDefaultAsync(c => c.id_usuario == userId);
 
                     if (chofer != null)
                     {
@@ -740,6 +1376,118 @@ namespace COMAVI_SA.Controllers
                 _logger.LogError(ex, "Error al procesar solicitud de restablecimiento de contraseña");
                 ModelState.AddModelError("", "Error en el servidor. Por favor, intente más tarde.");
                 return View();
+            }
+        }
+
+
+        [Authorize]
+        [HttpGet]
+        public async Task<IActionResult> CambiarContrasena()
+        {
+            try
+            {
+                int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+                var user = await _userService.GetUserByIdAsync(userId);
+
+                if (user == null)
+                {
+                    TempData["Error"] = "No se pudo encontrar la información del usuario.";
+                    return RedirectToAction("Profile");
+                }
+
+                var model = new CambiarContrasenaViewModel
+                {
+                    Email = user.correo_electronico
+                };
+
+                return View(model);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar la página de cambio de contraseña");
+                TempData["Error"] = "Error al cargar la página de cambio de contraseña.";
+                return RedirectToAction("Profile");
+            }
+        }
+
+        [Authorize]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CambiarContrasena(CambiarContrasenaViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return View(model);
+            }
+
+            try
+            {
+                int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+                var user = await _userService.GetUserByIdAsync(userId);
+
+                if (user == null)
+                {
+                    TempData["Error"] = "No se pudo encontrar la información del usuario.";
+                    return RedirectToAction("Profile");
+                }
+
+                // Verificar la contraseña actual
+                bool passwordValid = _passwordService.VerifyPassword(model.PasswordActual, user.contrasena);
+                if (!passwordValid)
+                {
+                    ModelState.AddModelError("PasswordActual", "La contraseña actual es incorrecta.");
+                    return View(model);
+                }
+
+                // Cambiar la contraseña
+                user.contrasena = _passwordService.HashPassword(model.NuevaPassword);
+
+                // Registrar la fecha de actualización de la contraseña
+                user.fecha_actualizacion_password = DateTime.Now;
+
+                await _context.SaveChangesAsync();
+
+                // Registrar el cambio de contraseña
+                await _userService.RecordLoginAttemptAsync(
+                    userId,
+                    HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown",
+                    true);
+
+                // Enviar correo de confirmación
+                await EnviarCorreoCambioContrasena(user.correo_electronico, user.nombre_usuario);
+
+                TempData["SuccessMessage"] = "Su contraseña ha sido actualizada exitosamente.";
+                return RedirectToAction("Profile");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cambiar la contraseña del usuario");
+                ModelState.AddModelError("", "Error al cambiar la contraseña. Por favor, intente más tarde.");
+                return View(model);
+            }
+        }
+
+        private async Task EnviarCorreoCambioContrasena(string email, string nombre)
+        {
+            try
+            {
+                var emailBody = $@"
+        <h2>Confirmación de Cambio de Contraseña - COMAVI S.A.</h2>
+        <p>Estimado/a {nombre},</p>
+        <p>Le informamos que la contraseña de su cuenta ha sido actualizada exitosamente.</p>
+        <p>Si usted no realizó este cambio, por favor contacte inmediatamente al administrador del sistema.</p>
+        <p>Fecha y hora del cambio: {DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss")}</p>
+        <p>Atentamente,<br>Equipo COMAVI</p>";
+
+                await _emailService.SendEmailAsync(
+                    email,
+                    "Confirmación de Cambio de Contraseña - COMAVI S.A.",
+                    emailBody);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al enviar correo de confirmación de cambio de contraseña");
+                // No lanzamos la excepción para que el proceso de cambio de contraseña continúe
             }
         }
 

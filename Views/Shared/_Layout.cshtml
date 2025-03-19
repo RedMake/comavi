@@ -7,7 +7,7 @@
     <link href="~/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css" />
     <link href="~/css/sb-admin-2.min.css" rel="stylesheet" />
     <link href="~/vendor/datatables/dataTables.bootstrap4.min.css" rel="stylesheet">
-
+    @await RenderSectionAsync("Styles", required: false)
 </head>
 <body id="page-top">
     
@@ -61,6 +61,20 @@
                         <a class="collapse-item" href="@Url.Action("AccessDenied", "Login")">Acceso Denegado</a>
                         <a class="collapse-item" href="@Url.Action("VerifyOtp", "Login")">Autenticación MFA</a>
                         <a class="collapse-item" href="@Url.Action("Profile", "Login")">Perfil</a>
+                    </div>
+                </div>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseAgenda" aria-expanded="true" aria-controls="collapseAgenda">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>Agenda</span>
+                </a>
+                <div id="collapseAgenda" class="collapse" aria-labelledby="headingAgenda" data-parent="#accordionSidebar">
+                    <div class="bg-white py-2 collapse-inner rounded">
+                        <a class="collapse-item" href="@Url.Action("Index", "Agenda")">Mi Agenda</a>
+                        <a class="collapse-item" href="@Url.Action("Calendar", "Agenda")">Calendario</a>
+                        <a class="collapse-item" href="@Url.Action("Create", "Agenda")">Crear Evento</a>
                     </div>
                 </div>
             </li>
@@ -170,8 +184,9 @@
                                 <a class="dropdown-item text-center small text-gray-500"  href="@Url.Action("Notificaciones", "Sistema")">Mostrar Todas las Alertas</a>
                             </div>
                         </li>
-
-                        <div class="topbar-divider d-none d-sm-block"></div>
+                        <li>
+                            <div class="topbar-divider d-none d-sm-block" style="transform: translateY(1rem);"></div>
+                        </li>
 
                         <li class="nav-item dropdown no-arrow">
                             <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
@@ -182,13 +197,13 @@
                             </a>
                             <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in"
                                 aria-labelledby="userDropdown">
-                                <a class="dropdown-item" href="/Login/PerfilConfiguracion">
+                                <a class="dropdown-item" href="@Url.Action("Profile", "Login")">
                                     <i class="fas fa-cogs fa-sm fa-fw mr-2 text-gray-400"></i>
-                                    Configuracion 
+                                    Perfil 
                                 </a>
                               
                                 <div class="dropdown-divider"></div>
-                                <a class="dropdown-item" href="#" data-toggle="modal" data-target="#logoutModal">
+                                <a class="dropdown-item" href="@Url.Action("Logout", "Login")" data-toggle="modal" data-target="#logoutModal">
                                     <i class="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-gray-400"></i>
                                     Cerrar Sesión
                                 </a>
@@ -247,7 +262,7 @@
 
     <script src="~/vendor/chart.js/Chart.min.js"></script>
 
-    <script>
+    @* <script>
         var camionesData = {
             labels: ['Camión A', 'Camión B', 'Camión C', 'Camión D', 'Camión E'],
             datasets: [{
@@ -316,7 +331,7 @@
             type: 'doughnut',
             data: documentosData
         });
-    </script>
+    </script> *@
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

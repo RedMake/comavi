@@ -1,0 +1,134 @@
+﻿@{
+    ViewData["Title"] = "Calendario de Vencimientos";
+}
+
+<div class="container-fluid">
+    <!-- Page Heading -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Calendario de Vencimientos</h1>
+        <a href="@Url.Action("ExpirationReport", "Reports")" class="d-none d-sm-inline-block btn btn-sm btn-danger shadow-sm">
+            <i class="fas fa-file-pdf fa-sm text-white-50"></i> Generar Reporte
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-xl-12 col-lg-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        Vencimientos de documentos para @ViewBag.NombreConductor
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div id="calendar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-xl-12 col-lg-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Leyenda</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="p-2 mb-2 bg-success text-white rounded">Vigente (más de 30 días)</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-2 mb-2 bg-warning text-white rounded">Próximo a vencer (30 días o menos)</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-2 mb-2 bg-danger text-white rounded">Vencido</div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="p-2 mb-2 bg-primary text-white rounded">Mantenimiento de vehículo</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para detalles del evento -->
+<div class="modal fade" id="eventModal" tabindex="-1" role="dialog" aria-labelledby="eventModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="eventModalLabel">Detalles del Evento</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Título:</strong> <span id="eventTitle"></span></p>
+                <p><strong>Fecha:</strong> <span id="eventDate"></span></p>
+                <p><strong>Descripción:</strong> <span id="eventDescription"></span></p>
+                <p><strong>Estado:</strong> <span id="eventStatus"></span></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.css" rel="stylesheet" />
+    <style>
+        #calendar {
+            height: 650px;
+        }
+
+        .fc-event {
+            cursor: pointer;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/locales-all.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var calendarEl = document.getElementById('calendar');
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,listMonth'
+                },
+                locale: 'es',
+                events: @Html.Raw(ViewBag.Eventos),
+                eventClick: function(info) {
+                    // Mostrar modal con detalles del evento
+                    $('#eventTitle').text(info.event.title);
+                    $('#eventDate').text(info.event.startStr);
+                    $('#eventDescription').text(info.event.extendedProps.description || 'No hay descripción disponible');
+
+                    // Determinar estado
+                    var estado = '';
+                    if (info.event.classNames.includes('bg-danger')) {
+                        estado = '<span class="badge badge-danger">Vencido</span>';
+                    } else if (info.event.classNames.includes('bg-warning')) {
+                        estado = '<span class="badge badge-warning">Próximo a vencer</span>';
+                    } else if (info.event.classNames.includes('bg-success')) {
+                        estado = '<span class="badge badge-success">Vigente</span>';
+                    } else if (info.event.classNames.includes('bg-primary')) {
+                        estado = '<span class="badge badge-primary">Mantenimiento</span>';
+                    }
+
+                    $('#eventStatus').html(estado);
+                    $('#eventModal').modal('show');
+                }
+            });
+            calendar.render();
+        });
+    </script>
+}

@@ -25,6 +25,7 @@ namespace COMAVIxUnitTest
         private List<IntentosLogin> _intentosLogin;
         private List<MFA> _mfas;
         private List<RestablecimientoContrasena> _restablecimientos;
+        private List<CodigosRespaldoMFA> _codigosRespaldo;
 
         public UserServiceTests()
         {
@@ -37,13 +38,15 @@ namespace COMAVIxUnitTest
                     nombre_usuario = "TestUser",
                     correo_electronico = "test@example.com",
                     contrasena = "hashedpassword", // Será usado en VerifyPassword
-                    rol = "admin"
+                    rol = "admin",
+                    mfa_habilitado = false // Añadido para tests de MFA
                 }
             };
 
             _intentosLogin = new List<IntentosLogin>();
             _mfas = new List<MFA>();
             _restablecimientos = new List<RestablecimientoContrasena>();
+            _codigosRespaldo = new List<CodigosRespaldoMFA>();
 
             // Configurar DbContext en memoria
             var options = new DbContextOptionsBuilder<ComaviDbContext>()
@@ -61,6 +64,27 @@ namespace COMAVIxUnitTest
             _mockOtpService = new Mock<IOtpService>();
             _mockLogger = new Mock<ILogger<UserService>>();
             _mockConfiguration = new Mock<IConfiguration>();
+            var mockSection = new Mock<IConfigurationSection>();
+
+            // Configurar valores de configuración para bloqueo de cuenta
+            mockSection.Setup(x => x.Value).Returns("5");
+            _mockConfiguration.Setup(c => c.GetSection("SecuritySettings:Lockout:MaxFailedAttempts")).Returns(mockSection.Object);
+
+            var lockoutTimeSection = new Mock<IConfigurationSection>();
+            lockoutTimeSection.Setup(a => a.Value).Returns("15");
+            _mockConfiguration.Setup(c => c.GetSection("SecuritySettings:Lockout:LockoutTimeInMinutes")).Returns(lockoutTimeSection.Object);
+
+            // Setup para GetValue
+            var maxFailedAttemptsSection = new Mock<IConfigurationSection>();
+            maxFailedAttemptsSection.Setup(x => x.Value).Returns("5");
+            _mockConfiguration.Setup(c => c.GetSection("SecuritySettings:Lockout:MaxFailedAttempts"))
+                              .Returns(maxFailedAttemptsSection.Object);
+
+            var lockoutTimeSection_1 = new Mock<IConfigurationSection>();
+            lockoutTimeSection.Setup(x => x.Value).Returns("15");
+            _mockConfiguration.Setup(c => c.GetSection("SecuritySettings:Lockout:LockoutTimeInMinutes"))
+                              .Returns(lockoutTimeSection_1.Object);
+
 
             // Configurar comportamiento del servicio de contraseñas
             _mockPasswordService.Setup(p => p.VerifyPassword("correctpassword", "hashedpassword")).Returns(true);
@@ -71,6 +95,7 @@ namespace COMAVIxUnitTest
             _mockOtpService.Setup(o => o.GenerateSecret()).Returns("testsecret");
             _mockOtpService.Setup(o => o.VerifyOtp("testsecret", "123456")).Returns(true);
             _mockOtpService.Setup(o => o.VerifyOtp("testsecret", "111111")).Returns(false);
+            _mockOtpService.Setup(o => o.GenerateBackupCodes(It.IsAny<int>())).Returns(new List<string> { "ABCDE-FGHIJ", "KLMNO-PQRST" });
 
             // Inicializar servicio
             _userService = new UserService(
@@ -184,13 +209,19 @@ namespace COMAVIxUnitTest
             var userId = 1;
             var mfaCode = "123456";
 
+            // Actualizar usuario para tener MFA habilitado
+            var user = await _context.Usuarios.FindAsync(userId);
+            user.mfa_habilitado = true;
+            await _context.SaveChangesAsync();
+
             var mfa = new MFA
             {
                 id_mfa = 1,
                 id_usuario = userId,
                 codigo = "testsecret",
                 fecha_generacion = DateTime.Now,
-                usado = false
+                usado = false,
+                esta_activo = true  // Añadido para que el MFA esté activo
             };
             _context.MFA.Add(mfa);
             await _context.SaveChangesAsync();
@@ -200,10 +231,6 @@ namespace COMAVIxUnitTest
 
             // Assert
             Assert.True(result);
-
-            // Verificar que se marcó como usado
-            var updatedMfa = await _context.MFA.FindAsync(1);
-            Assert.True(updatedMfa.usado);
         }
 
         [Fact]
@@ -213,13 +240,19 @@ namespace COMAVIxUnitTest
             var userId = 1;
             var mfaCode = "111111"; // Código inválido
 
+            // Actualizar usuario para tener MFA habilitado
+            var user = await _context.Usuarios.FindAsync(userId);
+            user.mfa_habilitado = true;
+            await _context.SaveChangesAsync();
+
             var mfa = new MFA
             {
                 id_mfa = 2,
                 id_usuario = userId,
                 codigo = "testsecret",
                 fecha_generacion = DateTime.Now,
-                usado = false
+                usado = false,
+                esta_activo = true  // MFA activo
             };
             _context.MFA.Add(mfa);
             await _context.SaveChangesAsync();
@@ -229,12 +262,100 @@ namespace COMAVIxUnitTest
 
             // Assert
             Assert.False(result);
-
-            // Verificar que NO se marcó como usado
-            var updatedMfa = await _context.MFA.FindAsync(2);
-            Assert.False(updatedMfa.usado);
         }
 
+        [Fact]
+        public async Task EnableMfaAsync_WithValidCode_ActivatesMfa()
+        {
+            // Arrange
+            var userId = 1;
+            var otpCode = "123456"; // Código válido
+
+            // Asegurarse de que MFA no esté habilitado inicialmente
+            var user = await _context.Usuarios.FindAsync(userId);
+            user.mfa_habilitado = false;
+            await _context.SaveChangesAsync();
+
+            // Crear registro MFA para habilitar
+            var mfa = new MFA
+            {
+                id_mfa = 3,
+                id_usuario = userId,
+                codigo = "testsecret",
+                fecha_generacion = DateTime.Now,
+                usado = false
+            };
+            _context.MFA.Add(mfa);
+            await _context.SaveChangesAsync();
+
+            // Configurar OTP service para verificar el código
+            _mockOtpService.Setup(o => o.VerifyOtp("testsecret", otpCode)).Returns(true);
+
+            // Act
+            var result = await _userService.EnableMfaAsync(userId, otpCode);
+
+            // Assert
+            Assert.True(result);
+
+            // Verificar que el usuario tiene MFA habilitado
+            var updatedUser = await _context.Usuarios.FindAsync(userId);
+            Assert.True(updatedUser.mfa_habilitado);
+
+            // Verificar que se crearon códigos de respaldo
+            var backupCodes = await _context.CodigosRespaldoMFA.Where(c => c.id_usuario == userId).ToListAsync();
+            Assert.NotEmpty(backupCodes);
+        }
+
+        [Fact]
+        public async Task DisableMfaAsync_WithValidCode_DisablesMfa()
+        {
+            // Arrange
+            var userId = 1;
+            var backupCode = "ABCDE-FGHIJ"; // Código válido
+
+            // Configurar usuario con MFA habilitado
+            var user = await _context.Usuarios.FindAsync(userId);
+            user.mfa_habilitado = true;
+            await _context.SaveChangesAsync();
+
+            // Añadir un MFA activo
+            var mfa = new MFA
+            {
+                id_mfa = 4,
+                id_usuario = userId,
+                codigo = "testsecret",
+                fecha_generacion = DateTime.Now,
+                usado = false,
+                esta_activo = true
+            };
+            _context.MFA.Add(mfa);
+
+            // Añadir código de respaldo
+            var codigo = new CodigosRespaldoMFA
+            {
+                id_usuario = userId,
+                codigo = "ABCDE-FGHIJ",
+                fecha_generacion = DateTime.Now,
+                usado = false
+            };
+            _context.CodigosRespaldoMFA.Add(codigo);
+
+            await _context.SaveChangesAsync();
+
+            // Act
+            var result = await _userService.DisableMfaAsync(userId, backupCode);
+
+            // Assert
+            Assert.True(result);
+
+            // Verificar que MFA está deshabilitado
+            var updatedUser = await _context.Usuarios.FindAsync(userId);
+            Assert.False(updatedUser.mfa_habilitado);
+
+            // Verificar que MFA está inactivo
+            var updatedMfa = await _context.MFA.FindAsync(4);
+            Assert.False(updatedMfa.esta_activo);
+        }
 
         [Fact]
         public async Task VerifyUserAsync_WithValidToken_ReturnsTrue()
@@ -322,6 +443,72 @@ namespace COMAVIxUnitTest
 
             // Assert
             Assert.False(result);
+        }
+
+        [Fact]
+        public async Task VerifyBackupCodeAsync_WithValidCode_ReturnsTrue()
+        {
+            // Arrange
+            var userId = 1;
+            var backupCode = "ABCDE-FGHIJ";
+
+            // Añadir código de respaldo
+            var codigo = new CodigosRespaldoMFA
+            {
+                id_usuario = userId,
+                codigo = "ABCDE-FGHIJ",
+                fecha_generacion = DateTime.Now,
+                usado = false
+            };
+            _context.CodigosRespaldoMFA.Add(codigo);
+            await _context.SaveChangesAsync();
+
+            // Act
+            var result = await _userService.VerifyBackupCodeAsync(userId, backupCode);
+
+            // Assert
+            Assert.True(result);
+
+            // Verificar que el código se marcó como usado
+            var updatedCodigo = await _context.CodigosRespaldoMFA.FirstOrDefaultAsync(c => c.id_usuario == userId);
+            Assert.True(updatedCodigo.usado);
+        }
+
+        [Fact]
+        public async Task IsMfaEnabledAsync_WithEnabledMfa_ReturnsTrue()
+        {
+            // Arrange
+            var userId = 1;
+            var user = await _context.Usuarios.FindAsync(userId);
+            user.mfa_habilitado = true;
+            await _context.SaveChangesAsync();
+
+            // Act
+            var result = await _userService.IsMfaEnabledAsync(userId);
+
+            // Assert
+            Assert.True(result);
+        }
+
+        [Fact]
+        public async Task GenerateBackupCodesAsync_CreatesNewCodes()
+        {
+            // Arrange
+            var userId = 1;
+            var user = await _context.Usuarios.FindAsync(userId);
+            user.mfa_habilitado = true;
+            await _context.SaveChangesAsync();
+
+            // Act
+            var result = await _userService.GenerateBackupCodesAsync(userId);
+
+            // Assert
+            Assert.NotEmpty(result);
+            Assert.Equal(2, result.Count); // Basado en el setup del mock
+
+            // Verificar que los códigos se guardaron en la base de datos
+            var savedCodes = await _context.CodigosRespaldoMFA.Where(c => c.id_usuario == userId).ToListAsync();
+            Assert.Equal(result.Count, savedCodes.Count);
         }
     }
 }

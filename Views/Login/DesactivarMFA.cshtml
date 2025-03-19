@@ -1,0 +1,73 @@
+﻿@{
+    ViewData["Title"] = "Desactivar autenticación de dos factores";
+    Layout = "_Layout";
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-7">
+            <div class="card shadow">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-shield-alt me-2"></i> Desactivar autenticación de dos factores
+                    </h4>
+                </div>
+                <div class="card-body">
+                    @if (TempData["Error"] != null)
+                    {
+                        <div class="alert alert-danger">
+                            @TempData["Error"]
+                        </div>
+                    }
+
+                    <div class="alert alert-warning mb-4">
+                        <h5><i class="fas fa-exclamation-triangle"></i> Advertencia de seguridad</h5>
+                        <p>Está a punto de desactivar la autenticación de dos factores para su cuenta. Esto reducirá significativamente la seguridad de su cuenta.</p>
+                        <p><strong>Se recomienda mantener la autenticación de dos factores habilitada.</strong></p>
+                    </div>
+
+                    <form method="post" action="@Url.Action("DesactivarMFA", "Login")">
+                        <div class="form-group mb-4">
+                            <label class="form-label">Código de respaldo</label>
+                            <input type="text" name="codigoRespaldo" class="form-control" placeholder="Ingrese un código de respaldo" required>
+                            <div class="form-text">
+                                Ingrese uno de sus códigos de respaldo para confirmar que es usted quien solicita la desactivación.
+                            </div>
+                        </div>
+
+                        <div class="form-check mb-4">
+                            <input class="form-check-input" type="checkbox" id="chkConfirm" required>
+                            <label class="form-check-label" for="chkConfirm">
+                                Entiendo que al desactivar la autenticación de dos factores, mi cuenta será menos segura.
+                            </label>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="@Url.Action("ConfigurarMFA", "Login")" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-danger" id="btnDisable" disabled>
+                                <i class="fas fa-times"></i> Desactivar autenticación de dos factores
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const chkConfirm = document.getElementById('chkConfirm');
+            const btnDisable = document.getElementById('btnDisable');
+
+            if (chkConfirm && btnDisable) {
+                chkConfirm.addEventListener('change', function() {
+                    btnDisable.disabled = !this.checked;
+                });
+            }
+        });
+    </script>
+}

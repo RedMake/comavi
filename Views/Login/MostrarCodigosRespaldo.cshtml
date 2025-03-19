@@ -1,0 +1,153 @@
+﻿@model COMAVI_SA.Models.CodigosRespaldoViewModel
+@{
+    ViewData["Title"] = "Códigos de Respaldo";
+    Layout = "_Layout";
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-check-circle me-2"></i> Autenticación de dos factores activada
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-success mb-4">
+                        <p><strong>¡Felicidades!</strong> La autenticación de dos factores ha sido configurada correctamente para su cuenta.</p>
+                        <p>A partir de ahora, se le pedirá un código de verificación cada vez que inicie sesión.</p>
+                    </div>
+
+                    <h5 class="mb-3">Códigos de respaldo</h5>
+                    <div class="alert alert-warning">
+                        <h6><i class="fas fa-exclamation-triangle"></i> ¡Guarde estos códigos ahora!</h6>
+                        <p>Estos códigos de respaldo le permitirán iniciar sesión si pierde acceso a su aplicación de autenticación. <strong>Cada código solo puede usarse una vez</strong>.</p>
+                        <p><strong>Si pierde acceso a su dispositivo y no tiene estos códigos, no podrá acceder a su cuenta.</strong></p>
+                    </div>
+
+                    <div class="bg-light p-3 border rounded mb-4">
+                        <div class="row">
+                            @foreach (var codigo in Model.Codigos)
+                            {
+                                <div class="col-md-6 mb-2">
+                                    <code class="backup-code">@codigo</code>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <button type="button" id="btnCopiarCodigos" class="btn btn-primary w-100">
+                                <i class="fas fa-copy"></i> Copiar todos los códigos
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <button type="button" id="btnDescargarCodigos" class="btn btn-secondary w-100">
+                                <i class="fas fa-download"></i> Descargar como PDF
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="alertCopied" class="alert alert-info d-none">
+                        Códigos copiados al portapapeles.
+                    </div>
+
+                    <div class="alert alert-info">
+                        <p><strong>Recomendaciones:</strong></p>
+                        <ul>
+                            <li>Guarde estos códigos en un lugar seguro y diferente a donde guarda su contraseña.</li>
+                            <li>Puede imprimir esta página para tener una copia física.</li>
+                            <li>No comparta estos códigos con nadie.</li>
+                        </ul>
+                    </div>
+
+                    <div class="text-center mt-4">
+                        <a href="@Url.Action("Profile", "Login")" class="btn btn-success">
+                            <i class="fas fa-check"></i> He guardado mis códigos
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Botón para copiar todos los códigos
+            const btnCopiar = document.getElementById('btnCopiarCodigos');
+            const alertCopied = document.getElementById('alertCopied');
+
+            if (btnCopiar) {
+                btnCopiar.addEventListener('click', function() {
+                    // Obtener todos los códigos
+                    const codigos = Array.from(document.querySelectorAll('.backup-code'))
+                        .map(el => el.textContent.trim())
+                        .join('\n');
+
+                    // Copiar al portapapeles
+                    const textarea = document.createElement('textarea');
+                    textarea.value = codigos;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+
+                    // Mostrar alerta
+                    alertCopied.classList.remove('d-none');
+                    setTimeout(function() {
+                        alertCopied.classList.add('d-none');
+                    }, 3000);
+                });
+            }
+
+            // Botón para descargar como PDF
+            const btnDescargar = document.getElementById('btnDescargarCodigos');
+
+            if (btnDescargar && typeof window.jspdf !== 'undefined') {
+                btnDescargar.addEventListener('click', function() {
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF();
+
+                    // Título
+                    doc.setFontSize(18);
+                    doc.text('Códigos de respaldo - COMAVI', 20, 20);
+
+                    // Información
+                    doc.setFontSize(12);
+                    doc.text('Estos códigos le permitirán acceder a su cuenta si pierde acceso a su', 20, 35);
+                    doc.text('aplicación de autenticación. Cada código puede usarse una sola vez.', 20, 42);
+
+                    // Fecha
+                    const fecha = new Date().toLocaleDateString();
+                    doc.text(`Generados el: ${fecha}`, 20, 55);
+
+                    // Códigos
+                    doc.setFontSize(14);
+                    doc.text('Sus códigos de respaldo:', 20, 70);
+
+                    const codigos = Array.from(document.querySelectorAll('.backup-code'))
+                        .map(el => el.textContent.trim());
+
+                    let yPos = 85;
+                    codigos.forEach(codigo => {
+                        doc.text(codigo, 30, yPos);
+                        yPos += 10;
+                    });
+
+                    // Nota final
+                    yPos += 10;
+                    doc.setFontSize(12);
+                    doc.text('Importante: Guarde estos códigos en un lugar seguro.', 20, yPos);
+
+                    // Descargar PDF
+                    doc.save('codigos-respaldo-comavi.pdf');
+                });
+            }
+        });
+    </script>
+}
