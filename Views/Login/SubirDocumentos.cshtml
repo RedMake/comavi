@@ -17,7 +17,20 @@
             }
 
             <div class="alert alert-info">
-                <i class="fas fa-info-circle"></i> Por favor, suba los documentos requeridos en formato PDF. Todos los documentos serán revisados por un administrador antes de ser aprobados.
+                <i class="fas fa-info-circle"></i> Por favor, suba los documentos requeridos en formato PDF. Todos los
+                documentos serán revisados por un administrador antes de ser aprobados.
+            </div>
+            <div class="alert alert-info mt-3">
+                <h5><i class="fas fa-info-circle"></i> ¿Cómo usar las plantillas?</h5>
+                <ol>
+                    <li>Descargue la plantilla correspondiente al tipo de documento que desea subir.</li>
+                    <li>Abra la plantilla con Microsoft Word u otro editor de documentos compatible.</li>
+                    <li>Haga clic en los campos indicados y complete la información requerida.</li>
+                    <li>Guarde el documento como PDF (Archivo > Guardar como > PDF).</li>
+                    <li>Suba el PDF generado en este formulario.</li>
+                </ol>
+                <p><strong>Importante:</strong> Asegúrese de completar todos los campos. El documento será rechazado si
+                    falta información esencial.</p>
             </div>
 
             <form asp-action="SubirDocumentos" method="post" enctype="multipart/form-data" class="user">
@@ -27,13 +40,45 @@
                     <label asp-for="TipoDocumento" class="form-label">Tipo de Documento</label>
                     <select asp-for="TipoDocumento" class="form-control" required>
                         <option value="">Seleccionar tipo de documento...</option>
-                        <option value="licencia">Licencia de Conducir</option>
-                        <option value="cedula">Cédula de Identidad</option>
-                        <option value="inscripcion">Inscripción de Vehículo</option>
-                        <option value="mantenimiento">Reporte de Mantenimiento</option>
+                        @{
+                            var documentosTipos = new[] {
+                                                "licencia", "cedula", "inscripcion", "mantenimiento"
+                                                };
+                        }
+                        @foreach (var tipo in documentosTipos)
+                        {
+                            var documentoExistente = Model.DocumentosExistentes
+                            .FirstOrDefault(d => d.tipo_documento == tipo);
+
+                            if (documentoExistente == null)
+                            {
+                                <option value="@tipo">@(tipo.ToUpper()[0] + tipo.Substring(1))</option>
+                            }
+                            else if (documentoExistente.estado_validacion != "verificado")
+                            {
+                                <option value="@tipo">
+                                    @(tipo.ToUpper()[0] + tipo.Substring(1))
+                                    (@(documentoExistente.estado_validacion == "pendiente" ? "Pendiente" : "Rechazado"))
+                                </option>
+                            }
+                        }
                     </select>
                     <span asp-validation-for="TipoDocumento" class="text-danger"></span>
                 </div>
+
+                @if (Model.DocumentosExistentes.Any(d => d.estado_validacion == "verificado"))
+                {
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle"></i>
+                        Los siguientes documentos ya están verificados y no pueden ser modificados:
+                        <ul>
+                            @foreach (var doc in Model.DocumentosExistentes.Where(d => d.estado_validacion == "verificado"))
+                            {
+                                <li>@doc.tipo_documento.ToUpper()[0]@(doc.tipo_documento.Substring(1))</li>
+                            }
+                        </ul>
+                    </div>
+                }
 
                 <div class="form-group">
                     <label asp-for="ArchivoPdf" class="form-label">Archivo PDF</label>
@@ -68,74 +113,115 @@
                     <div class="card">
                         <div class="card-header" id="headingLicencia">
                             <h2 class="mb-0">
-                                <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseLicencia" aria-expanded="false" aria-controls="collapseLicencia">
+                                <button class="btn btn-link btn-block text-left collapsed" type="button"
+                                    data-toggle="collapse" data-target="#collapseLicencia" aria-expanded="false"
+                                    aria-controls="collapseLicencia">
                                     Licencia de Conducir
                                 </button>
                             </h2>
                         </div>
-                        <div id="collapseLicencia" class="collapse" aria-labelledby="headingLicencia" data-parent="#accordionDocuments">
+                        <div id="collapseLicencia" class="collapse" aria-labelledby="headingLicencia"
+                            data-parent="#accordionDocuments">
                             <div class="card-body">
                                 <ul>
                                     <li>PDF escaneado de licencia original</li>
                                     <li>Debe ser claramente legible</li>
-                                    <li>Debe mostrar nombre completo, número de licencia, categoría y fecha de vencimiento</li>
+                                    <li>Debe mostrar nombre completo, número de licencia, categoría y fecha de
+                                        vencimiento</li>
                                     <li>Debe estar vigente (no vencida)</li>
                                 </ul>
+                                <a href="@Url.Action("DescargarPlantilla", "Plantillas", new { tipoDocumento = "licencia" })"
+                                    class="btn btn-sm btn-primary">
+                                    <i class="fas fa-download"></i> Descargar plantilla
+                                </a>
                             </div>
                         </div>
                     </div>
+
                     <div class="card">
                         <div class="card-header" id="headingCedula">
                             <h2 class="mb-0">
-                                <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseCedula" aria-expanded="false" aria-controls="collapseCedula">
+                                <button class="btn btn-link btn-block text-left collapsed" type="button"
+                                    data-toggle="collapse" data-target="#collapseCedula" aria-expanded="false"
+                                    aria-controls="collapseCedula">
                                     Cédula de Identidad
                                 </button>
                             </h2>
                         </div>
-                        <div id="collapseCedula" class="collapse" aria-labelledby="headingCedula" data-parent="#accordionDocuments">
+                        <div id="collapseCedula" class="collapse" aria-labelledby="headingCedula"
+                            data-parent="#accordionDocuments">
                             <div class="card-body">
                                 <ul>
                                     <li>PDF escaneado de cédula original (ambos lados)</li>
                                     <li>Debe ser claramente legible</li>
-                                    <li>Debe mostrar nombre completo, número de identificación y fecha de nacimiento</li>
+                                    <li>Debe mostrar nombre completo, número de identificación y fecha de nacimiento
+                                    </li>
+                                    <li>Debe incluir nacionalidad y datos personales completos</li>
+                                    <li>El documento debe ser válido y no estar alterado</li>
                                 </ul>
+                                <a href="@Url.Action("DescargarPlantilla", "Plantillas", new { tipoDocumento = "cedula" })"
+                                    class="btn btn-sm btn-primary">
+                                    <i class="fas fa-download"></i> Descargar plantilla
+                                </a>
                             </div>
                         </div>
                     </div>
+
                     <div class="card">
                         <div class="card-header" id="headingInscripcion">
                             <h2 class="mb-0">
-                                <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseInscripcion" aria-expanded="false" aria-controls="collapseInscripcion">
+                                <button class="btn btn-link btn-block text-left collapsed" type="button"
+                                    data-toggle="collapse" data-target="#collapseInscripcion" aria-expanded="false"
+                                    aria-controls="collapseInscripcion">
                                     Inscripción de Vehículo
                                 </button>
                             </h2>
                         </div>
-                        <div id="collapseInscripcion" class="collapse" aria-labelledby="headingInscripcion" data-parent="#accordionDocuments">
+                        <div id="collapseInscripcion" class="collapse" aria-labelledby="headingInscripcion"
+                            data-parent="#accordionDocuments">
                             <div class="card-body">
                                 <ul>
                                     <li>PDF con documento de registro o inscripción del vehículo</li>
                                     <li>Debe incluir número de placa, marca, modelo y año</li>
-                                    <li>Debe incluir información del propietario</li>
+                                    <li>Debe incluir número de motor y número de chasis/VIN</li>
+                                    <li>Debe incluir información completa del propietario</li>
+                                    <li>El registro debe estar vigente y a nombre del propietario actual</li>
+                                    <li>Debe contener los sellos y firmas de la autoridad emisora</li>
                                 </ul>
+                                <a href="@Url.Action("DescargarPlantilla", "Plantillas", new { tipoDocumento = "inscripcion" })"
+                                    class="btn btn-sm btn-primary">
+                                    <i class="fas fa-download"></i> Descargar plantilla
+                                </a>
                             </div>
                         </div>
                     </div>
+
                     <div class="card">
                         <div class="card-header" id="headingMantenimiento">
                             <h2 class="mb-0">
-                                <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseMantenimiento" aria-expanded="false" aria-controls="collapseMantenimiento">
+                                <button class="btn btn-link btn-block text-left collapsed" type="button"
+                                    data-toggle="collapse" data-target="#collapseMantenimiento" aria-expanded="false"
+                                    aria-controls="collapseMantenimiento">
                                     Reporte de Mantenimiento
                                 </button>
                             </h2>
                         </div>
-                        <div id="collapseMantenimiento" class="collapse" aria-labelledby="headingMantenimiento" data-parent="#accordionDocuments">
+                        <div id="collapseMantenimiento" class="collapse" aria-labelledby="headingMantenimiento"
+                            data-parent="#accordionDocuments">
                             <div class="card-body">
                                 <ul>
                                     <li>PDF con reporte de mantenimiento realizado al vehículo</li>
-                                    <li>Debe incluir fecha del mantenimiento</li>
-                                    <li>Debe detallar los servicios realizados</li>
-                                    <li>Debe incluir información del vehículo (placa, modelo)</li>
+                                    <li>Debe incluir fecha del mantenimiento y kilometraje actual</li>
+                                    <li>Debe detallar los servicios realizados y piezas reemplazadas</li>
+                                    <li>Debe incluir información del vehículo (placa, modelo, VIN)</li>
+                                    <li>Debe estar firmado por el técnico responsable</li>
+                                    <li>Debe incluir datos del taller o centro de servicio</li>
+                                    <li>Debe contener recomendaciones para el próximo mantenimiento</li>
                                 </ul>
+                                <a href="@Url.Action("DescargarPlantilla", "Plantillas", new { tipoDocumento = "mantenimiento" })"
+                                    class="btn btn-sm btn-primary">
+                                    <i class="fas fa-download"></i> Descargar plantilla
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -151,33 +237,101 @@
     </div>
 </div>
 
+
+
 @section Scripts {
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
 
     <script>
-        // Validación de fechas
+        // Script completo para gestión de fechas en el formulario de documentos
         document.addEventListener('DOMContentLoaded', function () {
             const fechaEmisionInput = document.getElementById('FechaEmision');
             const fechaVencimientoInput = document.getElementById('FechaVencimiento');
+            const tipoDocumentoSelect = document.getElementById('TipoDocumento');
+
+            if (tipoDocumentoSelect) {
+                const verifiedDocuments = [
+                    @string.Join(", ", 
+                        Model.DocumentosExistentes
+                            .Where(d => d.estado_validacion == "verificado")
+                            .Select(d => $"'{d.tipo_documento}'")
+                    )
+                ];
+
+                Array.from(tipoDocumentoSelect.options).forEach(option => {
+                    if (verifiedDocuments.includes(option.value)) {
+                        option.disabled = true;
+                        option.title = 'Este documento ya está verificado y no puede modificarse';
+                    }
+                });
+            }
 
             if (fechaEmisionInput && fechaVencimientoInput) {
-                // La fecha de emisión no puede ser futura
+                // Obtener la fecha actual en formato YYYY-MM-DD para campos de tipo date
                 const today = new Date();
-                const maxDate = today.toISOString().split('T')[0];
-                fechaEmisionInput.max = maxDate;
+                const currentDate = today.toISOString().split('T')[0];
 
-                // La fecha de vencimiento debe ser posterior a la fecha de emisión
-                fechaEmisionInput.addEventListener('change', function() {
+                // Establecer fecha máxima para emisión (no puede ser futura)
+                fechaEmisionInput.max = currentDate;
+
+                // Verificar si la fecha actual es "01/01/0001" o está vacía (valor mínimo de DateTime)
+                // El formato exacto puede variar según la cultura, pero podemos verificar si es muy antigua
+                const inputDate = new Date(fechaEmisionInput.value);
+                if (!fechaEmisionInput.value || inputDate.getFullYear() < 1900) {
+                    fechaEmisionInput.value = currentDate;
+                }
+
+                // Calcular una fecha de vencimiento predeterminada (1 año después de la emisión)
+                const nextYear = new Date(fechaEmisionInput.value);
+                nextYear.setFullYear(nextYear.getFullYear() + 1);
+                const nextYearDate = nextYear.toISOString().split('T')[0];
+
+                // Verificar si la fecha de vencimiento necesita un valor predeterminado
+                const vencimientoDate = new Date(fechaVencimientoInput.value);
+                if (!fechaVencimientoInput.value || vencimientoDate.getFullYear() < 1900) {
+                    fechaVencimientoInput.value = nextYearDate;
+                }
+
+                // Asegurar que la fecha de vencimiento sea posterior a la de emisión
+                fechaVencimientoInput.min = fechaEmisionInput.value;
+
+                // Actualizar restricciones cuando cambia la fecha de emisión
+                fechaEmisionInput.addEventListener('change', function () {
+                    // Actualizar la fecha mínima de vencimiento
                     fechaVencimientoInput.min = this.value;
+
+                    // Si la fecha de vencimiento es anterior a la nueva fecha de emisión,
+                    // establecerla un año después por defecto
+                    if (fechaVencimientoInput.value <= this.value) {
+                        const newVencimiento = new Date(this.value);
+                        newVencimiento.setFullYear(newVencimiento.getFullYear() + 1);
+                        fechaVencimientoInput.value = newVencimiento.toISOString().split('T')[0];
+                    }
                 });
 
-                fechaVencimientoInput.addEventListener('change', function() {
+                // Validación para fecha de vencimiento
+                fechaVencimientoInput.addEventListener('change', function () {
                     if (this.value <= fechaEmisionInput.value) {
                         this.setCustomValidity('La fecha de vencimiento debe ser posterior a la fecha de emisión');
                     } else {
                         this.setCustomValidity('');
+                    }
+                });
+            }
+
+            // Opcional: Agregar validación para el tamaño del archivo
+            const archivoInput = document.querySelector('input[type="file"]');
+            if (archivoInput) {
+                archivoInput.addEventListener('change', function () {
+                    if (this.files.length > 0) {
+                        const fileSize = this.files[0].size / 1024 / 1024; // tamaño en MB
+                        if (fileSize > 10) {
+                            this.setCustomValidity('El archivo no debe exceder 10MB');
+                        } else {
+                            this.setCustomValidity('');
+                        }
                     }
                 });
             }

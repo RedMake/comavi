@@ -11,37 +11,95 @@
                 <h4 class="mb-0">Verificación de dos factores</h4>
             </div>
             <div class="card-body">
-                @if (ViewBag.IsFirstTimeSetup == true)
+                @if (ViewBag.IsFirstTimeSetup == true && !string.IsNullOrEmpty(ViewBag.Secret))
                 {
                     <div class="alert alert-info">
                         <h5>Configuración inicial de autenticación de dos factores</h5>
                         <p>Escanee el siguiente código QR con su aplicación de autenticación (como Google Authenticator, Microsoft Authenticator o Authy).</p>
 
                         <div class="text-center my-3">
-                            <img src="https://chart.googleapis.com/chart?chs=200x200&chld=M|0&cht=qr&chl=@ViewBag.QrCode" alt="QR Code" />
+                            <div id="qrcode-container" class="d-inline-block"></div>
                         </div>
 
                         <p>Si no puede escanear el código QR, ingrese esta clave en su aplicación: <strong>@ViewBag.Secret</strong></p>
                     </div>
                 }
 
-                <p>Ingrese el código de verificación de su aplicación de autenticación.</p>
-
-                <form asp-action="VerifyOtp" method="post">
-                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-
-                    <input type="hidden" asp-for="Email" value="@Model.Email" />
-
-                    <div class="form-group mb-3">
-                        <label asp-for="OtpCode" class="form-label">Código OTP</label>
-                        <input asp-for="OtpCode" class="form-control" placeholder="Ingrese el código de 6 dígitos" autocomplete="off" />
-                        <span asp-validation-for="OtpCode" class="text-danger"></span>
+                @if (ViewBag.MostrarCodigoRespaldo == true)
+                {
+                    <div class="alert alert-warning">
+                        <h5><i class="fas fa-exclamation-triangle"></i> Demasiados intentos fallidos</h5>
+                        <p>Ha excedido el número máximo de intentos permitidos. Por favor, utilice uno de sus códigos de respaldo para continuar.</p>
                     </div>
 
-                    <div class="form-group d-grid">
-                        <button type="submit" class="btn btn-primary">Verificar</button>
+                    <form asp-action="VerifyOtp" method="post">
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                        <input type="hidden" asp-for="Email" value="@Model.Email" />
+                        <input type="hidden" asp-for="UsarCodigoRespaldo" value="true" />
+
+                        <div class="form-group mb-3">
+                            <label asp-for="OtpCode" class="form-label">Código de respaldo</label>
+                            <input asp-for="OtpCode" class="form-control" placeholder="Ingrese un código de respaldo (formato: XXXXX-XXXXX)" autocomplete="off" />
+                            <span asp-validation-for="OtpCode" class="text-danger"></span>
+                            <small class="form-text text-muted">Ingrese uno de los códigos de respaldo que se le proporcionaron al configurar la autenticación de dos factores.</small>
+                        </div>
+
+                        <div class="form-group d-grid">
+                            <button type="submit" class="btn btn-primary">Verificar</button>
+                        </div>
+                    </form>
+
+                    <hr />
+
+                    <div class="text-center mt-3">
+                        <p>¿No tiene acceso a sus códigos de respaldo?</p>
+                        <a href="@Url.Action("ResetPasswordRequest", "Login")" class="btn btn-outline-secondary">Restablecer contraseña</a>
                     </div>
-                </form>
+                }
+                else
+                {
+                    <p>Ingrese el código de verificación de su aplicación de autenticación.</p>
+
+                    <form asp-action="VerifyOtp" method="post">
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                        <input type="hidden" asp-for="Email" value="@Model.Email" />
+
+                        <div class="form-group mb-3">
+                            <label asp-for="OtpCode" class="form-label">Código OTP</label>
+                            <input asp-for="OtpCode" class="form-control" placeholder="Ingrese el código de 6 dígitos" autocomplete="off" />
+                            <span asp-validation-for="OtpCode" class="text-danger"></span>
+                        </div>
+
+                        <div class="form-group d-grid">
+                            <button type="submit" class="btn btn-primary">Verificar</button>
+                        </div>
+                    </form>
+
+                    <div class="mt-3">
+                        <a href="#" class="btn btn-link" id="toggleBackupCodeOption">Usar código de respaldo</a>
+
+                        <div id="backupCodeForm" style="display: none;" class="mt-3">
+                            <form asp-action="VerifyOtp" method="post">
+                                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                                <input type="hidden" asp-for="Email" value="@Model.Email" />
+                                <input type="hidden" asp-for="UsarCodigoRespaldo" value="true" />
+
+                                <div class="form-group mb-3">
+                                    <label for="OtpCode" class="form-label">Código de respaldo</label>
+                                    <input name="OtpCode" class="form-control" placeholder="Ingrese un código de respaldo" autocomplete="off" />
+                                    <small class="form-text text-muted">Ingrese uno de los códigos de respaldo que se le proporcionaron al configurar la autenticación de dos factores.</small>
+                                </div>
+
+                                <div class="form-group d-grid">
+                                    <button type="submit" class="btn btn-outline-primary">Verificar con código de respaldo</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                }
 
                 <div class="mt-3 text-center">
                     <form asp-action="Logout" method="post">
@@ -54,5 +112,74 @@
 </div>
 
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Toggle para mostrar/ocultar el formulario de código de respaldo
+            const toggleBackupCodeBtn = document.getElementById('toggleBackupCodeOption');
+            const backupCodeForm = document.getElementById('backupCodeForm');
 
+            if (toggleBackupCodeBtn && backupCodeForm) {
+                toggleBackupCodeBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (backupCodeForm.style.display === 'none') {
+                        backupCodeForm.style.display = 'block';
+                        toggleBackupCodeBtn.textContent = 'Usar código OTP';
+                    } else {
+                        backupCodeForm.style.display = 'none';
+                        toggleBackupCodeBtn.textContent = 'Usar código de respaldo';
+                    }
+                });
+            }
+
+        @if (ViewBag.IsFirstTimeSetup == true && !string.IsNullOrEmpty(ViewBag.Secret))
+        {
+            <text>
+                    try {
+                        console.log("Iniciando generación de QR");
+                        // Datos para generar el QR
+                        var email = '@Model.Email';
+                        var secret = '@ViewBag.Secret';
+                        var issuer = 'COMAVI_DockTrack';
+
+                        // Crear la URL otpauth para aplicaciones de autenticación
+                        var otpauthUrl = 'otpauth://totp/' +
+                            encodeURIComponent(issuer) + ':' +
+                            encodeURIComponent(email) +
+                            '?secret=' + secret +
+                            '&issuer=' + encodeURIComponent(issuer) +
+                            '&algorithm=SHA1&digits=6&period=30';
+
+                        console.log("URL otpauth generada:", otpauthUrl);
+
+                        // Obtener el elemento contenedor
+                        var container = document.getElementById('qrcode-container');
+                        console.log("Contenedor encontrado:", container != null);
+
+                        if (container) {
+                            // Alternativa que no usa canvas
+                            QRCode.toDataURL(otpauthUrl, function(err, url) {
+                                if (err) {
+                                    console.error("Error generando QR:", err);
+                                    container.innerHTML = '<div class="alert alert-danger">Error al generar el código QR</div>';
+                                } else {
+                                    console.log("QR generado exitosamente");
+                                    var img = document.createElement('img');
+                                    img.src = url;
+                                    img.alt = "Código QR para autenticación";
+                                    img.width = 200;
+                                    img.height = 200;
+                                    container.appendChild(img);
+                                }
+                            });
+                        } else {
+                            console.error("No se encontró el contenedor del QR");
+                        }
+                    } catch (error) {
+                        console.error("Error en generación de QR:", error);
+                    }
+            </text>
+        }
+        });
+    </script>
 }

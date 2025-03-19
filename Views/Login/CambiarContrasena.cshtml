@@ -1,0 +1,67 @@
+﻿@model CambiarContrasenaViewModel
+@{
+    ViewData["Title"] = "Cambiar Contraseña";
+}
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card shadow-lg border-0 rounded-lg mt-5">
+                <div class="card-header">
+                    <h3 class="text-center font-weight-light my-4">Cambiar Contraseña</h3>
+                </div>
+                <div class="card-body">
+                    @if (TempData["Error"] != null)
+                    {
+                        <div class="alert alert-danger">
+                            @TempData["Error"]
+                        </div>
+                    }
+
+                    <form asp-action="CambiarContrasena" method="post">
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                        <input type="hidden" asp-for="Email" />
+
+                        <div class="mb-3">
+                            <label asp-for="PasswordActual" class="form-label">Contraseña Actual</label>
+                            <input asp-for="PasswordActual" class="form-control" />
+                            <span asp-validation-for="PasswordActual" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="NuevaPassword" class="form-label">Nueva Contraseña</label>
+                            <input asp-for="NuevaPassword" class="form-control" />
+                            <span asp-validation-for="NuevaPassword" class="text-danger"></span>
+                            <div class="form-text">
+                                La contraseña debe tener al menos 8 caracteres y contener letras mayúsculas, minúsculas, números y caracteres especiales.
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="ConfirmarPassword" class="form-label">Confirmar Nueva Contraseña</label>
+                            <input asp-for="ConfirmarPassword" class="form-control" />
+                            <span asp-validation-for="ConfirmarPassword" class="text-danger"></span>
+                        </div>
+
+                        <div class="d-flex align-items-center justify-content-between mt-4 mb-0">
+                            <a class="btn btn-secondary" asp-action="Profile">Cancelar</a>
+                            <button type="submit" class="btn btn-primary">Cambiar Contraseña</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="card-footer text-center py-3">
+                    <div class="small">
+                        <i class="fas fa-info-circle"></i> Para mayor seguridad, se enviará una notificación a su correo electrónico.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

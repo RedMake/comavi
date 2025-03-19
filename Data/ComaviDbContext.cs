@@ -15,10 +15,13 @@ namespace COMAVI_SA.Data
         public DbSet<Notificaciones_Usuario> NotificacionesUsuario { get; set; }
         public DbSet<RestablecimientoContrasena> RestablecimientoContrasena { get; set; }
         public DbSet<MFA> MFA { get; set; }
+        public DbSet<CodigosRespaldoMFA> CodigosRespaldoMFA { get; set; } 
         public DbSet<Choferes> Choferes { get; set; }
         public DbSet<Camiones> Camiones { get; set; }
         public DbSet<Documentos> Documentos { get; set; }
         public DbSet<Mantenimiento_Camiones> Mantenimiento_Camiones { get; set; }
+        public DbSet<PreferenciasNotificacion> PreferenciasNotificacion { get; set; }
+        public DbSet<EventoAgenda> EventosAgenda { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -35,11 +38,24 @@ namespace COMAVI_SA.Data
             modelBuilder.Entity<Camiones>().ToTable("Camiones");
             modelBuilder.Entity<Documentos>().ToTable("Documentos");
             modelBuilder.Entity<Mantenimiento_Camiones>().ToTable("Mantenimiento_Camiones");
+            modelBuilder.Entity<CodigosRespaldoMFA>().ToTable("CodigosRespaldoMFA");
+            modelBuilder.Entity<PreferenciasNotificacion>().ToTable("PreferenciasNotificacion");
+            modelBuilder.Entity<EventoAgenda>().ToTable("EventosAgenda");
 
             // Índices para mejorar el rendimiento
             modelBuilder.Entity<Usuario>()
                 .HasIndex(u => u.correo_electronico)
                 .IsUnique();
+
+            modelBuilder.Entity<Usuario>()
+                .Property(u => u.mfa_habilitado)
+                .HasDefaultValue(false);
+
+            modelBuilder.Entity<CodigosRespaldoMFA>()
+                .HasIndex(c => new { c.id_usuario, c.codigo });
+
+            modelBuilder.Entity<MFA>()
+                .HasIndex(m => new { m.id_usuario, m.esta_activo });
 
             modelBuilder.Entity<IntentosLogin>()
                 .HasIndex(l => new { l.id_usuario, l.fecha_hora });
@@ -69,6 +85,14 @@ namespace COMAVI_SA.Data
 
             modelBuilder.Entity<Documentos>()
                 .HasIndex(d => d.estado_validacion);
+
+            modelBuilder.Entity<PreferenciasNotificacion>()
+                .HasIndex(p => p.id_usuario)
+                .IsUnique();
+
+            modelBuilder.Entity<EventoAgenda>()
+                .HasIndex(e => e.fecha_inicio);
+
             // Relaciones que no están explícitamente definidas en las propiedades
             modelBuilder.Entity<Camiones>()
                 .HasOne(c => c.Chofer)
@@ -92,6 +116,17 @@ namespace COMAVI_SA.Data
                 .Property(m => m.costo)
                 .HasColumnType("decimal(18,2)");
 
+            modelBuilder.Entity<Choferes>()
+                .HasOne(c => c.Usuario)
+                .WithOne()
+                .HasForeignKey<Choferes>(c => c.id_usuario)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<PreferenciasNotificacion>()
+                .HasOne(p => p.Usuario)
+                .WithOne()
+                .HasForeignKey<PreferenciasNotificacion>(p => p.id_usuario)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

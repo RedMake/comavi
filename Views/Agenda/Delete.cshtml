@@ -1,0 +1,76 @@
+﻿@model EventoAgenda
+@{
+    ViewData["Title"] = "Eliminar Evento";
+}
+
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Confirmar Eliminación</h1>
+        <a href="@Url.Action("Index", "Agenda")" class="d-none d-sm-inline-block btn btn-sm btn-secondary shadow-sm">
+            <i class="fas fa-arrow-left fa-sm text-white-50"></i> Volver a la Agenda
+        </a>
+    </div>
+
+    <div class="alert alert-danger" role="alert">
+        <h4 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> ¡Advertencia!</h4>
+        <p>Está a punto de eliminar permanentemente este evento. Esta acción no se puede deshacer.</p>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Detalles del Evento a Eliminar</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <dl class="row">
+                        <dt class="col-sm-4">Título:</dt>
+                        <dd class="col-sm-8">@Model.titulo</dd>
+
+                        <dt class="col-sm-4">Tipo de Evento:</dt>
+                        <dd class="col-sm-8">@Model.tipo_evento</dd>
+
+                        <dt class="col-sm-4">Fecha de Inicio:</dt>
+                        <dd class="col-sm-8">@Model.fecha_inicio.ToString("dd/MM/yyyy HH:mm")</dd>
+
+                        <dt class="col-sm-4">Fecha de Fin:</dt>
+                        <dd class="col-sm-8">@(Model.fecha_fin.HasValue ? Model.fecha_fin.Value.ToString("dd/MM/yyyy HH:mm") : "No especificada")</dd>
+
+                        <dt class="col-sm-4">Estado:</dt>
+                        <dd class="col-sm-8">@Model.estado</dd>
+                    </dl>
+                </div>
+                <div class="col-md-6">
+                    <dl class="row">
+                        <dt class="col-sm-4">Chofer:</dt>
+                        <dd class="col-sm-8">
+                            @if (Model.Chofer != null)
+                            {
+                                <span>@Model.Chofer.nombreCompleto</span>
+                            }
+                            else
+                            {
+                                <span>No asignado</span>
+                            }
+                        </dd>
+
+                        <dt class="col-sm-4">Camión:</dt>
+                    </dl>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer">
+            <form asp-action="Delete" method="post">
+                <input type="hidden" asp-for="id_evento" />
+                <div class="form-group">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> Confirmar Eliminación
+                    </button>
+                    <a href="@Url.Action("Index", "Agenda")" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancelar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,193 @@
+﻿@model COMAVI_SA.Models.ConfigurarMFAViewModel
+@using System.Security.Claims
+
+@{
+    ViewData["Title"] = "Configurar Autenticación de Dos Factores";
+    Layout = "_Layout";
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        @(ViewBag.MfaHabilitado == true ? "Gestionar Autenticación de Dos Factores" : "Configurar Autenticación de Dos Factores")
+                    </h4>
+                </div>
+                <div class="card-body">
+                    @if (ViewBag.MfaHabilitado == true)
+                    {
+                        <div class="alert alert-info">
+                            <i class="fas fa-shield-alt fa-2x float-start me-3"></i>
+                            <p>La autenticación de dos factores está <strong>habilitada</strong> para su cuenta.</p>
+                            <p>Esto proporciona una capa adicional de seguridad, ya que además de su contraseña, necesitará acceder a su aplicación de autenticación para generar un código cada vez que inicie sesión.</p>
+                        </div>
+
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <div class="card mb-3">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Códigos de respaldo</h5>
+                                        <p class="card-text">Los códigos de respaldo le permiten acceder a su cuenta si pierde acceso a su aplicación de autenticación.</p>
+                                        <a href="@Url.Action("RegenerarCodigosRespaldo", "Login")" class="btn btn-outline-primary">Generar nuevos códigos</a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="card mb-3">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Desactivar 2FA</h5>
+                                        <p class="card-text">Puede desactivar la autenticación de dos factores si lo desea, pero esto reducirá la seguridad de su cuenta.</p>
+                                        <a href="@Url.Action("DesactivarMFA", "Login")" class="btn btn-outline-danger">Desactivar</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-warning mt-3">
+                            <strong>Nota importante:</strong> Si decide generar nuevos códigos de respaldo, los códigos anteriores dejarán de funcionar.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info mb-4">
+                            <h5><i class="fas fa-shield-alt"></i> Aumente la seguridad de su cuenta</h5>
+                            <p>La autenticación de dos factores agrega una capa adicional de seguridad a su cuenta, requiriendo no solo su contraseña sino también un código generado en su dispositivo móvil.</p>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <h5>Paso 1: Escanee el código QR</h5>
+                                <p>Use una aplicación de autenticación como Google Authenticator, Microsoft Authenticator o Authy para escanear este código:</p>
+
+                                <div class="text-center p-3 border rounded mb-3 bg-light">
+                                    <div id="qrcode-container"></div>
+                                </div>
+
+                                <p class="small">Si no puede escanear el código QR, ingrese esta clave en su aplicación:</p>
+                                <div class="input-group mb-3">
+                                    <input type="text" class="form-control" value="@Model.Secret" readonly id="secretKey">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="copySecret()">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                </div>
+                                <div id="copyAlert" class="alert alert-success d-none">
+                                    Clave copiada al portapapeles.
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <h5>Paso 2: Verificar configuración</h5>
+                                <p>Introduzca el código generado por su aplicación de autenticación para completar la configuración:</p>
+
+                                <form asp-action="ConfigurarMFA" method="post">
+                                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                                    <input type="hidden" asp-for="Secret" />
+                                    <input type="hidden" asp-for="QrCodeUrl" />
+
+                                    <div class="form-group mb-3">
+                                        <label asp-for="OtpCode" class="form-label">Código de verificación</label>
+                                        <input asp-for="OtpCode" class="form-control" placeholder="Ingrese el código de 6 dígitos" autocomplete="off" />
+                                        <span asp-validation-for="OtpCode" class="text-danger"></span>
+                                    </div>
+
+                                    <div class="d-grid mt-4">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-check"></i> Activar autenticación de dos factores
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-warning">
+                            <strong>Importante:</strong> Después de activar la autenticación de dos factores, se le proporcionarán códigos de respaldo. Guárdelos en un lugar seguro, ya que le permitirán acceder a su cuenta si pierde acceso a su dispositivo móvil.
+                        </div>
+                    }
+
+                    <div class="text-center mt-3">
+                        <a href="@Url.Action("Profile", "Login")" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Volver al perfil
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Función para copiar el secreto
+            window.copySecret = function() {
+                var secretInput = document.getElementById('secretKey');
+                var copyAlert = document.getElementById('copyAlert');
+
+                if (secretInput && copyAlert) {
+                    secretInput.select();
+                    document.execCommand('copy');
+
+                    copyAlert.classList.remove('d-none');
+                    setTimeout(function() {
+                        copyAlert.classList.add('d-none');
+                    }, 3000);
+                }
+            }
+
+            // Generar código QR
+        @if (ViewBag.MfaHabilitado != true && !string.IsNullOrEmpty(Model.Secret))
+        {
+            <text>
+                    try {
+                        console.log("Iniciando generación de QR");
+                        // Datos para generar el QR
+                        var email = '@User.Identity.Name';
+                        var secret = '@Model.Secret';
+                        var issuer = 'COMAVI_DockTrack';
+
+                        // Crear la URL otpauth para aplicaciones de autenticación
+                        var otpauthUrl = 'otpauth://totp/' +
+                            encodeURIComponent(issuer) + ':' +
+                            encodeURIComponent(email) +
+                            '?secret=' + secret +
+                            '&issuer=' + encodeURIComponent(issuer) +
+                            '&algorithm=SHA1&digits=6&period=30';
+
+                        console.log("URL otpauth generada:", otpauthUrl);
+
+                        // Obtener el elemento contenedor
+                        var container = document.getElementById('qrcode-container');
+                        console.log("Contenedor encontrado:", container != null);
+
+                        if (container) {
+                            // Alternativa que no usa canvas
+                            QRCode.toDataURL(otpauthUrl, function(err, url) {
+                                if (err) {
+                                    console.error("Error generando QR:", err);
+                                    container.innerHTML = '<div class="alert alert-danger">Error al generar el código QR</div>';
+                                } else {
+                                    console.log("QR generado exitosamente");
+                                    var img = document.createElement('img');
+                                    img.src = url;
+                                    img.alt = "Código QR para autenticación";
+                                    img.width = 200;
+                                    img.height = 200;
+                                    container.appendChild(img);
+                                }
+                            });
+                        } else {
+                            console.error("No se encontró el contenedor del QR");
+                        }
+                    } catch (error) {
+                        console.error("Error en generación de QR:", error);
+                    }
+            </text>
+        }
+        });
+    </script>
+}

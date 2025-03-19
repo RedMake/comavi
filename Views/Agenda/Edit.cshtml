@@ -1,0 +1,137 @@
+﻿@model EventoAgenda
+@{
+    ViewData["Title"] = "Editar Evento";
+}
+
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Editar Evento</h1>
+        <a href="@Url.Action("Index", "Agenda")" class="d-none d-sm-inline-block btn btn-sm btn-secondary shadow-sm">
+            <i class="fas fa-arrow-left fa-sm text-white-50"></i> Volver a la Agenda
+        </a>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Información del Evento</h6>
+        </div>
+        <div class="card-body">
+            <form asp-action="Edit" method="post">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                <input type="hidden" asp-for="id_evento" />
+                <input type="hidden" asp-for="id_usuario" />
+                <input type="hidden" asp-for="notificacion_enviada" />
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="titulo" class="control-label">Título</label>
+                            <input asp-for="titulo" class="form-control" />
+                            <span asp-validation-for="titulo" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="tipo_evento" class="control-label">Tipo de Evento</label>
+                            <select asp-for="tipo_evento" class="form-control">
+                                <option value="Renovación">Renovación</option>
+                                <option value="Mantenimiento">Mantenimiento</option>
+                                <option value="Reunión">Reunión</option>
+                                <option value="Vencimiento">Vencimiento</option>
+                                <option value="Otro">Otro</option>
+                            </select>
+                            <span asp-validation-for="tipo_evento" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="fecha_inicio" class="control-label">Fecha y Hora de Inicio</label>
+                            <input asp-for="fecha_inicio" class="form-control" type="datetime-local" value="@Model.fecha_inicio.ToString("yyyy-MM-ddTHH:mm")" min="@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")" id="fecha_inicio" />
+                            <span asp-validation-for="fecha_inicio" class="text-danger"></span>
+                            <div id="fecha_inicio_error" class="text-danger" style="display:none;">La fecha de inicio no puede ser anterior a la fecha actual.</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="fecha_fin" class="control-label">Fecha y Hora de Fin (Opcional)</label>
+                            <input asp-for="fecha_fin" class="form-control" type="datetime-local" value="@(Model.fecha_fin.HasValue ? Model.fecha_fin.Value.ToString("yyyy-MM-ddTHH:mm") : "")" id="fecha_fin" />
+                            <span asp-validation-for="fecha_fin" class="text-danger"></span>
+                            <div id="fecha_fin_error" class="text-danger" style="display:none;">La fecha de fin debe ser posterior a la fecha de inicio.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="id_chofer" class="control-label">Chofer Relacionado (Opcional)</label>
+                            <select asp-for="id_chofer" class="form-control" asp-items="ViewBag.Choferes">
+                                <option value="">-- Seleccionar Chofer --</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="descripcion" class="control-label">Descripción</label>
+                    <textarea asp-for="descripcion" class="form-control" rows="4"></textarea>
+                    <span asp-validation-for="descripcion" class="text-danger"></span>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="estado" class="control-label">Estado</label>
+                            <select asp-for="estado" class="form-control">
+                                <option value="Pendiente">Pendiente</option>
+                                <option value="Completado">Completado</option>
+                                <option value="Cancelado">Cancelado</option>
+                            </select>
+                            <span asp-validation-for="estado" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group form-check">
+                            <input asp-for="requiere_notificacion" class="form-check-input" />
+                            <label asp-for="requiere_notificacion" class="form-check-label">Enviar Notificación</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label asp-for="dias_anticipacion_notificacion" class="control-label">Días de Anticipación</label>
+                            <input asp-for="dias_anticipacion_notificacion" class="form-control" type="number" min="1" max="30" />
+                            <span asp-validation-for="dias_anticipacion_notificacion" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Guardar Cambios
+                    </button>
+                    <a href="@Url.Action("Index", "Agenda")" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancelar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script src="~/js/agenda-validations.js"></script>
+    <script>
+        $(document).ready(function() {
+            initAgendaValidations();
+        });
+    </script>
+}

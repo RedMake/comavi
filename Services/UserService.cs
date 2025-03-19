@@ -20,6 +20,15 @@ namespace COMAVI_SA.Services
         Task<Usuario> GetUserByIdAsync(int userId);
         Task<Usuario> GetUserByEmailAsync(string email);
         Task<bool> VerifyUserAsync(string email, string token);
+        Task<bool> EnableMfaAsync(int userId, string otpCode);
+        Task<bool> DisableMfaAsync(int userId, string otpCode);
+        Task<bool> IsMfaEnabledAsync(int userId);
+        Task<List<string>> GenerateBackupCodesAsync(int userId);
+        Task<bool> VerifyBackupCodeAsync(int userId, string backupCode);
+        Task<int> GetFailedMfaAttemptsAsync(int userId);
+        Task RecordMfaAttemptAsync(int userId, bool success);
+        Task ResetMfaFailedAttemptsAsync(int userId);
+
     }
 
     public class UserService : IUserService
@@ -191,34 +200,6 @@ namespace COMAVI_SA.Services
             }
         }
 
-        public async Task<bool> VerifyMfaCodeAsync(int userId, string otpCode)
-        {
-            try
-            {
-                var mfaRecord = await _context.MFA
-                    .Where(m => m.id_usuario == userId && !m.usado)
-                    .OrderByDescending(m => m.fecha_generacion)
-                    .FirstOrDefaultAsync();
-
-                if (mfaRecord == null)
-                    return false;
-
-                var isValid = _otpService.VerifyOtp(mfaRecord.codigo, otpCode);
-                if (isValid)
-                {
-                    mfaRecord.usado = true;
-                    await _context.SaveChangesAsync();
-                }
-
-                return isValid;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al verificar código MFA");
-                return false;
-            }
-        }
-
         public async Task<bool> ResetPasswordAsync(string email, string token, string newPassword)
         {
             try
@@ -330,5 +311,327 @@ namespace COMAVI_SA.Services
                 return false;
             }
         }
+
+        public async Task<bool> EnableMfaAsync(int userId, string otpCode)
+        {
+            try
+            {
+                var user = await _context.Usuarios.FindAsync(userId);
+                if (user == null)
+                    return false;
+
+                var mfaRecord = await _context.MFA
+                    .Where(m => m.id_usuario == userId && !m.usado)
+                    .OrderByDescending(m => m.fecha_generacion)
+                    .FirstOrDefaultAsync();
+
+                if (mfaRecord == null)
+                    return false;
+
+                var isValid = _otpService.VerifyOtp(mfaRecord.codigo, otpCode);
+                if (!isValid)
+                    return false;
+
+                // Activar MFA para el usuario
+                user.mfa_habilitado = true;
+                mfaRecord.esta_activo = true;
+                mfaRecord.usado = true; // Marcar como usado pero activo
+
+                // Generar códigos de respaldo
+                var backupCodes = _otpService.GenerateBackupCodes();
+                foreach (var code in backupCodes)
+                {
+                    _context.CodigosRespaldoMFA.Add(new CodigosRespaldoMFA
+                    {
+                        id_usuario = userId,
+                        codigo = code,
+                        fecha_generacion = DateTime.Now,
+                        usado = false
+                    });
+                }
+
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al habilitar MFA");
+                return false;
+            }
+        }
+
+
+        public async Task<bool> DisableMfaAsync(int userId, string backupCode)
+        {
+            try
+            {
+                var user = await _context.Usuarios.FindAsync(userId);
+                if (user == null)
+                    return false;
+
+                // Verificar si el backupCode es válido o si no se requiere verificación (código vacío)
+                bool codeValid = string.IsNullOrEmpty(backupCode) ||
+                                 await VerifyBackupCodeAsync(userId, backupCode);
+
+                if (!codeValid)
+                    return false;
+
+                // Desactivar MFA para el usuario
+                user.mfa_habilitado = false;
+
+                // Desactivar todos los registros MFA
+                var mfaRecords = await _context.MFA
+                    .Where(m => m.id_usuario == userId)
+                    .ToListAsync();
+
+                foreach (var record in mfaRecords)
+                {
+                    record.esta_activo = false;
+                }
+
+                // Opcional: eliminar códigos de respaldo existentes
+                var backupCodes = await _context.CodigosRespaldoMFA
+                    .Where(c => c.id_usuario == userId)
+                    .ToListAsync();
+
+                _context.CodigosRespaldoMFA.RemoveRange(backupCodes);
+
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al deshabilitar MFA");
+                return false;
+            }
+        }
+
+        public async Task<bool> IsMfaEnabledAsync(int userId)
+        {
+            try
+            {
+                var user = await _context.Usuarios.FindAsync(userId);
+                return user?.mfa_habilitado ?? false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al verificar estado de MFA");
+                return false;
+            }
+        }
+
+        public async Task<List<string>> GenerateBackupCodesAsync(int userId)
+        {
+            try
+            {
+                var user = await _context.Usuarios.FindAsync(userId);
+                if (user == null || !user.mfa_habilitado)
+                    return new List<string>();
+
+                // Eliminar códigos de respaldo existentes
+                var existingCodes = await _context.CodigosRespaldoMFA
+                    .Where(c => c.id_usuario == userId)
+                    .ToListAsync();
+
+                _context.CodigosRespaldoMFA.RemoveRange(existingCodes);
+
+                // Generar nuevos códigos
+                var backupCodes = _otpService.GenerateBackupCodes();
+                var codesEntities = new List<CodigosRespaldoMFA>();
+
+                foreach (var code in backupCodes)
+                {
+                    codesEntities.Add(new CodigosRespaldoMFA
+                    {
+                        id_usuario = userId,
+                        codigo = code,
+                        fecha_generacion = DateTime.Now,
+                        usado = false
+                    });
+                }
+
+                _context.CodigosRespaldoMFA.AddRange(codesEntities);
+                await _context.SaveChangesAsync();
+
+                return backupCodes;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al generar códigos de respaldo");
+                return new List<string>();
+            }
+        }
+
+        public async Task<bool> VerifyBackupCodeAsync(int userId, string backupCode)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(backupCode))
+                    return false;
+
+                // Normalizar el código (eliminar espacios, guiones, etc.)
+                backupCode = backupCode.Replace("-", "").Replace(" ", "").ToUpper();
+
+                // Si el código proporcionado está en formato XXXXX, buscar cualquier código que comience así
+                string searchCode = backupCode;
+                if (backupCode.Length == 5)
+                {
+                    // Buscar códigos que comiencen con estos 5 caracteres
+                    var matchingCodes = await _context.CodigosRespaldoMFA
+                        .Where(c => c.id_usuario == userId &&
+                               !c.usado &&
+                               c.codigo.Replace("-", "").StartsWith(backupCode))
+                        .ToListAsync();
+
+                    if (matchingCodes.Any())
+                    {
+                        // Usar el primer código coincidente
+                        var codeToUse = matchingCodes.First();
+                        codeToUse.usado = true;
+                        await _context.SaveChangesAsync();
+                        return true;
+                    }
+                    return false;
+                }
+
+                // Buscar el código completo (10 caracteres)
+                if (backupCode.Length == 10)
+                {
+                    var backupCodeRecord = await _context.CodigosRespaldoMFA
+                        .FirstOrDefaultAsync(c => c.id_usuario == userId &&
+                                           !c.usado &&
+                                           c.codigo.Replace("-", "") == backupCode);
+
+                    if (backupCodeRecord != null)
+                    {
+                        backupCodeRecord.usado = true;
+                        await _context.SaveChangesAsync();
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al verificar código de respaldo");
+                return false;
+            }
+        }
+
+        public async Task<int> GetFailedMfaAttemptsAsync(int userId)
+        {
+            try
+            {
+                // Obtener intentos fallidos de MFA en los últimos 15 minutos
+                var failedAttempts = await _context.IntentosLogin
+                    .CountAsync(i => i.id_usuario == userId &&
+                               !i.exitoso &&
+                               i.fecha_hora >= DateTime.Now.AddMinutes(-15));
+
+                return failedAttempts;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener intentos fallidos de MFA");
+                return 0;
+            }
+        }
+
+        public async Task RecordMfaAttemptAsync(int userId, bool success)
+        {
+            try
+            {
+                var mfaAttempt = new IntentosLogin
+                {
+                    id_usuario = userId,
+                    fecha_hora = DateTime.Now,
+                    exitoso = success,
+                    direccion_ip = "OTP_Verification" // Marcar específicamente como intento OTP
+                };
+
+                _context.IntentosLogin.Add(mfaAttempt);
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al registrar intento de MFA");
+            }
+        }
+
+        public async Task ResetMfaFailedAttemptsAsync(int userId)
+        {
+            try
+            {
+                // Eliminar intentos fallidos recientes de MFA
+                var failedAttempts = await _context.IntentosLogin
+                    .Where(i => i.id_usuario == userId &&
+                           !i.exitoso &&
+                           i.direccion_ip == "OTP_Verification" &&
+                           i.fecha_hora >= DateTime.Now.AddMinutes(-15))
+                    .ToListAsync();
+
+                _context.IntentosLogin.RemoveRange(failedAttempts);
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al reiniciar intentos fallidos de MFA");
+            }
+        }
+
+        // Modificación del método VerifyMfaCodeAsync existente
+        public async Task<bool> VerifyMfaCodeAsync(int userId, string otpCode)
+        {
+            try
+            {
+                var user = await _context.Usuarios.FindAsync(userId);
+                if (user == null)
+                    return false;
+
+                // Verificar si el usuario tiene MFA habilitado
+                if (!user.mfa_habilitado)
+                {
+                    // Si no tiene MFA habilitado, verificar si está intentando configurarlo
+                    var setupMfaRecord = await _context.MFA
+                        .Where(m => m.id_usuario == userId && !m.usado)
+                        .OrderByDescending(m => m.fecha_generacion)
+                        .FirstOrDefaultAsync();
+
+                    if (setupMfaRecord == null)
+                        return true; // No tiene MFA configurado, permitir el acceso
+
+                    return _otpService.VerifyOtp(setupMfaRecord.codigo, otpCode);
+                }
+
+                // Si tiene MFA habilitado, verificar el código
+                var mfaRecord = await _context.MFA
+                    .Where(m => m.id_usuario == userId && m.esta_activo)
+                    .OrderByDescending(m => m.fecha_generacion)
+                    .FirstOrDefaultAsync();
+
+                if (mfaRecord == null)
+                    return false;
+
+                var isValid = _otpService.VerifyOtp(mfaRecord.codigo, otpCode);
+
+                // Registrar el intento
+                await RecordMfaAttemptAsync(userId, isValid);
+
+                // Si es válido, reiniciar intentos fallidos
+                if (isValid)
+                {
+                    await ResetMfaFailedAttemptsAsync(userId);
+                }
+
+                return isValid;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al verificar código MFA");
+                return false;
+            }
+        }
+
     }
 }

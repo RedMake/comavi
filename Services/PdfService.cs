@@ -132,34 +132,53 @@ namespace COMAVI_SA.Services
             // Normalizar texto para búsqueda (minúsculas, sin acentos)
             string normalizedText = pdfText.ToLowerInvariant()
                 .Replace("á", "a").Replace("é", "e").Replace("í", "i")
-                .Replace("ó", "o").Replace("ú", "u");
+                .Replace("ó", "o").Replace("ú", "u").Replace("ñ", "n");
 
             switch (documentType.ToLowerInvariant())
             {
                 case "licencia":
                     // Verificar si contiene información típica de una licencia de conducir
-                    return normalizedText.Contains("licencia") &&
-                           normalizedText.Contains("conducir") &&
-                           (normalizedText.Contains("vencimiento") || normalizedText.Contains("expiracion")) &&
-                           (normalizedText.Contains("categoria") || normalizedText.Contains("clase")) &&
-                           ContainsDatePattern(normalizedText);
+                    return normalizedText.Contains("licencia de conducir") &&
+                           normalizedText.Contains("nombre") &&
+                           normalizedText.Contains("cedula") &&
+                           (normalizedText.Contains("fecha") &&
+                            (normalizedText.Contains("emision") || normalizedText.Contains("expedicion"))) &&
+                           (normalizedText.Contains("fecha") && normalizedText.Contains("vencimiento")) &&
+                           (normalizedText.Contains("clase") || normalizedText.Contains("categoria")) &&
+                           ContainsDatePattern(normalizedText) &&
+                           ContainsIdNumberPattern(normalizedText);
 
                 case "cedula":
                     // Verificar si contiene información típica de una cédula
-                    return normalizedText.Contains("documento") &&
+                    return (normalizedText.Contains("cedula") || normalizedText.Contains("documento")) &&
                            normalizedText.Contains("identidad") &&
+                           normalizedText.Contains("nombre") &&
+                           (normalizedText.Contains("fecha") && normalizedText.Contains("nacimiento")) &&
+                           (normalizedText.Contains("nacionalidad") || normalizedText.Contains("pais")) &&
+                           ContainsDatePattern(normalizedText) &&
                            ContainsIdNumberPattern(normalizedText);
 
                 case "inscripcion":
                     // Verificar si contiene información de inscripción de vehículo/camión
-                    return normalizedText.Contains("vehiculo") &&
+                    return (normalizedText.Contains("inscripcion") || normalizedText.Contains("registro")) &&
+                           normalizedText.Contains("vehiculo") &&
                            (normalizedText.Contains("placa") || normalizedText.Contains("patente")) &&
-                           (normalizedText.Contains("registro") || normalizedText.Contains("inscripcion"));
+                           normalizedText.Contains("marca") &&
+                           normalizedText.Contains("modelo") &&
+                           (normalizedText.Contains("chasis") || normalizedText.Contains("vin")) &&
+                           normalizedText.Contains("motor") &&
+                           (normalizedText.Contains("propietario") || normalizedText.Contains("dueño")) &&
+                           ContainsIdNumberPattern(normalizedText);
 
                 case "mantenimiento":
                     // Verificar si contiene información de un reporte de mantenimiento
                     return normalizedText.Contains("mantenimiento") &&
-                           (normalizedText.Contains("reparacion") || normalizedText.Contains("servicio")) &&
+                           normalizedText.Contains("vehiculo") &&
+                           normalizedText.Contains("servicio") &&
+                           (normalizedText.Contains("placa") || normalizedText.Contains("patente")) &&
+                           (normalizedText.Contains("fecha") &&
+                            (normalizedText.Contains("servicio") || normalizedText.Contains("mantenimiento"))) &&
+                           (normalizedText.Contains("tecnico") || normalizedText.Contains("mecanico")) &&
                            ContainsDatePattern(normalizedText);
 
                 default:

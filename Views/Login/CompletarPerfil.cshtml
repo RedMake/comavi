@@ -20,9 +20,10 @@
                 <i class="fas fa-exclamation-triangle"></i> Por favor, complete toda la información a continuación para poder acceder completamente al sistema. Si no completa su perfil, algunas funcionalidades estarán restringidas.
             </div>
 
-            <form asp-action="CompletarPerfil" method="post" class="user">
+            <form asp-controller="Login" asp-action="CompletarPerfil" method="post" class="user">
+                @Html.AntiForgeryToken()
                 <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-
+        
                 <div class="form-group row">
                     <div class="col-sm-6 mb-3 mb-sm-0">
                         <label asp-for="Edad" class="form-label">Edad</label>
@@ -79,12 +80,35 @@
     </div>
 </div>
 
-@section Scripts {
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
+<!-- Canvas de respaldo para evitar errores de getContext -->
+<canvas id="auxiliarCanvas" style="display:none;"></canvas>
 
+@section Scripts {
     <script>
+        // Verificación de existencia de canvas antes de intentar usarlo
+        document.addEventListener('DOMContentLoaded', function() {
+            // Esta función se encargará de verificar todos los posibles canvas utilizados
+            function verificarYPrevenirErrorCanvas() {
+                // Lista de posibles IDs de canvas utilizados en la aplicación
+                const posiblesCanvasIds = ['chartCanvas', 'signatureCanvas', 'graphCanvas', 'auxiliarCanvas'];
+
+                // Verificar cada posible canvas
+                posiblesCanvasIds.forEach(id => {
+                    const canvas = document.getElementById(id);
+                    // Si el canvas no existe, crearlo como respaldo
+                    if (!canvas) {
+                        const canvasRespaldo = document.createElement('canvas');
+                        canvasRespaldo.id = id;
+                        canvasRespaldo.style.display = 'none';
+                        document.body.appendChild(canvasRespaldo);
+                    }
+                });
+            }
+
+            // Ejecutar la función de verificación
+            verificarYPrevenirErrorCanvas();
+        });
+
         // Validación de fecha de vencimiento (debe ser futura)
         document.addEventListener('DOMContentLoaded', function () {
             const fechaInput = document.getElementById('Fecha_Venc_Licencia');

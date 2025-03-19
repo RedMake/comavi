@@ -1,0 +1,75 @@
+﻿<svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fondo del documento -->
+  <rect width="800" height="600" fill="#f5f5f5" stroke="#cccccc" stroke-width="2"/>
+  
+  <!-- Cabecera -->
+  <rect x="50" y="50" width="700" height="100" fill="#4e73df" rx="5" ry="5"/>
+  <text x="400" y="100" font-family="Arial" font-size="32" fill="white" text-anchor="middle" dominant-baseline="middle" font-weight="bold">LICENCIA DE CONDUCIR</text>
+  <text x="400" y="130" font-family="Arial" font-size="16" fill="white" text-anchor="middle" dominant-baseline="middle">REPÚBLICA DE EJEMPLO</text>
+  
+  <!-- Contenido principal -->
+  <rect x="50" y="180" width="340" height="370" fill="white" stroke="#cccccc" stroke-width="1"/>
+  <rect x="410" y="180" width="340" height="370" fill="white" stroke="#cccccc" stroke-width="1"/>
+  
+  <!-- Sección de datos del conductor -->
+  <text x="70" y="210" font-family="Arial" font-size="18" fill="#4e73df" font-weight="bold">DATOS DEL CONDUCTOR</text>
+  <line x1="70" y1="220" x2="370" y2="220" stroke="#4e73df" stroke-width="2"/>
+  
+  <!-- Datos personales -->
+  <text x="70" y="250" font-family="Arial" font-size="14" fill="#333333" font-weight="bold">Nombre Completo:</text>
+  
+  <text x="70" y="280" font-family="Arial" font-size="14" fill="#333333" font-weight="bold">Cédula:</text>
+  
+  <text x="70" y="310" font-family="Arial" font-size="14" fill="#333333" font-weight="bold">Fecha Nac.:</text>
+  
+  <text x="70" y="340" font-family="Arial" font-size="14" fill="#333333" font-weight="bold">Domicilio:</text>
+  
+  <text x="70" y="370" font-family="Arial" font-size="14" fill="#333333" font-weight="bold">Nacionalidad:</text>
+  
+  <text x="70" y="400" font-family="Arial" font-size="14" fill="#333333" font-weight="bold">Tipo Sangre:</text>
+  
+  <text x="70" y="430" font-family="Arial" font-size="14" fill="#333333" font-weight="bold">Sexo:</text>
+  
+  <!-- Foto del conductor (simulada) -->
+  <rect x="80" y="440" width="120" height="60" fill="#e0e0e0" stroke="#cccccc" stroke-width="1"/>
+  <text x="140" y="470" font-family="Arial" font-size="12" fill="#666666" text-anchor="middle" dominant-baseline="middle">[CEDULA - ATRAS]</text>
+  <text x="140" y="515" font-family="Arial" font-size="12" fill="#666666" text-anchor="middle" dominant-baseline="middle">[IMAGEN]</text>
+	<!-- Foto del conductor (simulada) -->
+  <rect x="220" y="440" width="140" height="60" fill="#e0e0e0" stroke="#cccccc" stroke-width="1"/>
+  <text x="290" y="470" font-family="Arial" font-size="12" fill="#666666" text-anchor="middle" dominant-baseline="middle">[CEDULA - ADELANTE]</text>
+  <text x="290" y="515" font-family="Arial" font-size="12" fill="#666666" text-anchor="middle" dominant-baseline="middle">[IMAGEN]</text>
+
+	<!-- Información de la licencia -->
+  <text x="430" y="210" font-family="Arial" font-size="18" fill="#4e73df" font-weight="bold">INFORMACIÓN DE LICENCIA</text>
+  <line x1="430" y1="220" x2="730" y2="220" stroke="#4e73df" stroke-width="2"/>
+  
+  <!-- Datos de la licencia -->
+  <text x="430" y="250" font-family="Arial" font-size="14" fill="#333333" font-weight="bold">Número Licencia:</text>
+  
+  <text x="430" y="280" font-family="Arial" font-size="14" fill="#333333" font-weight="bold">Clase de auto:</text>
+  
+  <text x="430" y="310" font-family="Arial" font-size="14" fill="#333333" font-weight="bold">Fecha Emisión:</text>
+  
+  <text x="430" y="340" font-family="Arial" font-size="14" fill="#333333" font-weight="bold">Fecha Vencimiento:</text>
+  
+  <text x="430" y="370" font-family="Arial" font-size="14" fill="#333333" font-weight="bold">Restricciones:</text>
+  
+  <text x="430" y="400" font-family="Arial" font-size="14" fill="#333333" font-weight="bold">Autoridad Emisora:</text>
+  
+  <!-- Carner de Conducir -->
+  <rect x="595" y="450" width="120" height="60" fill="#e0e0e0" stroke="#cccccc" stroke-width="1"/>
+  <text x="655" y="480" font-family="Arial" font-size="12" fill="#666666" text-anchor="middle" dominant-baseline="middle">[LICENCIA - ATRAS]</text>
+  <text x="655" y="520" font-family="Arial" font-size="12" fill="#666666" text-anchor="middle" dominant-baseline="middle">[IMAGEN]</text>
+
+	<!-- Carner de Conducir -->
+  <rect x="435" y="450" width="140" height="60" fill="#e0e0e0" stroke="#cccccc" stroke-width="1"/>
+  <text x="505" y="480" font-family="Arial" font-size="12" fill="#666666" text-anchor="middle" dominant-baseline="middle">[LICENCIA - ADELANTE]</text>
+  <text x="505" y="520" font-family="Arial" font-size="12" fill="#666666" text-anchor="middle" dominant-baseline="middle">[IMAGEN]</text>
+
+	<!-- Pie de página -->
+  <rect x="50" y="570" width="700" height="30" fill="#4e73df" rx="5" ry="5"/>
+  <text x="400" y="590" font-family="Arial" font-size="12" fill="white" text-anchor="middle" dominant-baseline="middle">DOCUMENTO OFICIAL DE IDENTIDAD - PROHIBIDA SU FALSIFICACIÓN</text>
+  
+  <!-- Sello de agua -->
+  <text x="400" y="350" font-family="Arial" font-size="60" fill="rgba(78, 115, 223, 0.1)" text-anchor="middle" dominant-baseline="middle" transform="rotate(-30, 400, 350)">EJEMPLO</text>
+</svg>
