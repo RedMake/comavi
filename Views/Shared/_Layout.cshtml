@@ -9,8 +9,8 @@
     <link href="~/vendor/datatables/dataTables.bootstrap4.min.css" rel="stylesheet">
     @await RenderSectionAsync("Styles", required: false)
 </head>
-<body id="page-top">
-    
+<body id="page-top" class="@(User.IsInRole("admin") ? "admin-role" : "user-role")">
+
     <div id="wrapper">
         <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
             <li>
@@ -36,87 +36,120 @@
                 <hr class="sidebar-divider" />
             </li>
 
-            <li class="nav-item">
-                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseSistema" aria-expanded="true" aria-controls="collapseSistema">
-                    <i class="fas fa-cogs"></i>
-                    <span>Sistema</span>
-                </a>
-                <div id="collapseSistema" class="collapse" aria-labelledby="headingSistema" data-parent="#accordionSidebar">
-                    <div class="bg-white py-2 collapse-inner rounded">
-                        <a class="collapse-item" href="@Url.Action("Notificaciones", "Sistema")">Notificaciones</a>
-                        <a class="collapse-item" href="@Url.Action("Usuarios", "Sistema")">Usuarios</a>
+            @if (User.IsInRole("admin"))
+            {
+                <li class="nav-item">
+                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseSistema" aria-expanded="true" aria-controls="collapseSistema">
+                        <i class="fas fa-cogs"></i>
+                        <span>Sistema</span>
+                    </a>
+                    <div id="collapseSistema" class="collapse" aria-labelledby="headingSistema" data-parent="#accordionSidebar">
+                        <div class="bg-white py-2 collapse-inner rounded">
+                            <a class="collapse-item" href="@Url.Action("Notificaciones", "Sistema")">Notificaciones</a>
+                            <a class="collapse-item" href="@Url.Action("Usuarios", "Sistema")">Usuarios</a>
+                            <a class="collapse-item" href="@Url.Action("SesionesActivas", "Sistema")">Sesiones Activas</a>
+                            <a class="collapse-item" href="@Url.Action("IntentosLogin", "Sistema")">Intentos de Login</a>
+                        </div>
                     </div>
-                </div>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseLogin" aria-expanded="true" aria-controls="collapseLogin">
-                    <i class="fas fa-solid fa-user"></i>
-                    <span>Usuario</span>
-                </a>
-                <div id="collapseLogin" class="collapse" aria-labelledby="headingLogin" data-parent="#accordionSidebar">
-                    <div class="bg-white py-2 collapse-inner rounded">
-                        <a class="collapse-item" href="@Url.Action("Index", "Login")">Iniciar Sesión</a>
-                        <a class="collapse-item" href="@Url.Action("Register", "Login")">Registrar Usuario</a>
-                        <a class="collapse-item" href="@Url.Action("ForgotPassword", "Login")">Restablecer Contraseña</a>
-                        <a class="collapse-item" href="@Url.Action("AccessDenied", "Login")">Acceso Denegado</a>
-                        <a class="collapse-item" href="@Url.Action("VerifyOtp", "Login")">Autenticación MFA</a>
-                        <a class="collapse-item" href="@Url.Action("Profile", "Login")">Perfil</a>
-                    </div>
-                </div>
-            </li>
+                </li>
+            }
 
-            <li class="nav-item">
-                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseAgenda" aria-expanded="true" aria-controls="collapseAgenda">
-                    <i class="fas fa-calendar-alt"></i>
-                    <span>Agenda</span>
-                </a>
-                <div id="collapseAgenda" class="collapse" aria-labelledby="headingAgenda" data-parent="#accordionSidebar">
-                    <div class="bg-white py-2 collapse-inner rounded">
-                        <a class="collapse-item" href="@Url.Action("Index", "Agenda")">Mi Agenda</a>
-                        <a class="collapse-item" href="@Url.Action("Calendar", "Agenda")">Calendario</a>
-                        <a class="collapse-item" href="@Url.Action("Create", "Agenda")">Crear Evento</a>
+            @if (!User.Identity.IsAuthenticated)
+            {
+                <li class="nav-item">
+                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseLogin" aria-expanded="true" aria-controls="collapseLogin">
+                        <i class="fas fa-solid fa-user"></i>
+                        <span>Acceso</span>
+                    </a>
+                    <div id="collapseLogin" class="collapse" aria-labelledby="headingLogin" data-parent="#accordionSidebar">
+                        <div class="bg-white py-2 collapse-inner rounded">
+                            <a class="collapse-item" href="@Url.Action("Index", "Login")">Iniciar Sesión</a>
+                            <a class="collapse-item" href="@Url.Action("Register", "Login")">Registrase</a>
+                            <a class="collapse-item" href="@Url.Action("ForgotPassword", "Login")">Restablecer Contraseña</a>
+                        </div>
                     </div>
-                </div>
-            </li>
-         
-            <li class="nav-item">
-                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseChoferes" aria-expanded="true" aria-controls="collapseChoferes">
-                    <i class="fas fa-users"></i>
-                    <span>Choferes</span>
-                </a>
-                <div id="collapseChoferes" class="collapse" aria-labelledby="headingChoferes" data-parent="#accordionSidebar">
-                    <div class="bg-white py-2 collapse-inner rounded">
-                        <a class="collapse-item" href="@Url.Action("RegistrarChofer", "Admin")">Registrar Chofer</a>
-                        <a class="collapse-item" href="@Url.Action("ActualizarDocumentos", "Admin")">Actualizar Documentos</a>
-                        <a class="collapse-item" href="@Url.Action("MonitorearVencimientos", "Admin")">Monitorear Vencimientos</a>
-                        <a class="collapse-item" href="@Url.Action("ActualizarDatosChofer", "Admin")">Actualizar Datos</a>
-                        <a class="collapse-item" href="@Url.Action("DesactivarChofer", "Admin")">Desactivar Chofer</a>
-                        <a class="collapse-item" href="@Url.Action("AsignarDocumentos", "Admin")">Asignar Documentos</a>
-                        <a class="collapse-item" href="@Url.Action("EliminarChofer", "Admin")">Eliminar Chofer</a>
+                </li>
+            }
+            else
+            {
+                <li class="nav-item">
+                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseAgenda" aria-expanded="true" aria-controls="collapseAgenda">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>Agenda</span>
+                    </a>
+                    <div id="collapseAgenda" class="collapse" aria-labelledby="headingAgenda" data-parent="#accordionSidebar">
+                        <div class="bg-white py-2 collapse-inner rounded">
+                            <a class="collapse-item" href="@Url.Action("Index", "Agenda")">Mi Agenda</a>
+                            <a class="collapse-item" href="@Url.Action("Calendar", "Agenda")">Calendario</a>
+                            <a class="collapse-item" href="@Url.Action("Create", "Agenda")">Crear Evento</a>
+                        </div>
                     </div>
-                </div>
-            </li>
+                </li>
+            }
 
-            <li class="nav-item">
-                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseCamiones" aria-expanded="true" aria-controls="collapseCamiones">
-                    <i class="fas fa-truck"></i>
-                    <span>Camiones</span>
-                </a>
-                <div id="collapseCamiones" class="collapse" aria-labelledby="headingCamiones" data-parent="#accordionSidebar">
-                    <div class="bg-white py-2 collapse-inner rounded">
-                        <a class="collapse-item" href="@Url.Action("RegistrarCamion", "Admin")">Registrar Camión</a>
-                        <a class="collapse-item" href="@Url.Action("ActualizarCamion", "Admin")">Actualizar Camión</a>
-                        <a class="collapse-item" href="@Url.Action("HistorialMantenimiento", "Admin")">Historial de <br> Mantenimiento</a>
-                        <a class="collapse-item" href="@Url.Action("NotificacionesMantenimiento", "Admin")">Notificaciones de <br> Mantenimiento</a>
-                        <a class="collapse-item" href="@Url.Action("DesactivarCamion", "Admin")">Desactivar Camión</a>
-                        <a class="collapse-item" href="@Url.Action("AsignarChofer", "Admin")">Asignar Chofer</a>
-                        <a class="collapse-item" href="@Url.Action("EliminarCamion", "Admin")">Eliminar Camión</a>
+            @if (User.IsInRole("user"))
+            {
+                <li class="nav-item">
+                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapsePerfil" aria-expanded="true" aria-controls="collapsePerfil">
+                        <i class="fas fa-id-card"></i>
+                        <span>Mi Perfil</span>
+                    </a>
+                    <div id="collapsePerfil" class="collapse" aria-labelledby="headingPerfil" data-parent="#accordionSidebar">
+                        <div class="bg-white py-2 collapse-inner rounded">
+                            <a class="collapse-item" href="@Url.Action("Profile", "Login")">Datos Personales</a>
+                            <a class="collapse-item" href="@Url.Action("CamionAsignado", "Camion")">Mi Camión</a>
+                            <a class="collapse-item" href="@Url.Action("Index", "Calendar")">Ver Vencimientos</a>
+                        </div>
                     </div>
-                </div>
-            </li>
+                </li>
+            }
+
+            @if (User.IsInRole("admin"))
+            {
+                <li class="nav-item">
+                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseDocumentos" aria-expanded="true" aria-controls="collapseDocumentos">
+                        <i class="fas fa-file-pdf"></i>
+                        <span>Documentos</span>
+                    </a>
+                    <div id="collapseDocumentos" class="collapse" aria-labelledby="headingDocumentos" data-parent="#accordionSidebar">
+                        <div class="bg-white py-2 collapse-inner rounded">
+                            <a class="collapse-item" href="@Url.Action("PendientesValidacion", "Documentos")">Pendientes Validación</a>
+                            <a class="collapse-item" href="@Url.Action("DocumentosPorVencer", "Documentos")">Por Vencer</a>
+                            <a class="collapse-item" href="@Url.Action("GenerarReporteDocumentos", "Documentos")">Generar Reporte</a>
+                        </div>
+                    </div>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseChoferes" aria-expanded="true" aria-controls="collapseChoferes">
+                        <i class="fas fa-users"></i>
+                        <span>Choferes</span>
+                    </a>
+                    <div id="collapseChoferes" class="collapse" aria-labelledby="headingChoferes" data-parent="#accordionSidebar">
+                        <div class="bg-white py-2 collapse-inner rounded">
+                            <a class="collapse-item" href="@Url.Action("RegistrarChofer", "Admin")">Registrar Chofer</a>
+                            <a class="collapse-item" href="@Url.Action("MonitorearVencimientos", "Admin")">Monitorear Vencimientos</a>
+                            <a class="collapse-item" href="@Url.Action("ObtenerChoferesPaginados", "Admin")">Listar Choferes</a>
+                        </div>
+                    </div>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseCamiones" aria-expanded="true" aria-controls="collapseCamiones">
+                        <i class="fas fa-truck"></i>
+                        <span>Camiones</span>
+                    </a>
+                    <div id="collapseCamiones" class="collapse" aria-labelledby="headingCamiones" data-parent="#accordionSidebar">
+                        <div class="bg-white py-2 collapse-inner rounded">
+                            <a class="collapse-item" href="@Url.Action("RegistrarCamion", "Admin")">Registrar Camión</a>
+                            <a class="collapse-item" href="@Url.Action("HistorialMantenimiento", "Admin")">Historial Mantenimiento</a>
+                            <a class="collapse-item" href="@Url.Action("NotificacionesMantenimiento", "Admin")">Notificaciones</a>
+                            <a class="collapse-item" href="@Url.Action("AsignarChofer", "Admin")">Asignar Chofer</a>
+                        </div>
+                    </div>
+                </li>
+            }
         </ul>
-
-
 
         <div id="content-wrapper" class="d-flex flex-column">
             <div id="content">
@@ -124,94 +157,120 @@
                     <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
                         <i class="fa fa-bars"></i>
                     </button>
-                    <form class="d-none d-sm-inline-block form-inline mr-auto ml-md-3 my-2 my-md-0 mw-100 navbar-search">
-                        <div class="input-group">
-                            <input type="text" class="form-control bg-light border-0 small" placeholder="Buscar por..." />
-                            <div class="input-group-append">
-                                <button class="btn btn-primary" type="button">
-                                    <i class="fas fa-search fa-sm"></i>
-                                </button>
+
+                    @if (User.Identity.IsAuthenticated)
+                    {
+                        <form class="d-none d-sm-inline-block form-inline mr-auto ml-md-3 my-2 my-md-0 mw-100 navbar-search">
+                            <div class="input-group">
+                                <input type="text" class="form-control bg-light border-0 small" placeholder="Buscar por..." aria-label="Search" aria-describedby="basic-addon2" />
+                                <div class="input-group-append">
+                                    <button class="btn btn-primary" type="submit">
+                                        <i class="fas fa-search fa-sm"></i>
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                    </form>
+                        </form>
+                    }
+
                     <ul class="navbar-nav ml-auto">
-
-                        <li class="nav-item dropdown no-arrow d-sm-none">
-                            <a class="nav-link dropdown-toggle" href="#" id="searchDropdown" role="button"
-                                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <i class="fas fa-search fa-fw"></i>
-                            </a>
-                            <div class="dropdown-menu dropdown-menu-right p-3 shadow animated--grow-in"
-                                aria-labelledby="searchDropdown">
-                                <form class="form-inline mr-auto w-100 navbar-search">
-                                    <div class="input-group">
-                                        <input type="text" class="form-control bg-light border-0 small"
-                                            placeholder="Buscar por..." aria-label="Search"
-                                            aria-describedby="basic-addon2">
-                                        <div class="input-group-append">
-                                            <button class="btn btn-primary" type="button">
-                                                <i class="fas fa-search fa-sm"></i>
-                                            </button>
+                        @if (User.Identity.IsAuthenticated)
+                        {
+                            <li class="nav-item dropdown no-arrow d-sm-none">
+                                <a class="nav-link dropdown-toggle" href="#" id="searchDropdown" role="button"
+                                   data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    <i class="fas fa-search fa-fw"></i>
+                                </a>
+                                <div class="dropdown-menu dropdown-menu-right p-3 shadow animated--grow-in"
+                                     aria-labelledby="searchDropdown">
+                                    <form class="form-inline mr-auto w-100 navbar-search">
+                                        <div class="input-group">
+                                            <input type="text" class="form-control bg-light border-0 small"
+                                                   placeholder="Buscar por..." aria-label="Search"
+                                                   aria-describedby="basic-addon2">
+                                            <div class="input-group-append">
+                                                <button class="btn btn-primary" type="button">
+                                                    <i class="fas fa-search fa-sm"></i>
+                                                </button>
+                                            </div>
                                         </div>
-                                    </div>
-                                </form>
-                            </div>
-                        </li>
+                                    </form>
+                                </div>
+                            </li>
 
-                        <li class="nav-item dropdown no-arrow mx-1">
-                            <a class="nav-link dropdown-toggle" href="#" id="alertsDropdown" role="button"
-                                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <i class="fas fa-bell fa-fw"></i>
-                                <span class="badge badge-danger badge-counter">1+</span>
-                            </a>
-                            <div class="dropdown-list dropdown-menu dropdown-menu-right shadow animated--grow-in"
-                                aria-labelledby="alertsDropdown">
-                                <h6 class="dropdown-header">
-                                    Centro de Alertas
-                                </h6>
-                                <a class="dropdown-item d-flex align-items-center"  href="@Url.Action("Notificaciones", "Sistema")">
-                                    <div class="mr-3">
-                                        <div class="icon-circle bg-primary">
-                                            <i class="fas fa-file-alt text-white"></i>
-                                        </div>
+                            <li class="nav-item dropdown no-arrow mx-1">
+                                <a class="nav-link dropdown-toggle" href="#" id="alertsDropdown" role="button"
+                                   data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    <i class="fas fa-bell fa-fw"></i>
+                                    <span class="badge badge-danger badge-counter" id="notificationsCount">0</span>
+                                </a>
+                                <div class="dropdown-list dropdown-menu dropdown-menu-right shadow animated--grow-in"
+                                     aria-labelledby="alertsDropdown" id="notificationsDropdown">
+                                    <h6 class="dropdown-header">
+                                        Centro de Alertas
+                                    </h6>
+                                    <div id="notificationsContainer">
+                                        <!-- Las notificaciones se cargarán aquí dinámicamente -->
+                                        <a class="dropdown-item d-flex align-items-center" href="#">
+                                            <div class="mr-3">
+                                                <div class="icon-circle bg-primary">
+                                                    <i class="fas fa-info-circle text-white"></i>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div class="small text-gray-500">Cargando notificaciones...</div>
+                                                <span class="font-weight-bold">Por favor espere.</span>
+                                            </div>
+                                        </a>
                                     </div>
-                                    <div>
-                                        <div class="small text-gray-500">December 12, 2024</div>
-                                        <span class="font-weight-bold">Un nuevo reporte esta listo para descargarse</span>
-                                    </div>
-                                </a>
-                                
-                                <a class="dropdown-item text-center small text-gray-500"  href="@Url.Action("Notificaciones", "Sistema")">Mostrar Todas las Alertas</a>
-                            </div>
-                        </li>
-                        <li>
-                            <div class="topbar-divider d-none d-sm-block" style="transform: translateY(1rem);"></div>
-                        </li>
 
-                        <li class="nav-item dropdown no-arrow">
-                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
-                                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                <span class="mr-2 d-none d-lg-inline text-gray-600 small">Administrador</span>
-                                <img class="img-profile rounded-circle"
-                                    src="~/img/undraw_profile.svg">
-                            </a>
-                            <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in"
-                                aria-labelledby="userDropdown">
-                                <a class="dropdown-item" href="@Url.Action("Profile", "Login")">
-                                    <i class="fas fa-cogs fa-sm fa-fw mr-2 text-gray-400"></i>
-                                    Perfil 
-                                </a>
-                              
-                                <div class="dropdown-divider"></div>
-                                <a class="dropdown-item" href="@Url.Action("Logout", "Login")" data-toggle="modal" data-target="#logoutModal">
-                                    <i class="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-gray-400"></i>
-                                    Cerrar Sesión
-                                </a>
-                            </div>
-                        </li>
+                                    <a class="dropdown-item text-center small text-gray-500" href="@Url.Action("Index", "Notifications")">
+                                        Mostrar Todas las Alertas
+                                    </a>
+                                </div>
+                            </li>
+                            <li>
+                                <div class="topbar-divider d-none d-sm-block" style="transform: translateY(1rem);"></div>
+                            </li>
 
+                            <li class="nav-item dropdown no-arrow">
+                                <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
+                                   data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    <span class="mr-2 d-none d-lg-inline text-gray-600 small">@User.Identity.Name</span>
+                                    <img class="img-profile rounded-circle"
+                                         src="~/img/undraw_profile.svg">
+                                </a>
+                                <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in"
+                                     aria-labelledby="userDropdown">
+                                    <a class="dropdown-item" href="@Url.Action("Profile", "Login")">
+                                        <i class="fas fa-user fa-sm fa-fw mr-2 text-gray-400"></i>
+                                        Mi Perfil
+                                    </a>
+                                    <a class="dropdown-item" href="@Url.Action("CambiarContrasena", "Login")">
+                                        <i class="fas fa-key fa-sm fa-fw mr-2 text-gray-400"></i>
+                                        Cambiar Contraseña
+                                    </a>
+                                    <a class="dropdown-item" href="@Url.Action("ConfigurarMFA", "Login")">
+                                        <i class="fas fa-shield-alt fa-sm fa-fw mr-2 text-gray-400"></i>
+                                        Autenticación 2FA
+                                    </a>
+                                    <div class="dropdown-divider"></div>
+                                    <a class="dropdown-item" href="#" data-toggle="modal" data-target="#logoutModal">
+                                        <i class="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-gray-400"></i>
+                                        Cerrar Sesión
+                                    </a>
+                                </div>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" href="@Url.Action("Index", "Login")">
+                                    <i class="fas fa-sign-in-alt fa-sm fa-fw mr-2 text-gray-400"></i>
+                                    Iniciar Sesión
+                                </a>
+                            </li>
+                        }
                     </ul>
-
                 </nav>
 
                 <div class="container-fluid">
@@ -221,7 +280,7 @@
                 <footer class="sticky-footer bg-white">
                     <div class="container my-auto">
                         <div class="copyright text-center my-auto">
-                            <span>Copyright &copy; COMAVI S.A 2024</span>
+                            <span>Copyright &copy; COMAVI S.A 2025</span>
                         </div>
                     </div>
                 </footer>
@@ -229,12 +288,13 @@
         </div>
     </div>
 
+
     <a class="scroll-to-top rounded" href="#page-top">
         <i class="fas fa-angle-up"></i>
     </a>
 
     <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
-        aria-hidden="true">
+         aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
@@ -246,11 +306,17 @@
                 <div class="modal-body">Selecciona "Cerrar Sesión" abajo si quieres cerrar esta sesion solamente.</div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" type="button" data-dismiss="modal">Cancelar</button>
-                    <a class="btn btn-primary" href="@Url.Action("Index", "Login")">Cerrar Sesión</a>
+                    <form method="post" action="@Url.Action("Logout", "Login")" style="display: inline;">
+                        <button type="submit" class="btn btn-primary">Cerrar Sesión</button>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
+
+    <form id="csrf-form" style="display: none;">
+        @Html.AntiForgeryToken()
+    </form>
 
     <script src="~/vendor/jquery/jquery.min.js"></script>
     <script src="~/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
@@ -259,79 +325,10 @@
     <script src="~/vendor/datatables/jquery.dataTables.min.js"></script>
     <script src="~/vendor/datatables/dataTables.bootstrap4.min.js"></script>
     <script src="~/js/demo/datatables-demo.js"></script>
-
     <script src="~/vendor/chart.js/Chart.min.js"></script>
 
-    @* <script>
-        var camionesData = {
-            labels: ['Camión A', 'Camión B', 'Camión C', 'Camión D', 'Camión E'],
-            datasets: [{
-                label: 'Número de Camiones Activos',
-                data: [14, 12, 8, 5, 6, 7], 
-                backgroundColor: 'rgba(78, 115, 223, 0.2)',
-                borderColor: 'rgba(78, 115, 223, 1)',
-                borderWidth: 1
-            }]
-        };
+    <script src="~/js/notificaciones.js"></script>
 
-        var ctx = document.getElementById("myAreaChart").getContext("2d");
-        new Chart(ctx, {
-            type: 'line',
-            data: camionesData,
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
-            }
-        });
-
-        var choferesData = {
-            labels: ['Chofer 1', 'Chofer 2', 'Chofer 3', 'Chofer 4', 'Chofer 5'],
-            datasets: [{
-                label: 'Número de Choferes Activos',
-                data: [20, 15, 25, 10, 30, 40], 
-                backgroundColor: 'rgba(28, 200, 138, 0.2)',
-                borderColor: 'rgba(28, 200, 138, 1)',
-                borderWidth: 1
-            }]
-        };
-
-        var barCtx = document.getElementById("myBarChart").getContext("2d");
-        new Chart(barCtx, {
-            type: 'bar',
-            data: choferesData,
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
-            }
-        });
-
-        var documentosData = {
-            labels: ['Licencia', 'Cédula', 'Inscripción'],
-            datasets: [{
-                label: 'Porcentaje de Documentos Actualizados',
-                data: [70, 50, 80], 
-                backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc'],
-                hoverBackgroundColor: ['#2e59d9', '#17a673', '#2c9faf'],
-                hoverBorderColor: "rgba(234, 236, 244, 1)"
-            }]
-        };
-
-        var pieCtx = document.getElementById("myPieChart").getContext("2d");
-        new Chart(pieCtx, {
-            type: 'doughnut',
-            data: documentosData
-        });
-    </script> *@
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

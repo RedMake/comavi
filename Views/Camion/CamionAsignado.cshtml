@@ -1,0 +1,272 @@
+﻿@model COMAVI_SA.Models.Camiones
+@{
+    ViewData["Title"] = "Camión Asignado";
+}
+
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Mi Camión Asignado</h1>
+        <div class="d-flex justify-content-end">
+            <a href="@Url.Action("Profile", "Login")" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm" style="transform: translateX(-0.25rem);">
+                <i class="fas fa-user fa-sm text-white-50"></i> Ver Mi Perfil
+            </a>
+            <a href="@Url.Action("Index", "Home")" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+                <i class="fas fa-fw fa-tachometer-alt"></i> Volver al Inicio
+            </a>
+        </div>
+        
+    </div>
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["Error"]
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    }
+
+    @if (TempData["Info"] != null)
+    {
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            @TempData["Info"]
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    }
+
+    @if (Model == null)
+    {
+        <div class="card shadow mb-4">
+            <div class="card-body">
+                <div class="text-center py-4">
+                    <i class="fas fa-truck fa-5x text-gray-300 mb-4"></i>
+                    <h5 class="text-gray-700">No tiene un camión asignado actualmente</h5>
+                    <p class="text-muted">Un administrador le asignará un camión cuando sea necesario.</p>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <!-- Información del Camión -->
+            <div class="col-xl-6 col-lg-6">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                        <h6 class="m-0 font-weight-bold text-primary">Información del Camión</h6>
+                        <div>
+                            <span class="badge @(Model.estado == "activo" ? "badge-success" : "badge-warning")">
+                                @Model.estado.ToUpper()
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="text-center mb-4">
+                            <i class="fas fa-truck fa-5x text-gray-300"></i>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-sm-6 mb-3">
+                                <h6 class="font-weight-bold">Marca</h6>
+                                <p>@Model.marca</p>
+                            </div>
+                            <div class="col-sm-6 mb-3">
+                                <h6 class="font-weight-bold">Modelo</h6>
+                                <p>@Model.modelo</p>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-sm-6 mb-3">
+                                <h6 class="font-weight-bold">Año</h6>
+                                <p>@Model.anio</p>
+                            </div>
+                            <div class="col-sm-6 mb-3">
+                                <h6 class="font-weight-bold">Número de Placa</h6>
+                                <p>@Model.numero_placa</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Historial de Mantenimiento -->
+            <div class="col-xl-6 col-lg-6">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">Historial de Mantenimiento</h6>
+                    </div>
+                    <div class="card-body">
+                        @{
+                            var historialMantenimiento = ViewBag.HistorialMantenimiento as List<COMAVI_SA.Models.Mantenimiento_Camiones>;
+                        }
+
+                        @if (historialMantenimiento == null || !historialMantenimiento.Any())
+                        {
+                            <div class="text-center py-4">
+                                <i class="fas fa-tools fa-3x text-gray-300 mb-3"></i>
+                                <p>No hay registros de mantenimiento para este camión.</p>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-bordered" width="100%" cellspacing="0">
+                                    <thead>
+                                        <tr>
+                                            <th>Fecha</th>
+                                            <th>Descripción</th>
+                                            <th>Costo</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var mantenimiento in historialMantenimiento.Take(5))
+                                        {
+                                            <tr>
+                                                <td>@mantenimiento.fecha_mantenimiento.ToString("dd/MM/yyyy")</td>
+                                                <td>@mantenimiento.descripcion</td>
+                                                <td>$@mantenimiento.costo.ToString("N2")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            @if (historialMantenimiento.Count > 5)
+                            {
+                                <div class="text-center mt-3">
+                                    <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapseHistorialCompleto" aria-expanded="false" aria-controls="collapseHistorialCompleto">
+                                        Ver historial completo
+                                    </button>
+                                </div>
+
+                                <div class="collapse" id="collapseHistorialCompleto">
+                                    <div class="table-responsive mt-3">
+                                        <table class="table table-bordered" width="100%" cellspacing="0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Fecha</th>
+                                                    <th>Descripción</th>
+                                                    <th>Costo</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var mantenimiento in historialMantenimiento.Skip(5))
+                                                {
+                                                    <tr>
+                                                        <td>@mantenimiento.fecha_mantenimiento.ToString("dd/MM/yyyy")</td>
+                                                        <td>@mantenimiento.descripcion</td>
+                                                        <td>$@mantenimiento.costo.ToString("N2")</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+
+                <!-- Próximo Mantenimiento -->
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">Próximo Mantenimiento</h6>
+                    </div>
+                    <div class="card-body">
+                        @{
+                            var proximoMantenimiento = historialMantenimiento?.OrderByDescending(m => m.fecha_mantenimiento).FirstOrDefault();
+                            DateTime? fechaProximoMantenimiento = proximoMantenimiento != null ?
+                            proximoMantenimiento.fecha_mantenimiento.AddMonths(3) : null;
+                        }
+
+                        @if (fechaProximoMantenimiento.HasValue)
+                        {
+                            var diasRestantes = (fechaProximoMantenimiento.Value - DateTime.Now).Days;
+                            var estaProximo = diasRestantes <= 30;
+
+                            <div class="text-center">
+                                <div class="mb-3">
+                                    <span class="@(estaProximo ? "text-danger" : "text-primary") font-weight-bold">
+                                        @fechaProximoMantenimiento.Value.ToString("dd/MM/yyyy")
+                                    </span>
+                                </div>
+
+                                <div class="progress mb-3">
+                                    <div class="progress-bar @(estaProximo ? "bg-danger" : "bg-primary")" role="progressbar"
+                                         style="width: @(100 - Math.Min(100, (diasRestantes * 100) / 90))%"
+                                         aria-valuenow="@(100 - Math.Min(100, (diasRestantes * 100) / 90))"
+                                         aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+
+                                <p>
+                                    @if (diasRestantes > 0)
+                                    {
+                                        <span>Faltan <strong>@diasRestantes</strong> días para el próximo mantenimiento programado.</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-danger">El mantenimiento está <strong>vencido</strong>. Contacte a un administrador.</span>
+                                    }
+                                </p>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center py-4">
+                                <i class="fas fa-calendar fa-3x text-gray-300 mb-3"></i>
+                                <p>No hay información sobre el próximo mantenimiento programado.</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráfico de Mantenimientos -->
+        <div class="row">
+            <div class="col-xl-12 col-lg-12">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">Estadísticas de Mantenimiento</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-area">
+                            <canvas id="maintenanceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script src="~/js/maintenance-chart.js"></script>
+
+    @if (Model != null && ViewBag.HistorialMantenimiento != null)
+    {
+        <script>
+            $(document).ready(function() {
+            @{
+                var historial = ViewBag.HistorialMantenimiento as List<COMAVI_SA.Models.Mantenimiento_Camiones>;
+                var labels = "[]";
+                var costos = "[]";
+
+                if (historial != null && historial.Any())
+                {
+                    var ultimosSeis = historial.OrderBy(m => m.fecha_mantenimiento)
+                                             .TakeLast(6)
+                                             .ToList();
+                    labels = $"[{string.Join(",", ultimosSeis.Select(m => $"'{m.fecha_mantenimiento:MMM yyyy}'"))}]";
+                    costos = $"[{string.Join(",", ultimosSeis.Select(m => m.costo))}]";
+                }
+            }
+                // Llamar a la función del archivo externo
+                initializeMaintenanceChart(@Html.Raw(labels), @Html.Raw(costos));
+            });
+        </script>
+    }
+}

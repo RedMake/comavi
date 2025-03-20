@@ -95,40 +95,8 @@
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/locales-all.min.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            var calendarEl = document.getElementById('calendar');
-            var calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'dayGridMonth',
-                headerToolbar: {
-                    left: 'prev,next today',
-                    center: 'title',
-                    right: 'dayGridMonth,timeGridWeek,listMonth'
-                },
-                locale: 'es',
-                events: @Html.Raw(ViewBag.Eventos),
-                eventClick: function(info) {
-                    // Mostrar modal con detalles del evento
-                    $('#eventTitle').text(info.event.title);
-                    $('#eventDate').text(info.event.startStr);
-                    $('#eventDescription').text(info.event.extendedProps.description || 'No hay descripción disponible');
-
-                    // Determinar estado
-                    var estado = '';
-                    if (info.event.classNames.includes('bg-danger')) {
-                        estado = '<span class="badge badge-danger">Vencido</span>';
-                    } else if (info.event.classNames.includes('bg-warning')) {
-                        estado = '<span class="badge badge-warning">Próximo a vencer</span>';
-                    } else if (info.event.classNames.includes('bg-success')) {
-                        estado = '<span class="badge badge-success">Vigente</span>';
-                    } else if (info.event.classNames.includes('bg-primary')) {
-                        estado = '<span class="badge badge-primary">Mantenimiento</span>';
-                    }
-
-                    $('#eventStatus').html(estado);
-                    $('#eventModal').modal('show');
-                }
-            });
-            calendar.render();
-        });
+        // Definir los datos de eventos para que estén disponibles para el script
+        var eventsData = @Html.Raw(ViewBag.Eventos);
     </script>
+    <script src="~/js/calendar-init.js"></script>
 }

@@ -6,8 +6,10 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Data;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -672,6 +674,7 @@ namespace COMAVI_SA.Controllers
                     ModelState.AddModelError("Email", "Este correo electrónico ya está registrado.");
                     return View(model);
                 }
+                model.UserName = model.UserName?.Trim();
 
                 // Generar token de verificación
                 var verificationToken = GenerateVerificationToken();
@@ -902,33 +905,38 @@ namespace COMAVI_SA.Controllers
         {
             if (!User.Identity.IsAuthenticated)
                 return RedirectToAction("Index");
-
             try
             {
                 int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
                 var chofer = await _context.Choferes
                     .FirstOrDefaultAsync(c => c.id_usuario == userId);
-
                 if (chofer == null)
                 {
                     TempData["Error"] = "Debe completar su perfil primero.";
-                    return RedirectToAction("CompletarPerfil");
+                    return RedirectToAction("Profile");
                 }
 
-                // Obtener documentos existentes
                 var documentosExistentes = await _context.Documentos
                     .Where(d => d.id_chofer == chofer.id_chofer)
                     .ToListAsync();
 
+                // Definir los tipos de documentos requeridos
+                var tiposRequeridos = new List<string> { "licencia", "carnet", "seguro", "tarjeta" }; // Ajusta según tus requisitos
+
+                // Verificar qué documentos faltan
+                var tiposExistentes = documentosExistentes.Select(d => d.tipo_documento).ToList();
+                var documentosFaltantes = tiposRequeridos.Except(tiposExistentes).ToList();
+
                 var model = new CargaDocumentoViewModel
                 {
-                    DocumentosExistentes = documentosExistentes
+                    DocumentosExistentes = documentosExistentes,
+                    DocumentosFaltantes = documentosFaltantes 
                 };
 
-                // Verificar si todos los documentos están verificados
+                bool tieneTodosLosDocumentos = !documentosFaltantes.Any();
                 bool todosVerificados = documentosExistentes.All(d => d.estado_validacion == "verificado");
 
-                if (todosVerificados)
+                if (tieneTodosLosDocumentos && todosVerificados)
                 {
                     TempData["InfoMessage"] = "Todos sus documentos ya están verificados.";
                     return RedirectToAction("Profile");
@@ -938,12 +946,10 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al cargar página de subir documentos");
                 TempData["Error"] = "Ocurrió un error al cargar la página.";
                 return RedirectToAction("Profile");
             }
         }
-
         [Authorize(Roles = "admin,user")]
         [HttpPost]
         public async Task<IActionResult> SubirDocumentos(CargaDocumentoViewModel model)
@@ -957,7 +963,7 @@ namespace COMAVI_SA.Controllers
                 if (chofer == null)
                 {
                     TempData["Error"] = "Debe completar su perfil primero.";
-                    return RedirectToAction("CompletarPerfil");
+                    return RedirectToAction("Profile");
                 }
 
                 // Validar si el documento ya está verificado
@@ -1064,7 +1070,14 @@ namespace COMAVI_SA.Controllers
             }
         }
 
-        [AllowAnonymous]
+        [Authorize(Roles = "admin,user")]
+        [HttpGet]
+        public IActionResult LogoutGet()
+        {
+            return View();
+        }
+
+        [Authorize(Roles = "admin,user")]
         [HttpPost]
         public async Task<IActionResult> Logout()
         {
@@ -1087,6 +1100,49 @@ namespace COMAVI_SA.Controllers
                     }
                 }
 
+                // Eliminar solo la sesión activa actual de la base de datos
+                if (User.Identity.IsAuthenticated)
+                {
+                    var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+                    _logger.LogInformation("Eliminando sesión activa actual para usuario {UserId}", userId);
+
+                    // Obtener información para ayudar a identificar la sesión actual
+                    string userAgent = Request.Headers["User-Agent"].ToString();
+                    string ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+
+                    // Buscar la sesión activa que mejor coincida con la sesión actual
+                    var sesionActual = await _context.SesionesActivas
+                        .Where(s => s.id_usuario == userId)
+                        .FirstOrDefaultAsync(s =>
+                            s.dispositivo.Contains(userAgent) ||
+                            (s.ubicacion != null && s.ubicacion.Contains(ipAddress)));
+
+                    // Si no encontramos una coincidencia exacta, tomamos la última actualizada
+                    if (sesionActual == null)
+                    {
+                        sesionActual = await _context.SesionesActivas
+                            .Where(s => s.id_usuario == userId)
+                            .OrderByDescending(s => s.fecha_ultima_actividad)
+                            .FirstOrDefaultAsync();
+                    }
+
+                    // Eliminar la sesión si la encontramos
+                    if (sesionActual != null)
+                    {
+                        _context.SesionesActivas.Remove(sesionActual);
+                        await _context.SaveChangesAsync();
+                        _logger.LogInformation("Eliminada sesión activa con ID {SesionId} de la base de datos", sesionActual.id_sesion);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("No se encontró una sesión activa para eliminar para el usuario {UserId}", userId);
+                    }
+
+                    var idSesionParam = new SqlParameter("@idSesion", SqlDbType.NVarChar, 500) { Value = sessionId };
+                    var idUsuarioParam = new SqlParameter("@idUsuario", SqlDbType.Int) { Value = userId };
+                    var returnValue = new SqlParameter("@returnValue", SqlDbType.Int) { Direction = ParameterDirection.ReturnValue };
+                }
+
                 HttpContext.Session.Remove("JwtToken");
 
                 // Limpiar todos los TempData relacionados con la autenticación
@@ -1096,24 +1152,6 @@ namespace COMAVI_SA.Controllers
                 TempData.Remove("MfaCompleted");
                 TempData.Remove("OtpTimestamp");
                 TempData.Remove("ReturnUrl");
-
-                // Eliminar sesiones activas de la base de datos
-                if (User.Identity.IsAuthenticated)
-                {
-                    var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-                    _logger.LogInformation("Eliminando sesiones activas para usuario {UserId}", userId);
-
-                    var sesionesActivas = await _context.SesionesActivas
-                        .Where(s => s.id_usuario == userId)
-                        .ToListAsync();
-
-                    if (sesionesActivas.Any())
-                    {
-                        _context.SesionesActivas.RemoveRange(sesionesActivas);
-                        await _context.SaveChangesAsync();
-                        _logger.LogInformation("Eliminadas {Count} sesiones activas de la base de datos", sesionesActivas.Count);
-                    }
-                }
 
                 // Eliminar todas las cookies con configuración exhaustiva
                 _logger.LogInformation("Eliminando todas las cookies");
@@ -1314,6 +1352,21 @@ namespace COMAVI_SA.Controllers
                     }
                 }
 
+                if (model.Fecha_Venc_Licencia.HasValue)
+                {
+                    // Calcular días hasta vencimiento correctamente
+                    ViewBag.DiasParaVencimiento = (model.Fecha_Venc_Licencia.Value.Date - DateTime.Now.Date).Days;
+
+                    // Generar mensaje de alerta según los días restantes
+                    if (ViewBag.DiasParaVencimiento <= 0)
+                    {
+                        ViewBag.AlertaLicencia = "Su licencia de conducir ha vencido. Por favor, renuévela lo antes posible.";
+                    }
+                    else if (ViewBag.DiasParaVencimiento <= 30)
+                    {
+                        ViewBag.AlertaLicencia = $"Su licencia de conducir vencerá en {ViewBag.DiasParaVencimiento} días. Considere renovarla pronto.";
+                    }
+                }
                 return View(model);
             }
             catch (Exception ex)
