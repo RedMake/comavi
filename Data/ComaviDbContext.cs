@@ -127,6 +127,10 @@ namespace COMAVI_SA.Data
                 .WithOne()
                 .HasForeignKey<PreferenciasNotificacion>(p => p.id_usuario)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            //modelBuilder.Entity<Usuario>()
+            //    .Property(u => u.mfa_habilitado)
+            //    .HasDefaultValue(false);
         }
     }
 }

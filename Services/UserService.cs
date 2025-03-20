@@ -28,6 +28,7 @@ namespace COMAVI_SA.Services
         Task<int> GetFailedMfaAttemptsAsync(int userId);
         Task RecordMfaAttemptAsync(int userId, bool success);
         Task ResetMfaFailedAttemptsAsync(int userId);
+        string HashPassword(string password);
 
     }
 
@@ -92,7 +93,8 @@ namespace COMAVI_SA.Services
                     estado_verificacion = "pendiente",
                     fecha_registro = DateTime.Now,
                     token_verificacion = verificationToken,
-                    fecha_expiracion_token = tokenExpiration
+                    fecha_expiracion_token = tokenExpiration,
+                    mfa_habilitado = false
                 };
 
                 _context.Usuarios.Add(newUser);
@@ -633,5 +635,10 @@ namespace COMAVI_SA.Services
             }
         }
 
+        public string HashPassword(string password)
+        {
+            return _passwordService.HashPassword(password);
+        }
     }
+
 }

@@ -420,6 +420,120 @@ namespace COMAVI_SA.Models
         public bool allDay { get; set; } = false;
     }
 
+
+    public class AdminDashboardViewModel
+    {
+        public int TotalCamiones { get; set; }
+        public int CamionesActivos { get; set; }
+        public int TotalChoferes { get; set; }
+        public int ChoferesActivos { get; set; }
+        public int TotalUsuarios { get; set; }
+        public int UsuariosActivos { get; set; }
+        public int DocumentosProximosVencer { get; set; }
+        public List<Camiones> Camiones { get; set; }
+        public List<Choferes> Choferes { get; set; }
+    }
+
+    public class CamionViewModel
+    {
+        public int id_camion { get; set; }
+        public string marca { get; set; }
+        public string modelo { get; set; }
+        public int anio { get; set; }
+        public string numero_placa { get; set; }
+        public string estado { get; set; }
+        public int? chofer_asignado { get; set; }
+        public string NombreChofer { get; set; }
+    }
+
+    public class DocumentoVencimientoViewModel
+    {
+        public int id_documento { get; set; }
+        public int id_chofer { get; set; }
+        public string nombreChofer { get; set; }
+        public string tipo_documento { get; set; }
+        public DateTime fecha_emision { get; set; }
+        public DateTime fecha_vencimiento { get; set; }
+        public int diasParaVencimiento { get; set; }
+        public string estadoDocumento { get; set; } // Vencido, Por vencer, Vigente
+    }
+
+    public class UsuarioAdminViewModel
+    {
+        public int id_usuario { get; set; }
+        public string nombre_usuario { get; set; }
+        public string correo_electronico { get; set; }
+        public string rol { get; set; }
+        public DateTime? ultimo_ingreso { get; set; }
+        public string estado_verificacion { get; set; }
+        public DateTime fecha_registro { get; set; }
+        public int sesiones_activas { get; set; }
+    }
+
+    public class EditarUsuarioViewModel
+    {
+        public int id_usuario { get; set; }
+        public string nombre_usuario { get; set; }
+        public string correo_electronico { get; set; }
+        public string rol { get; set; }
+    }
+
+    public class SesionActivaViewModel
+    {
+        public int id_sesion { get; set; }
+        public int id_usuario { get; set; }
+        public string nombre_usuario { get; set; }
+        public string dispositivo { get; set; }
+        public string ubicacion { get; set; }
+        public DateTime fecha_inicio { get; set; }
+        public DateTime fecha_ultima_actividad { get; set; }
+        public string token_sesion { get; set; }
+    }
+
+    public class GraficoDataViewModel
+    {
+        public string label { get; set; }
+        public int value { get; set; }
+        public string color { get; set; }
+    }
+
+    public class ActividadRecienteViewModel
+    {
+        public int id_actividad { get; set; }
+        public string tipo_actividad { get; set; }
+        public string descripcion { get; set; }
+        public DateTime fecha_hora { get; set; }
+        public int? id_usuario { get; set; }
+        public string usuario { get; set; }
+    }
+
+    public class DashboardViewModel
+    {
+        public int TotalCamiones { get; set; }
+        public int CamionesActivos { get; set; }
+        public int TotalChoferes { get; set; }
+        public int ChoferesActivos { get; set; }
+        public int TotalUsuarios { get; set; }
+        public int UsuariosActivos { get; set; }
+        public int DocumentosProximosVencer { get; set; }
+        public int MantenimientosDelMes { get; set; }
+        public decimal CostoMantenimientoMes { get; set; }
+    }
+
+    public class MantenimientoReporteViewModel
+    {
+        public int id_mantenimiento { get; set; }
+        public int id_camion { get; set; }
+        public string marca { get; set; }
+        public string modelo { get; set; }
+        public string numero_placa { get; set; }
+        public string descripcion { get; set; }
+        public DateTime fecha_mantenimiento { get; set; }
+        public decimal costo { get; set; }
+    }
+    
+
+
     public class NotificacionesViewModel
     {
         public List<Notificaciones_Usuario> Notificaciones { get; set; }
@@ -649,6 +763,9 @@ namespace COMAVI_SA.Models
         public int? IdChofer { get; set; }
 
         public List<Documentos> DocumentosExistentes { get; set; } = new List<Documentos>();
+
+        public List<string> DocumentosFaltantes { get; set; } = new List<string>();
+
 
     }
 

@@ -8,6 +8,8 @@ namespace COMAVI_SA.Services
     public interface IEmailService
     {
         Task SendEmailAsync(string to, string subject, string body);
+        Task EnviarCorreoAsync(string to, string subject, string body) => SendEmailAsync(to, subject, body);
+
     }
 
     public class EmailService : IEmailService
