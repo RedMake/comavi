@@ -2,7 +2,6 @@
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 
 name: Build and deploy ASP.Net Core app to Azure Web App - COMAVISA20250314144249
-
 on:
   push:
     branches:
@@ -13,35 +12,133 @@ jobs:
   build:
     runs-on: windows-latest
     permissions:
-      contents: read #This is required for actions/checkout
-
+      contents: read 
     steps:
       - uses: actions/checkout@v4
-
+      
       - name: Set up .NET Core
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.x'
-
+          dotnet-version: '9.0'
+      
+      - name: Cache NuGet packages
+        uses: actions/cache@v3.4.3
+        with:
+          path: |
+            ~/.nuget/packages
+            !~/.nuget/packages/microsoft.net.test.sdk
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+          enableCrossOsArchive: false
+          fail-on-cache-miss: false
+      
+      - name: Restore dependencies
+        run: dotnet restore
+      
       - name: Build with dotnet
-        run: dotnet build --configuration Release
-
+        run: dotnet build --configuration Release --no-restore
+      
+      - name: Cache build outputs
+        uses: actions/cache@v3.4.3
+        with:
+          path: |
+            **/bin
+            **/obj
+          key: ${{ runner.os }}-build-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-build-
+      
+  test:
+    runs-on: windows-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up .NET Core
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0'
+      
+      - name: Cache NuGet packages
+        uses: actions/cache@v3.4.3
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+      
+      - name: Restore cached build outputs
+        uses: actions/cache@v3.4.3
+        with:
+          path: |
+            **/bin
+            **/obj
+          key: ${{ runner.os }}-build-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-build-
+          fail-on-cache-miss: false
+      
+      - name: Restore dependencies
+        run: dotnet restore
+      
+      - name: Run tests
+        run: dotnet test --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./TestResults
+      
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ./TestResults
+          retention-days: 5
+  
+  publish:
+    runs-on: windows-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: RedMake/comavi
+      
+      - name: Set up .NET Core
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0'
+      
+      - name: Cache NuGet packages
+        uses: actions/cache@v3.4.3
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+      
+      - name: Restore cached build outputs
+        uses: actions/cache@v3.4.3
+        with:
+          path: |
+            **/bin
+            **/obj
+          key: ${{ runner.os }}-build-${{ github.sha }}
+          fail-on-cache-miss: false
+      
+      - name: Restore dependencies
+        run: dotnet restore
+      
       - name: dotnet publish
         run: dotnet publish -c Release -o "${{env.DOTNET_ROOT}}/myapp"
-
+      
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: .net-app
           path: ${{env.DOTNET_ROOT}}/myapp
-
+          if-no-files-found: error
+  
   deploy:
     runs-on: windows-latest
-    needs: build
+    needs: publish
     environment:
-      name: 'Development'
+      name: 'Production'
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
-    
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
@@ -53,6 +150,6 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'COMAVISA20250314144249'
-          slot-name: 'Development'
+          slot-name: 'Production'
           package: .
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_5EDE184A2476400889942253C74CEBFF }}
