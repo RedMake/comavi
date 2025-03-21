@@ -1,94 +1,111 @@
-# COMAVI S.A. - Sistema de Gestión de Transportes
+OMAVI S.A. - Transport Management System
+========================================
 
 ![Logo COMAVI S.A.](https://github.com/RedMake/comavi/blob/development/wwwroot/img/Comavi_SA_Logo.png)
 
-## Descripción
+Description
+-----------
 
-Este proyecto es un sistema de gestión integral diseñado específicamente para COMAVI S.A., una empresa de transporte que necesita administrar su flota de camiones, conductores, documentación y mantenimientos. El sistema proporciona una plataforma centralizada para el seguimiento de vencimientos de documentos críticos, gestión de mantenimientos de vehículos, y administración de personal.
+This project is a comprehensive management system specifically designed for COMAVI S.A., a transport company that needs to manage its fleet of trucks, drivers, documentation, and maintenance. The system provides a centralized platform for tracking critical document expirations, vehicle maintenance management, and personnel administration.
 
-## Características principales
+Main Features
+-------------
 
-### Gestión de usuarios con autenticación de dos factores (2FA)
-- Registro y login seguro
-- Verificación por email
-- Autenticación de dos factores con códigos de respaldo
-- Gestión de contraseñas y recuperación segura
+### User Management with Two-Factor Authentication (2FA)
 
-### Gestión de conductores
-- Perfiles completos de los conductores
-- Seguimiento de licencias y documentación
-- Alertas de vencimiento de documentos personales
-- Asignación de vehículos
+-   Secure registration and login
+-   Email verification
+-   Two-factor authentication with backup codes
+-   Password management and secure recovery
 
-### Administración de flota
-- Registro y seguimiento de vehículos
-- Historial de mantenimientos
-- Alertas de mantenimientos próximos
-- Reportes de estado
+### Driver Management
 
-### Sistema de documentación digital
-- Almacenamiento de documentos en formato PDF
-- Proceso de validación por administradores
-- Alertas automáticas de vencimientos
-- Histórico de documentación
+-   Comprehensive driver profiles
+-   License and documentation tracking
+-   Personal document expiration alerts
+-   Vehicle assignment
 
-### Calendario y agenda
-- Programación de eventos y mantenimientos
-- Vista de calendario integrada
-- Recordatorios automáticos
-- Seguimiento de actividades
+### Fleet Administration
 
-### Dashboard administrativo
-- Estadísticas en tiempo real
-- Indicadores clave de rendimiento
-- Gráficos y visualizaciones de datos
-- Monitoreo de vencimientos críticos
+-   Vehicle registration and tracking
+-   Maintenance history
+-   Upcoming maintenance alerts
+-   Status reports
 
-### Sistema de notificaciones
-- Alertas por correo electrónico
-- Notificaciones en la plataforma
-- Configuración de preferencias personalizadas
+### Digital Documentation System
 
-## Arquitectura técnica
+-   PDF document storage
+-   Administrator validation process
+-   Automatic expiration alerts
+-   Documentation history
 
-El sistema está desarrollado utilizando:
+### Calendar and Scheduling
 
-- **Frontend**: HTML, CSS, JavaScript, Bootstrap, jQuery
-- **Backend**: ASP.NET MVC Core
-- **Base de datos**: SQL Server
-- **Autenticación**: Identity Framework con 2FA personalizado
-- **Reportes**: Generación de PDF mediante bibliotecas integradas
-- **Calendario**: FullCalendar.js
+-   Event and maintenance scheduling
+-   Integrated calendar view
+-   Automatic reminders
+-   Activity tracking
 
-## Capturas de pantalla
+### Administrative Dashboard
 
-*(Pendiente de agregar capturas de pantalla de las principales funcionalidades)*
+-   Real-time statistics
+-   Key performance indicators
+-   Data graphs and visualizations
+-   Critical expiration monitoring
 
-## Instalación y configuración
+### Notification System
 
-### Requisitos previos
+-   Email alerts
+-   Platform notifications
+-   Custom preference configuration
 
-- Visual Studio 2022 o superior
-- .NET Core 6.0 o superior
-- SQL Server 2019 o superior
-- Node.js y npm (para algunas dependencias del frontend)
+Technical Architecture
+----------------------
 
-### Pasos para la instalación
+The system is developed using:
 
-1. Clonar el repositorio
-https://github.com/RedMake/comavi.git
+-   **Frontend**: HTML, CSS, JavaScript, Bootstrap, jQuery
+-   **Backend**: ASP.NET MVC Core
+-   **Database**: SQL Server
+-   **Authentication**: Identity Framework with custom 2FA
+-   **Reports**: PDF generation through integrated libraries
+-   **Calendar**: FullCalendar.js
 
-2. Restaurar los paquetes NuGet
+Screenshots
+-----------
 
-dotnet restore
+*(Screenshots of main functionalities pending)*
 
-4. Configurar la cadena de conexión a la base de datos en `appsettings.json` y definir los diferentes secretos el JWT Token (generarlo), Email y su configuración DKIM.
+Installation and Configuration
+------------------------------
 
-5. Aplicar las migraciones para crear la base de datos
+### Prerequisites
 
-dotnet ef database update
+-   Visual Studio 2022 or higher
+-   .NET Core 6.0 or higher
+-   SQL Server 2019 or higher
+-   Node.js and npm (for some frontend dependencies)
 
-## Estructura del proyecto
+### Installation Steps
+
+1.  Clone the repository
+
+
+`https://github.com/RedMake/comavi.git`
+
+1.  Restore NuGet packages
+
+
+`dotnet restore`
+
+1.  Configure the database connection string in `appsettings.json` and define the different secrets for the JWT Token (generate it), Email, and its DKIM configuration.
+2.  Apply migrations to create the database
+
+
+`dotnet ef database update`
+
+Project Structure
+-----------------
 
 <pre>
 COMAVI_SA/
@@ -158,40 +175,45 @@ COMAVI_SA/
     ├── README.md
     └── web.config
 </pre>
-    
-## Flujo de trabajo de desarrollo
 
-1. **Autenticación y perfil**: Los usuarios se registran, verifican su cuenta por email y pueden configurar la autenticación de dos factores
-2. **Gestión de conductores**: Administradores registran/editan conductores y sus documentos
-3. **Gestión de vehículos**: Registro de camiones, asignación a conductores y seguimiento de mantenimientos
-4. **Documentación**: Carga, verificación y seguimiento de documentos críticos
-5. **Monitorización**: Dashboard y reportes sobre el estado de vehículos, conductores y documentación
+Development Workflow
+--------------------
 
-## Seguridad
+1.  **Authentication and Profile**: Users register, verify their account by email, and can configure two-factor authentication
+2.  **Driver Management**: Administrators register/edit drivers and their documents
+3.  **Vehicle Management**: Truck registration, driver assignment, and maintenance tracking
+4.  **Documentation**: Upload, verification, and tracking of critical documents
+5.  **Monitoring**: Dashboard and reports on the status of vehicles, drivers, and documentation
 
-El sistema implementa múltiples capas de seguridad:
+Security
+--------
 
-- Autenticación de dos factores
-- Códigos de respaldo para acceso de emergencia
-- Verificación por correo electrónico
-- Control de sesiones activas
-- Políticas de contraseñas robustas
-- Recuperación segura de contraseñas
-- Validación de formularios client-side y server-side
+The system implements multiple security layers:
 
-## Mantenimiento y soporte
+-   Two-factor authentication
+-   Backup codes for emergency access
+-   Email verification
+-   Active session control
+-   Strong password policies
+-   Secure password recovery
+-   Client-side and server-side form validation
 
-Para reportar problemas o solicitar nuevas características, por favor abra un issue en el repositorio de GitHub o contacte al equipo de soporte a través de:
+Maintenance and Support
+-----------------------
 
-- Email: info@comavicr.com
-- Teléfono: +506 2551-1117
+To report issues or request new features, please open an issue on the GitHub repository or contact the support team through:
 
-## Licencia
+-   Email: <info@comavicr.com>
+-   Phone: +506 2551-1117
 
-Este software es propiedad de COMAVI S.A. y está protegido por las leyes de propiedad intelectual. Su uso no autorizado está estrictamente prohibido.
+License
+-------
 
-## Equipo de desarrollo
+This software is the property of COMAVI S.A. and is protected by intellectual property laws. Unauthorized use is strictly prohibited.
 
-- Gabriel Amador Artavia, Reynaldo Solano Vega - Desarrollo completo del proyecto
+Development Team
+----------------
 
-© 2025 COMAVI S.A. Todos los derechos reservados.
+-   Gabriel Amador Artavia, Reynaldo Solano Vega - Complete project development
+
+© 2025 COMAVI S.A. All rights reserved.
