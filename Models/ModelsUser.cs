@@ -48,7 +48,6 @@ namespace COMAVI_SA.Models
 
     }
 
-    
     public class IntentosLogin
     {
         [Key]
@@ -143,7 +142,6 @@ namespace COMAVI_SA.Models
         [Required]
         public DateTime fecha_expiracion { get; set; }
     }
-
 
     public class MFA
     {
@@ -303,6 +301,7 @@ namespace COMAVI_SA.Models
         [ForeignKey("chofer_asignado")]
         public Choferes Chofer { get; set; }
     }
+
     public class Mantenimiento_Camiones
     {
         [Key]
@@ -324,6 +323,7 @@ namespace COMAVI_SA.Models
         [Required]
         public decimal costo { get; set; }
     }
+
     public class Documentos
     {
         [Key]
@@ -408,7 +408,6 @@ namespace COMAVI_SA.Models
         public bool notificacion_enviada { get; set; } = false;
     }
 
-
     public class CalendarEvent
     {
         public string id { get; set; }
@@ -419,7 +418,32 @@ namespace COMAVI_SA.Models
         public string description { get; set; }
         public bool allDay { get; set; } = false;
     }
+    
+    public class DashboardStats
+    {
+        public int TotalCamiones { get; set; }
+        public int CamionesActivos { get; set; }
+        public int TotalChoferes { get; set; }
+        public int ChoferesActivos { get; set; }
+        public int TotalUsuarios { get; set; }
+        public int UsuariosActivos { get; set; }
+    }
 
+
+    //ViewModel
+    public class DocumentoVencimientoIndexViewModel
+    {
+        public int Id { get; set; }
+        public string Descripcion { get; set; }
+        public DateTime FechaVencimiento { get; set; }
+        public int EntidadId { get; set; }
+        public string TipoEntidad { get; set; }
+        public string NombreEntidad { get; set; }
+
+        // Propiedades calculadas
+        public int DiasRestantes => (FechaVencimiento - DateTime.Today).Days;
+        public string EstadoAlerta => DiasRestantes <= 7 ? "Crítico" : DiasRestantes <= 15 ? "Advertencia" : "Normal";
+    }
 
     public class AdminDashboardViewModel
     {
@@ -430,8 +454,9 @@ namespace COMAVI_SA.Models
         public int TotalUsuarios { get; set; }
         public int UsuariosActivos { get; set; }
         public int DocumentosProximosVencer { get; set; }
-        public List<Camiones> Camiones { get; set; }
-        public List<Choferes> Choferes { get; set; }
+        public List<Camiones> Camiones { get; set; } = new List<Camiones>();
+        public List<Choferes> Choferes { get; set; } = new List<Choferes>();
+        public List<DocumentoVencimientoViewModel> DocumentosProximosVencimiento { get; set; } = new List<DocumentoVencimientoViewModel>();
     }
 
     public class CamionViewModel
@@ -532,15 +557,14 @@ namespace COMAVI_SA.Models
         public decimal costo { get; set; }
     }
     
-
-
     public class NotificacionesViewModel
     {
         public List<Notificaciones_Usuario> Notificaciones { get; set; }
         public PreferenciasNotificacion Preferencias { get; set; }
+        public int PaginaActual { get; set; } = 1;
+        public int TotalPaginas { get; set; } = 1;
+
     }
-
-
 
     public class ResetPasswordViewModel
     {
@@ -561,6 +585,7 @@ namespace COMAVI_SA.Models
         [EmailAddress]
         public string Email { get; set; }
     }
+
     public class CambiarContrasenaViewModel
     {
         [Required(ErrorMessage = "El correo electrónico es requerido")]
@@ -599,10 +624,12 @@ namespace COMAVI_SA.Models
         [StringLength(6, MinimumLength = 6, ErrorMessage = "El código OTP debe tener 6 dígitos")]
         public string OtpCode { get; set; }
     }
+
     public class CodigosRespaldoViewModel
     {
         public List<string> Codigos { get; set; }
     }
+
     public class ConfigurarMFAViewModel
     {
         public string Secret { get; set; }
@@ -612,7 +639,6 @@ namespace COMAVI_SA.Models
         [StringLength(6, MinimumLength = 6, ErrorMessage = "El código OTP debe tener 6 dígitos")]
         public string OtpCode { get; set; }
     }
-
 
     public class LoginViewModel
     {
@@ -734,6 +760,7 @@ namespace COMAVI_SA.Models
         public int total_paginas { get; set; }
         public int pagina_actual { get; set; }
     }
+
     public class VerificacionViewModel
     {
         [Required(ErrorMessage = "El token es requerido")]

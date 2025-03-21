@@ -1,4 +1,8 @@
-﻿using COMAVI_SA.Utils;
+﻿using COMAVI_SA.Models;
+using COMAVI_SA.Utils;
+using DocumentFormat.OpenXml.Drawing;
+using iText.IO.Font.Constants;
+using iText.Kernel.Font;
 using iText.Kernel.Pdf;
 using iText.Kernel.Pdf.Canvas.Parser;
 using iText.Kernel.Pdf.Canvas.Parser.Listener;
@@ -12,6 +16,8 @@ namespace COMAVI_SA.Services
         Task<(string filePath, string hash)> SavePdfAsync(IFormFile file, string customFileName = null);
         Task<string> ExtractTextFromPdfAsync(IFormFile file);
         bool ContainsRequiredInformation(string pdfText, string documentType);
+        Task<bool> GenerarReporteDocumentosPDF(List<COMAVI_SA.Models.Documentos> documentos, string estado, int diasAnticipacion, string filePath);
+
     }
 
     public class PdfService : IPdfService
@@ -26,7 +32,7 @@ namespace COMAVI_SA.Services
         {
             _hostingEnvironment = NotNull.Check(hostingEnvironment);
             _logger = NotNull.Check(logger);
-            _uploadsFolder = Path.Combine(_hostingEnvironment.WebRootPath, "uploads", "pdfs");
+            _uploadsFolder = System.IO.Path.Combine(_hostingEnvironment.WebRootPath, "uploads", "pdfs");
 
             // Asegurar que exista el directorio para los archivos
             if (!Directory.Exists(_uploadsFolder))
@@ -77,7 +83,7 @@ namespace COMAVI_SA.Services
         public async Task<(string filePath, string hash)> SavePdfAsync(IFormFile file, string customFileName = null)
         {
             var fileName = customFileName ?? $"{Guid.NewGuid()}.pdf";
-            var filePath = Path.Combine(_uploadsFolder, fileName);
+            var filePath = System.IO.Path.Combine(_uploadsFolder, fileName);
 
             using (var stream = new FileStream(filePath, FileMode.Create))
             {
@@ -185,6 +191,129 @@ namespace COMAVI_SA.Services
                     return false;
             }
         }
+
+        public async Task<bool> GenerarReporteDocumentosPDF(List<Documentos> documentos, string estado, int diasAnticipacion, string filePath)
+        {
+            try
+            {
+                // Crear documento PDF
+                using (var writer = new PdfWriter(filePath))
+                using (var pdf = new PdfDocument(writer))
+                using (var document = new iText.Layout.Document(pdf))
+                {
+                    // Título y encabezado
+                    string estadoTexto = estado == "todos" ? "Todos" :
+                        estado == "pendiente" ? "Pendientes" :
+                        estado == "verificado" ? "Verificados" :
+                        estado == "rechazado" ? "Rechazados" :
+                        estado == "porVencer" ? "Por Vencer" : estado;
+
+                    var boldFont = PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD);
+
+                    // Añadir título
+                    document.Add(new iText.Layout.Element.Paragraph("Reporte de Documentos")
+                        .SetFontSize(16)
+                        .SetFont(boldFont)
+                        .SetMarginBottom(10));
+
+                    document.Add(new iText.Layout.Element.Paragraph($"Estado: {estadoTexto}")
+                        .SetFontSize(12)
+                        .SetMarginBottom(5));
+
+                    if (estado == "porVencer")
+                    {
+                        document.Add(new iText.Layout.Element.Paragraph($"Días de Anticipación: {diasAnticipacion}")
+                            .SetFontSize(12)
+                            .SetMarginBottom(5));
+                    }
+
+                    document.Add(new iText.Layout.Element.Paragraph($"Fecha de Generación: {DateTime.Now:dd/MM/yyyy HH:mm}")
+                        .SetFontSize(10)
+                        .SetMarginBottom(5));
+
+                    document.Add(new iText.Layout.Element.Paragraph($"Total de Documentos: {documentos.Count}")
+                        .SetFontSize(10)
+                        .SetMarginBottom(15));
+
+                    // Crear tabla
+                    var table = new iText.Layout.Element.Table(7)
+                        .SetWidth(iText.Layout.Properties.UnitValue.CreatePercentValue(100));
+
+                    // Encabezados
+                    table.AddHeaderCell(new iText.Layout.Element.Cell().Add(new iText.Layout.Element.Paragraph("ID")).SetFont(boldFont));
+                    table.AddHeaderCell(new iText.Layout.Element.Cell().Add(new iText.Layout.Element.Paragraph("Chofer")).SetFont(boldFont));
+                    table.AddHeaderCell(new iText.Layout.Element.Cell().Add(new iText.Layout.Element.Paragraph("Tipo Documento")).SetFont(boldFont));
+                    table.AddHeaderCell(new iText.Layout.Element.Cell().Add(new iText.Layout.Element.Paragraph("Emisión")).SetFont(boldFont));
+                    table.AddHeaderCell(new iText.Layout.Element.Cell().Add(new iText.Layout.Element.Paragraph("Vencimiento")).SetFont(boldFont));
+                    table.AddHeaderCell(new iText.Layout.Element.Cell().Add(new iText.Layout.Element.Paragraph("Estado")).SetFont(boldFont));
+                    table.AddHeaderCell(new iText.Layout.Element.Cell().Add(new iText.Layout.Element.Paragraph("Días Restantes")).SetFont(boldFont));
+
+                    // Datos
+                    foreach (var documento in documentos)
+                    {
+                        var diasRestantes = (documento.fecha_vencimiento - DateTime.Now).Days;
+                        var estadoValidacion = documento.estado_validacion == "pendiente" ? "Pendiente" :
+                                              documento.estado_validacion == "verificado" ? "Verificado" :
+                                              documento.estado_validacion == "rechazado" ? "Rechazado" : documento.estado_validacion;
+
+                        table.AddCell(documento.id_documento.ToString());
+                        table.AddCell(documento.Chofer.nombreCompleto);
+                        table.AddCell(documento.tipo_documento);
+                        table.AddCell(documento.fecha_emision.ToString("dd/MM/yyyy"));
+
+                        // Celda con color según vencimiento
+                        var vencimientoCell = new iText.Layout.Element.Cell()
+                            .Add(new iText.Layout.Element.Paragraph(documento.fecha_vencimiento.ToString("dd/MM/yyyy")));
+
+                        if (diasRestantes < 0)
+                        {
+                            vencimientoCell.SetBackgroundColor(new iText.Kernel.Colors.DeviceRgb(255, 200, 200));
+                        }
+                        else if (diasRestantes <= 15)
+                        {
+                            vencimientoCell.SetBackgroundColor(new iText.Kernel.Colors.DeviceRgb(255, 235, 156));
+                        }
+
+                        table.AddCell(vencimientoCell);
+                        table.AddCell(estadoValidacion);
+
+                        // Días restantes con formato según vencimiento
+                        var diasRestantesCell = new iText.Layout.Element.Cell();
+                        if (diasRestantes < 0)
+                        {
+                            diasRestantesCell
+                                .Add(new iText.Layout.Element.Paragraph($"Vencido ({Math.Abs(diasRestantes)} días)"))
+                                .SetBackgroundColor(new iText.Kernel.Colors.DeviceRgb(255, 200, 200));
+                        }
+                        else
+                        {
+                            diasRestantesCell.Add(new iText.Layout.Element.Paragraph($"{diasRestantes} días"));
+
+                            if (diasRestantes <= 15)
+                            {
+                                diasRestantesCell.SetBackgroundColor(new iText.Kernel.Colors.DeviceRgb(255, 235, 156));
+                            }
+                            else if (diasRestantes <= 30)
+                            {
+                                diasRestantesCell.SetBackgroundColor(new iText.Kernel.Colors.DeviceRgb(200, 230, 255));
+                            }
+                        }
+
+                        table.AddCell(diasRestantesCell);
+                    }
+
+                    document.Add(table);
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al generar PDF de documentos");
+                return false;
+            }
+        }
+
 
         private bool ContainsDatePattern(string text)
         {

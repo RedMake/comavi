@@ -1,5 +1,8 @@
-﻿// Script para manejo de notificaciones y barra de búsqueda
+﻿// Script mejorado para manejo de notificaciones y barra de búsqueda
 $(document).ready(function () {
+    // Número máximo de notificaciones a mostrar en el dropdown
+    const MAX_NOTIFICATIONS_DISPLAYED = 3;
+
     // Función para cargar notificaciones
     function cargarNotificaciones() {
         $.ajax({
@@ -8,16 +11,16 @@ $(document).ready(function () {
             dataType: 'json',
             success: function (response) {
                 if (response.success) {
-                    // Actualizar contador de notificaciones
+                    // Actualizar contador de notificaciones (siempre muestra el total)
                     $('#notificationsCount').text(response.count);
-                    
+
                     // Limpiar el contenedor actual
                     $('#notificationsContainer').empty();
-                    
+
                     // Si no hay notificaciones
                     if (response.count === 0) {
                         $('#notificationsContainer').html(
-                            '<a class="dropdown-item d-flex align-items-center" href="#">' +
+                            '<a class="dropdown-item d-flex align-items-center" href="/Notifications/Index">' +
                             '<div class="mr-3">' +
                             '<div class="icon-circle bg-primary">' +
                             '<i class="fas fa-info-circle text-white"></i>' +
@@ -30,12 +33,15 @@ $(document).ready(function () {
                             '</a>'
                         );
                     } else {
+                        // Mostrar solo un número limitado de notificaciones
+                        const notificationsToShow = response.notifications.slice(0, MAX_NOTIFICATIONS_DISPLAYED);
+
                         // Agregar cada notificación al contenedor
-                        $.each(response.notifications, function (index, notif) {
+                        $.each(notificationsToShow, function (index, notif) {
                             // Determinar el ícono según el tipo de notificación
                             let iconClass = 'fa-info-circle';
                             let bgClass = 'bg-primary';
-                            
+
                             if (notif.tipo === 'Vencimiento') {
                                 iconClass = 'fa-calendar-alt';
                                 bgClass = 'bg-warning';
@@ -46,9 +52,9 @@ $(document).ready(function () {
                                 iconClass = 'fa-file-alt';
                                 bgClass = 'bg-info';
                             }
-                            
-                            let notifHtml = 
-                                '<a class="dropdown-item d-flex align-items-center" href="#" data-id="' + notif.id + '">' +
+
+                            let notifHtml =
+                                '<a class="dropdown-item d-flex align-items-center" href="/Notifications/Index" data-id="' + notif.id + '">' +
                                 '<div class="mr-3">' +
                                 '<div class="icon-circle ' + bgClass + '">' +
                                 '<i class="fas ' + iconClass + ' text-white"></i>' +
@@ -59,17 +65,21 @@ $(document).ready(function () {
                                 '<span class="font-weight-bold">' + notif.mensaje + '</span>' +
                                 '</div>' +
                                 '</a>';
-                                
+
                             $('#notificationsContainer').append(notifHtml);
                         });
-                        
-                        // Agregar manejador de eventos para marcar como leída
-                        $('#notificationsContainer a').click(function (e) {
-                            e.preventDefault();
-                            const notifId = $(this).data('id');
-                            marcarNotificacionLeida(notifId);
-                            $(this).fadeOut();
-                        });
+
+                        // Si hay más notificaciones que las mostradas, indicar cuántas más hay
+                        if (response.count > MAX_NOTIFICATIONS_DISPLAYED) {
+                            const remainingCount = response.count - MAX_NOTIFICATIONS_DISPLAYED;
+                            $('#notificationsContainer').append(
+                                '<a class="dropdown-item d-flex align-items-center text-center" href="/Notifications/Index">' +
+                                '<div class="w-100">' +
+                                '<span class="font-weight-bold text-primary">+' + remainingCount + ' notificaciones más</span>' +
+                                '</div>' +
+                                '</a>'
+                            );
+                        }
                     }
                 } else {
                     console.error('Error al cargar notificaciones:', response.message);
@@ -80,118 +90,154 @@ $(document).ready(function () {
             }
         });
     }
-    
-    // Función para marcar notificación como leída
-    function marcarNotificacionLeida(id) {
-        $.ajax({
-            url: '/Notifications/MarcarLeida',
-            type: 'POST',
-            data: { id: id },
-            headers: {
-                'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
-            },
-            success: function (response) {
-                if (response.success) {
-                    // Actualizar contador de notificaciones
-                    const currentCount = parseInt($('#notificationsCount').text());
-                    if (currentCount > 0) {
-                        $('#notificationsCount').text(currentCount - 1);
-                    }
-                }
-            }
-        });
-    }
-    
+
+    // Configuración para llevar a la página de notificaciones
+    $('#notificationsDropdown').on('click', 'a.dropdown-item', function (e) {
+        e.preventDefault();
+        window.location.href = '/Notifications/Index';
+    });
+
     // Cargar notificaciones al iniciar
     cargarNotificaciones();
-    
+
     // Actualizar notificaciones cada 60 segundos
     setInterval(cargarNotificaciones, 60000);
-    
+
+    // Términos de búsqueda actualizados según el navbar
+    const searchTerms = {
+        // Agenda
+        'agenda': '/Agenda/Index',
+        'mi agenda': '/Agenda/Index',
+        'calendario': '/Agenda/Calendar',
+        'crear evento': '/Agenda/Create',
+
+        // Perfil
+        'perfil': '/Login/Profile',
+        'mi perfil': '/Login/Profile',
+        'datos personales': '/Login/Profile',
+
+        // Camión (para usuario)
+        'mi camión': '/Camion/CamionAsignado',
+        'camion': '/Camion/CamionAsignado',
+        'vencimientos': '/Calendar/Index',
+
+        // Documentos (para admin)
+        'documentos': '/Documentos/PendientesValidacion',
+        'pendientes validación': '/Documentos/PendientesValidacion',
+        'por vencer': '/Documentos/DocumentosPorVencer',
+        'generar reporte': '/Documentos/GenerarReporteDocumentos',
+
+        // Choferes (para admin)
+        'choferes': '/Admin/ListarChoferes',
+        'registrar chofer': '/Admin/RegistrarChofer',
+        'monitorear vencimientos': '/Admin/MonitorearVencimientos',
+        'listar choferes': '/Admin/ListarChoferes',
+
+        // Camiones (para admin)
+        'camiones': '/Admin/ListarCamiones',
+        'listar camiones': '/Admin/ListarCamiones',
+        'mantenimientos': '/Admin/NotificacionesMantenimiento',
+        'usuarios': '/Admin/ListarUsuarios',
+        'dashboard': '/Admin/Dashboard',
+
+        // Configuración
+        'contraseña': '/Login/CambiarContrasena',
+        'cambiar contraseña': '/Login/CambiarContrasena',
+        '2fa': '/Login/ConfigurarMFA',
+        'autenticación': '/Login/ConfigurarMFA'
+    };
+
+    // Crear el contenedor del dropdown de sugerencias
+    $('body').append('<div id="search-suggestions" class="dropdown-menu dropdown-menu-right shadow animated--grow-in" style="display: none; position: absolute; z-index: 1000;"></div>');
+
+    // Función para mostrar sugerencias de búsqueda
+    function mostrarSugerencias(query) {
+        const $suggestions = $('#search-suggestions');
+        $suggestions.empty();
+
+        if (query.length < 2) {
+            $suggestions.hide();
+            return;
+        }
+
+        // Filtrar términos basados en la consulta
+        const matches = [];
+        $.each(searchTerms, function (term, url) {
+            if (term.includes(query.toLowerCase())) {
+                matches.push({ term: term, url: url });
+            }
+        });
+
+        // Mostrar hasta 5 sugerencias
+        const maxSuggestions = Math.min(5, matches.length);
+        if (maxSuggestions === 0) {
+            $suggestions.hide();
+            return;
+        }
+
+        // Posicionar el dropdown debajo del campo de búsqueda
+        const $searchInput = $('.navbar-search input[type="text"]');
+        const inputPosition = $searchInput.offset();
+        $suggestions.css({
+            top: inputPosition.top + $searchInput.outerHeight(),
+            left: inputPosition.left,
+            width: $searchInput.outerWidth()
+        });
+
+        // Agregar sugerencias al dropdown
+        for (let i = 0; i < maxSuggestions; i++) {
+            $suggestions.append(
+                '<a class="dropdown-item search-suggestion" href="' + matches[i].url + '">' +
+                matches[i].term.charAt(0).toUpperCase() + matches[i].term.slice(1) +
+                '</a>'
+            );
+        }
+
+        $suggestions.show();
+    }
+
+    // Manejar eventos de teclado en el campo de búsqueda
+    $('.navbar-search input[type="text"]').on('keyup focus', function () {
+        mostrarSugerencias($(this).val());
+    });
+
+    // Cerrar sugerencias al hacer clic fuera
+    $(document).on('click', function (e) {
+        if (!$(e.target).closest('.navbar-search, #search-suggestions').length) {
+            $('#search-suggestions').hide();
+        }
+    });
+
+    // Manejar clics en sugerencias
+    $(document).on('click', '.search-suggestion', function (e) {
+        e.preventDefault();
+        window.location.href = $(this).attr('href');
+    });
+
     // Configuración de la barra de búsqueda
     $('.navbar-search').submit(function (e) {
         e.preventDefault();
-        
+
         const searchQuery = $(this).find('input[type="text"]').val().trim().toLowerCase();
         if (searchQuery.length < 2) return; // Ignorar búsquedas muy cortas
-        
-        // Determinar el rol del usuario para direccionamiento adecuado
-        const isAdmin = $('body').hasClass('admin-role') || $('#collapseSistema').length > 0;
-        
-        // Mapeo de términos de búsqueda a URLs según el rol
-        const searchMap = {
-            // Términos comunes para ambos roles
-            'perfil': '/Login/Profile',
-            'cuenta': '/Login/Profile',
-            'contraseña': '/Login/CambiarContrasena',
-            'password': '/Login/CambiarContrasena',
-            'seguridad': '/Login/ConfigurarMFA',
-            'mfa': '/Login/ConfigurarMFA',
-            'agenda': '/Agenda/Index',
-            'eventos': '/Agenda/Index',
-            'calendario': '/Agenda/Calendar',
-            'notificaciones': '/Notifications/Index',
-            'alertas': '/Notifications/Index',
-            'salir': '/Login/Logout',
-            'cerrar': '/Login/Logout',
-            'logout': '/Login/Logout',
-            
-            // Términos para admin
-            'usuarios': '/Sistema/Usuarios',
-            'choferes': '/Admin/ObtenerChoferesPaginados',
-            'camiones': '/Admin/RegistrarCamion',
-            'documentos': '/Documentos/PendientesValidacion',
-            'pendientes': '/Documentos/PendientesValidacion',
-            'vencer': '/Documentos/DocumentosPorVencer',
-            'vencimientos': '/Documentos/DocumentosPorVencer',
-            'sistema': '/Sistema/Notificaciones',
-            'sesiones': '/Sistema/SesionesActivas',
-            'intentos': '/Sistema/IntentosLogin',
-            'mantenimiento': '/Admin/HistorialMantenimiento',
-            'registrar': '/Admin/RegistrarChofer',
-            
-            // Términos para usuario normal
-            'mi camión': '/Camion/CamionAsignado',
-            'camion': '/Camion/CamionAsignado',
-            'mi licencia': '/Login/Profile',
-            'mi perfil': '/Login/Profile',
-            'subir': '/Login/SubirDocumentos',
-            'documentos': '/Login/SubirDocumentos',
-            'crear evento': '/Agenda/Create'
-        };
-        
-        // Buscar coincidencias
+
+        // Verificar si la consulta coincide con alguno de los términos
         let foundMatch = false;
         let redirectUrl = '';
-        
-        $.each(searchMap, function(term, url) {
+
+        $.each(searchTerms, function (term, url) {
             if (searchQuery.includes(term)) {
-                // Verificar si la URL es específica de admin y el usuario no es admin
-                if (!isAdmin && 
-                    (url.includes('/Sistema/') || 
-                     url.includes('/Admin/') || 
-                     url.includes('/Documentos/'))) {
-                    return true; // continuar el bucle
-                }
-                
                 redirectUrl = url;
                 foundMatch = true;
                 return false; // romper el bucle
             }
         });
-        
+
         if (foundMatch) {
             window.location.href = redirectUrl;
         } else {
-            // Si no hay coincidencia, redirigir a la página de inicio
-            window.location.href = isAdmin ? '/Home/Index?q=' + encodeURIComponent(searchQuery) : '/Home/Index';
+            // Si no hay coincidencia, redirigir a la página de inicio con la consulta
+            window.location.href = '/Home/Index?q=' + encodeURIComponent(searchQuery);
         }
     });
-    
-    // Detectar rol del usuario y añadir clase para identificación
-    if ($('#collapseSistema').length > 0) {
-        $('body').addClass('admin-role');
-    } else {
-        $('body').addClass('user-role');
-    }
 });

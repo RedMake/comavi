@@ -1203,7 +1203,6 @@ namespace COMAVI_SA.Controllers
                 // Cerrar autenticación 
                 _logger.LogInformation("Cerrando autenticación por cookies");
                 await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-                await HttpContext.SignOutAsync(JwtBearerDefaults.AuthenticationScheme);
                 await HttpContext.SignOutAsync("Identity.Application"); // Para asegurarnos
 
                 // Limpiar el principal de autenticación

@@ -18,26 +18,111 @@ namespace COMAVI_SA.Controllers
         private readonly IEmailService _emailService;
         private readonly ILogger<DocumentosController> _logger;
         private readonly string _connectionString;
+        private readonly IExcelService _excelService;
 
         public DocumentosController(
             ComaviDbContext context,
             IPdfService pdfService,
+            IExcelService excelService,
             IEmailService emailService,
             IConfiguration configuration,
             ILogger<DocumentosController> logger)
         {
             _context = context;
             _pdfService = pdfService;
+            _excelService = excelService;
             _emailService = emailService;
             _logger = logger;
             _connectionString = configuration.GetConnectionString("DefaultConnection");
         }
+
 
         private IDbConnection CreateConnection()
         {
             var connection = new SqlConnection(_connectionString);
             connection.Open();
             return connection;
+        }
+
+        // Métodos de exportación:
+        [HttpGet]
+        public async Task<IActionResult> ExportarPDF(string estado = "todos", int diasAnticipacion = 30)
+        {
+            try
+            {
+                var fechaLimite = DateTime.Now.AddDays(diasAnticipacion);
+                var query = _context.Documentos.Include(d => d.Chofer).AsQueryable();
+
+                // Filtrar por estado
+                if (estado != "todos")
+                {
+                    query = query.Where(d => d.estado_validacion == estado);
+                }
+
+                // Si queremos documentos por vencer
+                if (estado == "porVencer")
+                {
+                    query = query.Where(d => d.estado_validacion == "verificado" && d.fecha_vencimiento <= fechaLimite);
+                }
+
+                var documentos = await query.OrderBy(d => d.fecha_vencimiento).ToListAsync();
+
+                // Generar archivo PDF
+                var nombreArchivo = $"Reporte_Documentos_{DateTime.Now:yyyyMMdd}.pdf";
+                var filePath = Path.Combine(Path.GetTempPath(), nombreArchivo);
+
+                // Crear PDF usando el servicio
+                await _pdfService.GenerarReporteDocumentosPDF(documentos, estado, diasAnticipacion, filePath);
+
+                // Devolver el archivo
+                var fileBytes = await System.IO.File.ReadAllBytesAsync(filePath);
+                return File(fileBytes, "application/pdf", nombreArchivo);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al exportar documentos a PDF");
+                TempData["Error"] = "Error al exportar documentos a PDF";
+                return RedirectToAction("GenerarReporteDocumentos", new { estado, diasAnticipacion });
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ExportarExcel(string estado = "todos", int diasAnticipacion = 30)
+        {
+            try
+            {
+                var fechaLimite = DateTime.Now.AddDays(diasAnticipacion);
+                var query = _context.Documentos.Include(d => d.Chofer).AsQueryable();
+
+                // Filtrar por estado
+                if (estado != "todos")
+                {
+                    query = query.Where(d => d.estado_validacion == estado);
+                }
+
+                // Si queremos documentos por vencer
+                if (estado == "porVencer")
+                {
+                    query = query.Where(d => d.estado_validacion == "verificado" && d.fecha_vencimiento <= fechaLimite);
+                }
+
+                var documentos = await query.OrderBy(d => d.fecha_vencimiento).ToListAsync();
+
+                // Generar Excel usando el servicio
+                var stream = await _excelService.GenerarReporteDocumentosExcel(documentos, estado, diasAnticipacion);
+
+                // Generar nombre del archivo
+                var nombreArchivo = $"Reporte_Documentos_{DateTime.Now:yyyyMMdd}.xlsx";
+
+                // Devolver el archivo
+                return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", nombreArchivo);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al exportar documentos a Excel");
+                TempData["Error"] = "Error al exportar documentos a Excel";
+                return RedirectToAction("GenerarReporteDocumentos", new { estado, diasAnticipacion });
+            }
         }
 
         // Lista de documentos pendientes de validación
@@ -402,5 +487,7 @@ namespace COMAVI_SA.Controllers
                 return RedirectToAction("Index", "Admin");
             }
         }
+
+
     }
 }

@@ -7,6 +7,9 @@
     <link href="~/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css" />
     <link href="~/css/sb-admin-2.min.css" rel="stylesheet" />
     <link href="~/vendor/datatables/dataTables.bootstrap4.min.css" rel="stylesheet">
+    <link href="~/css/custom-notifications.css" rel="stylesheet" />
+    <link href="~/css/custom-notifications-controller.css" rel="stylesheet" />
+
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body id="page-top" class="@(User.IsInRole("admin") ? "admin-role" : "user-role")">
@@ -36,24 +39,6 @@
                 <hr class="sidebar-divider" />
             </li>
 
-            @if (User.IsInRole("admin"))
-            {
-                <li class="nav-item">
-                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseSistema" aria-expanded="true" aria-controls="collapseSistema">
-                        <i class="fas fa-cogs"></i>
-                        <span>Sistema</span>
-                    </a>
-                    <div id="collapseSistema" class="collapse" aria-labelledby="headingSistema" data-parent="#accordionSidebar">
-                        <div class="bg-white py-2 collapse-inner rounded">
-                            <a class="collapse-item" href="@Url.Action("Notificaciones", "Sistema")">Notificaciones</a>
-                            <a class="collapse-item" href="@Url.Action("Usuarios", "Sistema")">Usuarios</a>
-                            <a class="collapse-item" href="@Url.Action("SesionesActivas", "Sistema")">Sesiones Activas</a>
-                            <a class="collapse-item" href="@Url.Action("IntentosLogin", "Sistema")">Intentos de Login</a>
-                        </div>
-                    </div>
-                </li>
-            }
-
             @if (!User.Identity.IsAuthenticated)
             {
                 <li class="nav-item">
@@ -64,7 +49,7 @@
                     <div id="collapseLogin" class="collapse" aria-labelledby="headingLogin" data-parent="#accordionSidebar">
                         <div class="bg-white py-2 collapse-inner rounded">
                             <a class="collapse-item" href="@Url.Action("Index", "Login")">Iniciar Sesión</a>
-                            <a class="collapse-item" href="@Url.Action("Register", "Login")">Registrase</a>
+                            <a class="collapse-item" href="@Url.Action("Register", "Login")">Registrarse</a>
                             <a class="collapse-item" href="@Url.Action("ForgotPassword", "Login")">Restablecer Contraseña</a>
                         </div>
                     </div>
@@ -119,7 +104,7 @@
                         </div>
                     </div>
                 </li>
-
+               
                 <li class="nav-item">
                     <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseChoferes" aria-expanded="true" aria-controls="collapseChoferes">
                         <i class="fas fa-users"></i>
@@ -129,7 +114,7 @@
                         <div class="bg-white py-2 collapse-inner rounded">
                             <a class="collapse-item" href="@Url.Action("RegistrarChofer", "Admin")">Registrar Chofer</a>
                             <a class="collapse-item" href="@Url.Action("MonitorearVencimientos", "Admin")">Monitorear Vencimientos</a>
-                            <a class="collapse-item" href="@Url.Action("ObtenerChoferesPaginados", "Admin")">Listar Choferes</a>
+                            <a class="collapse-item" href="@Url.Action("ListarChoferes", "Admin")">Listar Choferes</a>
                         </div>
                     </div>
                 </li>
@@ -141,10 +126,10 @@
                     </a>
                     <div id="collapseCamiones" class="collapse" aria-labelledby="headingCamiones" data-parent="#accordionSidebar">
                         <div class="bg-white py-2 collapse-inner rounded">
-                            <a class="collapse-item" href="@Url.Action("RegistrarCamion", "Admin")">Registrar Camión</a>
-                            <a class="collapse-item" href="@Url.Action("HistorialMantenimiento", "Admin")">Historial Mantenimiento</a>
-                            <a class="collapse-item" href="@Url.Action("NotificacionesMantenimiento", "Admin")">Notificaciones</a>
-                            <a class="collapse-item" href="@Url.Action("AsignarChofer", "Admin")">Asignar Chofer</a>
+                            <a class="collapse-item" href="@Url.Action("ListarCamiones", "Admin")">Listar Camiones</a>
+                            <a class="collapse-item" href="@Url.Action("NotificacionesMantenimiento", "Admin")">Mantenimientos</a>
+                            <a class="collapse-item" href="@Url.Action("ListarUsuarios", "Admin")">Gestión de Usuarios</a>
+                            <a class="collapse-item" href="@Url.Action("Dashboard", "Admin")">Dashboard</a>
                         </div>
                     </div>
                 </li>
@@ -318,15 +303,15 @@
         @Html.AntiForgeryToken()
     </form>
 
+    
     <script src="~/vendor/jquery/jquery.min.js"></script>
     <script src="~/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="~/vendor/jquery-easing/jquery.easing.min.js"></script>
     <script src="~/js/sb-admin-2.min.js"></script>
     <script src="~/vendor/datatables/jquery.dataTables.min.js"></script>
     <script src="~/vendor/datatables/dataTables.bootstrap4.min.js"></script>
-    <script src="~/js/demo/datatables-demo.js"></script>
     <script src="~/vendor/chart.js/Chart.min.js"></script>
-
+    <script src="~/js/datatables-global.js"></script>
     <script src="~/js/notificaciones.js"></script>
 
     @await RenderSectionAsync("Scripts", required: false)

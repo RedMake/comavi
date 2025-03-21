@@ -1,0 +1,31 @@
+﻿/* Estilo para agregar barra de desplazamiento al contenedor de notificaciones */
+#notificationsContainer {
+    max-height: 350px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+    /* Estilo para la barra de desplazamiento (webkit browsers) */
+    #notificationsContainer::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    #notificationsContainer::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+
+    #notificationsContainer::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 10px;
+    }
+
+        #notificationsContainer::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+/* Asegurar que el dropdown tenga un tamaño fijo para mostrar correctamente el scrollbar */
+#notificationsDropdown {
+    width: 350px;
+    padding: 0;
+}

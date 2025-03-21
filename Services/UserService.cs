@@ -274,15 +274,9 @@ namespace COMAVI_SA.Services
             }
         }
 
-        public async Task<Usuario> GetUserByIdAsync(int userId)
-        {
-            return await _context.Usuarios.FindAsync(userId);
-        }
+        public async Task<Usuario> GetUserByIdAsync(int userId) => await _context.Usuarios.FindAsync(userId);
 
-        public async Task<Usuario> GetUserByEmailAsync(string email)
-        {
-            return await _context.Usuarios.FirstOrDefaultAsync(u => u.correo_electronico == email);
-        }
+        public async Task<Usuario> GetUserByEmailAsync(string email) => await _context.Usuarios.FirstOrDefaultAsync(u => u.correo_electronico == email);
 
         public async Task<bool> VerifyUserAsync(string email, string token)
         {

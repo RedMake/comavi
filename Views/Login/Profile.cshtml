@@ -574,55 +574,6 @@
             </div>
         </div>
     }
-
-    <!-- Documentos pendientes (solo para administradores) -->
-    @if (Model.Rol == "admin")
-    {
-        <div class="row">
-            <div class="col-12">
-                <div class="card shadow mb-4">
-                    <div class="card-header py-3">
-                        <h6 class="m-0 font-weight-bold text-primary">Documentos Pendientes de Verificación</h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
-                                <thead>
-                                    <tr>
-                                        <th>Chofer</th>
-                                        <th>Tipo Documento</th>
-                                        <th>Fecha Subida</th>
-                                        <th>Vencimiento</th>
-                                        <th>Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <!-- Datos de ejemplo - En producción se reemplazaría con datos reales -->
-                                    <tr>
-                                        <td>Juan Pérez</td>
-                                        <td>Licencia</td>
-                                        <td>10/03/2025</td>
-                                        <td>15/12/2025</td>
-                                        <td>
-                                            <a href="#" class="btn btn-primary btn-sm">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            <a href="#" class="btn btn-success btn-sm">
-                                                <i class="fas fa-check"></i>
-                                            </a>
-                                            <a href="#" class="btn btn-danger btn-sm">
-                                                <i class="fas fa-times"></i>
-                                            </a>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
 </div>
 
 @section Scripts {

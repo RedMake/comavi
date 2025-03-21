@@ -1,0 +1,99 @@
+﻿@model List<COMAVI_SA.Models.Documentos>
+@{
+    ViewData["Title"] = "Histórico de Documentos";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container-fluid">
+    <!-- Page Heading -->
+    <h1 class="h3 mb-2 text-gray-800">Histórico de Documentos</h1>
+    <p class="mb-4">Histórico de documentos para el chofer: <strong>@ViewBag.Chofer.nombreCompleto</strong></p>
+
+    <!-- Resultados -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">Documentos</h6>
+            <a href="@Url.Action("GenerarReporteDocumentos", "Documentos")" class="btn btn-sm btn-secondary">
+                <i class="fas fa-arrow-left mr-1"></i> Volver al Reporte
+            </a>
+        </div>
+        <div class="card-body">
+            @if (Model.Count == 0)
+            {
+                <div class="alert alert-info">
+                    No se encontraron documentos para este chofer.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Tipo Documento</th>
+                                <th>Emisión</th>
+                                <th>Vencimiento</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var documento in Model)
+                            {
+                                var diasRestantes = (documento.fecha_vencimiento - DateTime.Now).Days;
+                                var claseFila = "";
+
+                                if (diasRestantes < 0)
+                                {
+                                    claseFila = "table-danger";
+                                }
+                                else if (diasRestantes <= 15)
+                                {
+                                    claseFila = "table-warning";
+                                }
+                                else if (diasRestantes <= 30)
+                                {
+                                    claseFila = "table-info";
+                                }
+
+                                <tr class="@claseFila">
+                                    <td>@documento.id_documento</td>
+                                    <td>@documento.tipo_documento</td>
+                                    <td>@documento.fecha_emision.ToString("dd/MM/yyyy")</td>
+                                    <td>@documento.fecha_vencimiento.ToString("dd/MM/yyyy")</td>
+                                    <td>
+                                        @switch (documento.estado_validacion)
+                                        {
+                                            case "pendiente":
+                                                <span class="badge badge-warning">Pendiente</span>
+                                                break;
+                                            case "verificado":
+                                                <span class="badge badge-success">Verificado</span>
+                                                break;
+                                            case "rechazado":
+                                                <span class="badge badge-danger">Rechazado</span>
+                                                break;
+                                            default:
+                                                <span class="badge badge-secondary">Desconocido</span>
+                                                break;
+                                        }
+                                    </td>
+                                    <td>
+                                        <a href="@Url.Action("VerDocumento", "Documentos", new { id = documento.id_documento })" class="btn btn-sm btn-info" target="_blank">
+                                            <i class="fas fa-eye"></i> Ver
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+
+}

@@ -1,0 +1,160 @@
+﻿@model List<DocumentoVencimientoViewModel>
+@{
+ViewData["Title"] = "Monitoreo de Vencimientos";
+}
+<!-- Header -->
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Monitoreo de Vencimientos</h1>
+    <a href="@Url.Action("ExportarReporteDocumentosVencidosPDF", "Admin", new { diasPrevios = ViewBag.DiasPrevios })" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+        <i class="fas fa-download fa-sm text-white-50"></i> Exportar a PDF
+    </a>
+</div>
+<!-- Filtros -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Configuración</h6>
+    </div>
+    <div class="card-body">
+        <form method="get" action="@Url.Action("MonitorearVencimientos", "Admin")" class="row g-3 align-items-end">
+            <div class="col-md-8">
+                <label for="diasPrevios" class="form-label">Mostrar documentos que vencen en los próximos días:</label>
+                <select class="form-control" id="diasPrevios" name="diasPrevios" onchange="this.form.submit()">
+                    <option value="15" selected="@(ViewBag.DiasPrevios == 15)">15 días</option>
+                    <option value="30" selected="@(ViewBag.DiasPrevios == 30)">30 días</option>
+                    <option value="60" selected="@(ViewBag.DiasPrevios == 60)">60 días</option>
+                    <option value="90" selected="@(ViewBag.DiasPrevios == 90)">90 días</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary w-100">Aplicar</button>
+            </div>
+        </form>
+    </div>
+</div>
+<!-- Mensajes de alerta -->
+@if (TempData["Success"] != null)
+{
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <strong>¡Éxito!</strong> @TempData["Success"]
+    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+        <span aria-hidden="true">×</span>
+    </button>
+</div>
+}
+@if (TempData["Error"] != null)
+{
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <strong>¡Error!</strong> @TempData["Error"]
+    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+        <span aria-hidden="true">×</span>
+    </button>
+</div>
+}
+<!-- Documentos por Vencer -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+        <h6 class="m-0 font-weight-bold text-primary">Documentos Próximos a Vencer</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" id="porVencerTable" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>Chofer</th>
+                        <th>Tipo</th>
+                        <th>Número</th>
+                        <th>Fecha Emisión</th>
+                        <th>Fecha Vencimiento</th>
+                        <th>Días Restantes</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var doc in Model)
+                    {
+                        <tr>
+                            <td>@doc.nombreChofer</td>
+                            <td>@doc.tipo_documento</td>
+                            <td>N/A</td>
+                            <td>@doc.fecha_emision.ToString("dd/MM/yyyy")</td>
+                            <td>@doc.fecha_vencimiento.ToString("dd/MM/yyyy")</td>
+                            <td>
+                                @{
+                                    <span class="font-weight-bold text-@(doc.diasParaVencimiento <= 7 ? "danger" : doc.diasParaVencimiento <= 15 ? "warning" : "primary")">
+                                        @(doc.diasParaVencimiento < 0 ? "Vencido" : doc.diasParaVencimiento.ToString() + " días")
+                                    </span>
+                                }
+                            </td>
+                            <td>
+                                <span class="badge badge-@(doc.estadoDocumento == "vigente" ? "success" : doc.estadoDocumento == "por_vencer" ? "warning" : "danger")">
+                                    @doc.estadoDocumento
+                                </span>
+                            </td>
+                            <td>
+                                <a href="@Url.Action("ObtenerDocumentosChofer", "Admin", new { idChofer = doc.id_chofer })" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-eye"></i> Ver Todos
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<!-- Licencias por Vencer -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+        <h6 class="m-0 font-weight-bold text-primary">Licencias de Conducir Próximas a Vencer</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" id="licenciasTable" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>Chofer</th>
+                        <th>Tipo Licencia</th>
+                        <th>Número</th>
+                        <th>Fecha Vencimiento</th>
+                        <th>Días Restantes</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var licencia in ViewBag.Licencias)
+                    {
+                        <tr>
+                            <td>@licencia.nombreChofer</td>
+                            <td>@licencia.tipoLicencia</td>
+                            <td>@licencia.numeroLicencia</td>
+                            <td>@licencia.fechaVencimiento.ToString("dd/MM/yyyy")</td>
+                            <td>
+                                @{
+                                    var diasRestantes = (licencia.fechaVencimiento - DateTime.Now).Days;
+                                    <span class="font-weight-bold text-@(diasRestantes <= 7 ? "danger" : diasRestantes <= 15 ? "warning" : "primary")">
+                                        @(diasRestantes < 0 ? "Vencido" : diasRestantes.ToString() + " días")
+                                    </span>
+                                }
+                            </td>
+                            <td>
+                                <span class="badge badge-@(licencia.estado == "vigente" ? "success" : licencia.estado == "por_vencer" ? "warning" : "danger")">
+                                    @licencia.estado
+                                </span>
+                            </td>
+                            <td>
+                                <a href="@Url.Action("ActualizarDatosChofer", "Admin", new { id = licencia.idChofer })" class="btn btn-sm btn-warning">
+                                    <i class="fas fa-edit"></i> Actualizar
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+@section Scripts {
+    <script src="~/js/monitorizacion.js"></script>
+}
