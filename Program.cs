@@ -14,7 +14,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Text;
 using COMAVI_SA.Controllers;
-using COMAVI_SA.Repositoy;
+using COMAVI_SA.Repository;
 using Microsoft.AspNetCore.DataProtection;
 using System.Security.Cryptography;
 

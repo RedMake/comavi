@@ -1,5 +1,5 @@
 ﻿using COMAVI_SA.Models;
-using COMAVI_SA.Repositoy;
+using COMAVI_SA.Repository;
 using Hangfire.Logging;
 using Microsoft.Extensions.Caching.Memory;
 using NPOI.SS.Formula.Functions;

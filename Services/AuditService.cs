@@ -1,4 +1,4 @@
-﻿using COMAVI_SA.Repositoy;
+﻿using COMAVI_SA.Repository;
 using Microsoft.AspNetCore.Http;
 
 namespace COMAVI_SA.Services

@@ -2,7 +2,7 @@
 using Microsoft.Data.SqlClient;
 using System.Data;
 
-namespace COMAVI_SA.Repositoy
+namespace COMAVI_SA.Repository
 {
     public interface IDatabaseRepository
     {
