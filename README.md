@@ -91,71 +91,72 @@ dotnet ef database update
 ## Estructura del proyecto
 
 COMAVI_SA/
-└── 📁Comavi
-    └── 📁.config
-        └── dotnet-tools.json
-    └── 📁.github
-        └── 📁workflows
-            └── ... Workflow
-    └── 📁Controllers
-        └──... Controllers
-    └── 📁Data
-        └──... Database Context
-    └── 📁Middleware
-        └──... Middleware
-    └── 📁Models
-        └──... Models
-    └── 📁Properties
-        └── launchSettings.json
-    └── 📁Repository
-        └──... Repositories
-    └── 📁Services
-        └──... Services
-    └── 📁Tests
-        └──... Tests
-    └── 📁Utils
-        └──... Utils
-    └── 📁Views
-        └── _ViewImports.cshtml
-        └── _ViewStart.cshtml
-        └── 📁Admin
-            └──... Pages 
-        └── 📁Agenda
-            └──... Pages 
-        └── 📁Calendar
-            └──... Pages 
-        └── 📁Camion
-            └──... Pages 
-        └── 📁Documentos
-            └──... Pages 
-        └── 📁Home
-            └──... Pages 
-        └── 📁Login
-            └──... Pages 
-        └── 📁Notifications
-            └──... Pages 
-        └── 📁Shared
-            └──... Pages
-    └── 📁wwwroot
-        └── 📁css
-        └── 📁js
-        └── 📁img
-        └── 📁lib
-        └── 📁plantillas
-        └── 📁vendor
-        favicon.ico
-        robots.txt
-    └── .gitattributes
-    └── .gitignore
-    └── appsettings.Development.json
-    └── appsettings.json
-    └── COMAVI_SA.csproj
-    └── COMAVI_SA.sln
-    └── LICENSE .txt
-    └── NOTICE.txt
-    └── Program.cs
-    └── README.md
+└── Comavi/
+    ├── .config/
+    │   └── dotnet-tools.json
+    ├── .github/
+    │   └── workflows/
+    │       └── ... Workflow
+    ├── Controllers/
+    │   └── ... Controllers
+    ├── Data/
+    │   └── ... Database Context
+    ├── Middleware/
+    │   └── ... Middleware
+    ├── Models/
+    │   └── ... Models
+    ├── Properties/
+    │   └── launchSettings.json
+    ├── Repository/
+    │   └── ... Repositories
+    ├── Services/
+    │   └── ... Services
+    ├── Tests/
+    │   └── ... Tests
+    ├── Utils/
+    │   └── ... Utils
+    ├── Views/
+    │   ├── _ViewImports.cshtml
+    │   ├── _ViewStart.cshtml
+    │   ├── Admin/
+    │   │   └── ... Pages 
+    │   ├── Agenda/
+    │   │   └── ... Pages 
+    │   ├── Calendar/
+    │   │   └── ... Pages 
+    │   ├── Camion/
+    │   │   └── ... Pages 
+    │   ├── Documentos/
+    │   │   └── ... Pages 
+    │   ├── Home/
+    │   │   └── ... Pages 
+    │   ├── Login/
+    │   │   └── ... Pages 
+    │   ├── Notifications/
+    │   │   └── ... Pages 
+    │   └── Shared/
+    │       └── ... Pages
+    ├── wwwroot/
+    │   ├── css/
+    │   ├── js/
+    │   ├── img/
+    │   ├── lib/
+    │   ├── plantillas/
+    │   ├── vendor/
+    │   ├── favicon.ico
+    │   └── robots.txt
+    ├── .gitattributes
+    ├── .gitignore
+    ├── appsettings.Development.json
+    ├── appsettings.json
+    ├── COMAVI_SA.csproj
+    ├── COMAVI_SA.sln
+    ├── LICENSE.txt
+    ├── NOTICE.txt
+    ├── Program.cs
+    ├── README.md
     └── web.config
+    
 ## Flujo de trabajo de desarrollo
 
 1. **Autenticación y perfil**: Los usuarios se registran, verifican su cuenta por email y pueden configurar la autenticación de dos factores
