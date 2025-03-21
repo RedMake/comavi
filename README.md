@@ -90,6 +90,7 @@ dotnet ef database update
 
 ## Estructura del proyecto
 
+<pre>
 COMAVI_SA/
 └── Comavi/
     ├── .config/
@@ -156,6 +157,7 @@ COMAVI_SA/
     ├── Program.cs
     ├── README.md
     └── web.config
+</pre>
     
 ## Flujo de trabajo de desarrollo
 
