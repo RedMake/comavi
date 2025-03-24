@@ -2,6 +2,10 @@
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 
 name: Build and deploy ASP.Net Core app to Azure Web App - COMAVISA20250314144249
+
+# Permisos a nivel de workflow (por defecto para todos los jobs)
+permissions: {}  # Esto establece todos los permisos a 'none' por defecto
+
 on:
   push:
     branches:
@@ -12,7 +16,7 @@ jobs:
   build:
     runs-on: windows-latest
     permissions:
-      contents: read 
+      contents: read  # Solo necesita leer el contenido del repositorio
     steps:
       - uses: actions/checkout@v4
       
@@ -52,6 +56,9 @@ jobs:
   test:
     runs-on: windows-latest
     needs: build
+    permissions:
+      contents: read  # Solo necesita leer el contenido del repositorio
+      actions: read   # Para leer los resultados del job anterior
     steps:
       - uses: actions/checkout@v4
       
@@ -95,6 +102,9 @@ jobs:
   publish:
     runs-on: windows-latest
     needs: test
+    permissions:
+      contents: read  # Para leer el contenido del repositorio
+      actions: read   # Para leer los resultados del job anterior
     steps:
       - uses: actions/checkout@v4
         with:
@@ -136,6 +146,11 @@ jobs:
   deploy:
     runs-on: windows-latest
     needs: publish
+    permissions:
+      contents: read       # Para acceder al código
+      actions: read        # Para leer los artefactos del job anterior
+      deployments: write   # Para crear despliegues
+      id-token: write      # Para autenticar con Azure (OIDC)
     environment:
       name: 'Production'
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
