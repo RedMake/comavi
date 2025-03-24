@@ -1,0 +1,180 @@
+﻿@{
+    ViewData["Title"] = "Reportes Generales";
+}
+
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Reportes Generales</h1>
+    <a href="@Url.Action("Index", "Admin")" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+        <i class="fas fa-arrow-left fa-sm text-white-50"></i> Volver al Panel
+    </a>
+</div>
+
+<!-- Alertas -->
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <strong>¡Éxito!</strong> @TempData["Success"]
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">×</span>
+        </button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>¡Error!</strong> @TempData["Error"]
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">×</span>
+        </button>
+    </div>
+}
+
+<!-- Contenido Principal - Tarjetas de Reportes -->
+<div class="row">
+    <!-- Reporte de Mantenimientos -->
+    <div class="col-xl-4 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Reporte de Mantenimientos</h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <i class="fas fa-tools fa-4x text-gray-300 mb-3"></i>
+                    <p>Historial de mantenimientos realizados a los camiones</p>
+                </div>
+                <form method="get" action="@Url.Action("GenerarReporteMantenimientos", "Admin")">
+                    <div class="form-group">
+                        <label for="fechaInicio">Fecha Inicio</label>
+                        <input type="date" id="fechaInicio" name="fechaInicio" class="form-control" value="@DateTime.Now.AddMonths(-1).ToString("yyyy-MM-dd")">
+                    </div>
+                    <div class="form-group">
+                        <label for="fechaFin">Fecha Fin</label>
+                        <input type="date" id="fechaFin" name="fechaFin" class="form-control" value="@DateTime.Now.ToString("yyyy-MM-dd")">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">
+                        <i class="fas fa-search fa-sm"></i> Generar Reporte
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reporte de Documentos Vencidos -->
+    <div class="col-xl-4 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-warning">Reporte de Documentos por Vencer</h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <i class="fas fa-file-pdf fa-4x text-gray-300 mb-3"></i>
+                    <p>Documentos próximos a vencer y licencias por renovar</p>
+                </div>
+                <form method="get" action="@Url.Action("GenerarReporteDocumentosVencidos", "Admin")">
+                    <div class="form-group">
+                        <label for="diasPrevios">Días de Anticipación</label>
+                        <select id="diasPrevios" name="diasPrevios" class="form-control">
+                            <option value="15">15 días</option>
+                            <option value="30" selected>30 días</option>
+                            <option value="60">60 días</option>
+                            <option value="90">90 días</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-warning btn-block">
+                        <i class="fas fa-search fa-sm"></i> Generar Reporte
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reporte de Usuarios -->
+    <div class="col-xl-4 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-info">Reporte de Usuarios</h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <i class="fas fa-users fa-4x text-gray-300 mb-3"></i>
+                    <p>Lista de usuarios registrados en el sistema</p>
+                </div>
+                <form method="get" action="@Url.Action("GenerarReporteUsuarios", "Admin")">
+                    <div class="form-group">
+                        <label for="rol">Filtrar por Rol</label>
+                        <select id="rol" name="rol" class="form-control">
+                            <option value="">Todos los roles</option>
+                            <option value="admin">Administradores</option>
+                            <option value="user">Usuarios</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-info btn-block">
+                        <i class="fas fa-search fa-sm"></i> Generar Reporte
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reporte de Camiones -->
+    <div class="col-xl-4 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-success">Reporte de Camiones</h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <i class="fas fa-truck fa-4x text-gray-300 mb-3"></i>
+                    <p>Estado actual de la flota de camiones</p>
+                </div>
+                <form method="get" action="@Url.Action("GenerarReporteCamiones", "Admin")">
+                    <div class="form-group">
+                        <label for="estado">Filtrar por Estado</label>
+                        <select id="estado" name="estado" class="form-control">
+                            <option value="">Todos los estados</option>
+                            <option value="activo">Activos</option>
+                            <option value="mantenimiento">En Mantenimiento</option>
+                            <option value="inactivo">Inactivos</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-success btn-block">
+                        <i class="fas fa-search fa-sm"></i> Generar Reporte
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reporte de Choferes -->
+    <div class="col-xl-4 col-md-6 mb-4">
+        <div class="card border-left-danger shadow h-100">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-danger">Reporte de Choferes</h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <i class="fas fa-id-badge fa-4x text-gray-300 mb-3"></i>
+                    <p>Lista de choferes y su información actualizada</p>
+                </div>
+                <form method="get" action="@Url.Action("GenerarReporteChoferes", "Admin")">
+                    <div class="form-group">
+                        <label for="estado">Filtrar por Estado</label>
+                        <select id="estado" name="estado" class="form-control">
+                            <option value="">Todos los estados</option>
+                            <option value="activo">Activos</option>
+                            <option value="inactivo">Inactivos</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-danger btn-block">
+                        <i class="fas fa-search fa-sm"></i> Generar Reporte
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/reportes-generales.js"></script>
+
+}

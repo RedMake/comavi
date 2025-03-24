@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Moq;
 using OtpNet;
@@ -36,7 +37,7 @@ namespace COMAVIxUnitTest
         private readonly Mock<ILogger<LoginController>> _mockLogger;
         private readonly LoginController _controller;
         private readonly ITempDataDictionary _tempData;
-
+        private readonly Mock<IMemoryCache> _mockCache;
         public LoginControllerTests()
         {
             _mockUserService = new Mock<IUserService>();
@@ -46,7 +47,7 @@ namespace COMAVIxUnitTest
             _mockEmailService = new Mock<IEmailService>();
             _mockPdfService = new Mock<IPdfService>(); 
             _mockLogger = new Mock<ILogger<LoginController>>();
-
+            _mockCache = new Mock<IMemoryCache>();
             // Configurar DbContext en memoria
             var options = new DbContextOptionsBuilder<ComaviDbContext>()
                 .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
@@ -58,6 +59,7 @@ namespace COMAVIxUnitTest
             _controller = new LoginController(
                 _mockUserService.Object,
                 _mockPasswordService.Object,
+                _mockCache.Object,
                 _mockOtpService.Object,
                 _mockJwtService.Object,
                 _mockEmailService.Object,

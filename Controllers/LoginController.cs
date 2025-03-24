@@ -1,4 +1,5 @@
 ﻿using COMAVI_SA.Data;
+using COMAVI_SA.Middleware;
 using COMAVI_SA.Models;
 using COMAVI_SA.Services;
 using Microsoft.AspNetCore.Authentication;
@@ -8,12 +9,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using System.Data;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using static COMAVI_SA.Middleware.SessionValidationMiddleware;
 
 namespace COMAVI_SA.Controllers
 {
@@ -28,10 +29,12 @@ namespace COMAVI_SA.Controllers
         private readonly IPdfService _pdfService;
         private readonly ComaviDbContext _context;
         private readonly ILogger<LoginController> _logger;
+        private readonly IMemoryCache _cache;
 
         public LoginController(
             IUserService userService,
             IPasswordService passwordService,
+            IMemoryCache cache,
             IOtpService otpService,
             IJwtService jwtService,
             IEmailService emailService,
@@ -41,6 +44,7 @@ namespace COMAVI_SA.Controllers
         {
             _userService = userService;
             _passwordService = passwordService;
+            _cache = cache;
             _otpService = otpService;
             _jwtService = jwtService;
             _emailService = emailService;
@@ -59,18 +63,16 @@ namespace COMAVI_SA.Controllers
             return View();
         }
 
+        [RateLimit(5, 300)]
         [AllowAnonymous]
         [HttpPost]
         public async Task<IActionResult> Index(LoginViewModel model)
         {
             try
             {
-                _logger.LogInformation("Intento de login para: {Email}", model.Email);
 
                 if (!ModelState.IsValid)
                 {
-                    _logger.LogWarning("Modelo inválido en login. Errores: {Errors}",
-                        string.Join("; ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage)));
 
                     foreach (var error in ModelState.Values.SelectMany(v => v.Errors))
                     {
@@ -82,19 +84,16 @@ namespace COMAVI_SA.Controllers
 
                 if (await _userService.IsAccountLockedAsync(model.Email))
                 {
-                    _logger.LogWarning("Intento de login en cuenta bloqueada: {Email}", model.Email);
                     ModelState.AddModelError("", "Su cuenta ha sido bloqueada por múltiples intentos fallidos. Intente más tarde.");
                     return View(model);
                 }
 
                 var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
-                _logger.LogInformation("IP de intento de login: {IP}", ipAddress);
 
                 var user = await _userService.AuthenticateAsync(model.Email, model.Password);
 
                 if (user == null)
                 {
-                    _logger.LogWarning("Fallo de autenticación para: {Email}", model.Email);
                     await _userService.RecordLoginAttemptAsync(null, ipAddress, false);
                     ModelState.AddModelError("", "Correo electrónico o contraseña incorrectos.");
                     return View(model);
@@ -102,33 +101,27 @@ namespace COMAVI_SA.Controllers
 
                 if (user.estado_verificacion != "verificado")
                 {
-                    _logger.LogWarning("Intento de login en cuenta no verificada: {Email}", model.Email);
                     ModelState.AddModelError("", "Su cuenta no ha sido verificada. Por favor, revise su correo electrónico para completar el proceso de verificación.");
                     return View(model);
                 }
 
                 await _userService.RecordLoginAttemptAsync(user.id_usuario, ipAddress, true);
-                _logger.LogInformation("Login exitoso para: {Email}", model.Email);
 
                 TempData["UserEmail"] = user.correo_electronico;
                 TempData["UserId"] = user.id_usuario;
                 TempData["RememberMe"] = model.RememberMe;
 
                 var token = _jwtService.GenerateJwtToken(user);
-                _logger.LogInformation("Token JWT generado correctamente para: {Email}", model.Email);
                 HttpContext.Session.SetString("JwtToken", token);
 
                 return RedirectToAction("VerifyOtp");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error no controlado durante el proceso de login: {Email}", model.Email);
                 ModelState.AddModelError("", "Error en el servidor. Por favor, intente más tarde.");
                 return View(model);
             }
         }
-
-        
 
         [Authorize]
         [HttpGet]
@@ -377,7 +370,7 @@ namespace COMAVI_SA.Controllers
             }
         }
 
-        // Eliminar el método VerifyOtp duplicado y mantener solo esta versión completa
+        [RateLimit(5, 300)] // 5 intentos en 5 minutos
         [AllowAnonymous]
         [HttpPost]
         public async Task<IActionResult> VerifyOtp(OtpViewModel model)
@@ -660,6 +653,7 @@ namespace COMAVI_SA.Controllers
             return Task.FromResult<IActionResult>(View());
         }
 
+        [RateLimit(3, 600)] // 3 intentos en 10 minutos
         [AllowAnonymous]
         [HttpPost]
         public async Task<IActionResult> Register(RegisterViewModel model)
@@ -908,39 +902,86 @@ namespace COMAVI_SA.Controllers
             try
             {
                 int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+
+                // Consulta optimizada que obtiene solo los datos necesarios
                 var chofer = await _context.Choferes
-                    .FirstOrDefaultAsync(c => c.id_usuario == userId);
+                    .AsNoTracking()
+                    .Where(c => c.id_usuario == userId)
+                    .Select(c => new { c.id_chofer, c.nombreCompleto })
+                    .FirstOrDefaultAsync();
+
                 if (chofer == null)
                 {
                     TempData["Error"] = "Debe completar su perfil primero.";
                     return RedirectToAction("Profile");
                 }
 
-                var documentosExistentes = await _context.Documentos
+                // Definir los tipos de documentos requeridos
+                var tiposRequeridos = new List<string> { "licencia", "carnet", "seguro", "tarjeta" };
+
+                // Consulta optimizada para obtener documentos con sus estados más recientes por tipo
+                var tiposDocumentosExistentes = await _context.Documentos
+                    .AsNoTracking()
                     .Where(d => d.id_chofer == chofer.id_chofer)
+                    .GroupBy(d => d.tipo_documento)
+                    .Select(g => new {
+                        TipoDocumento = g.Key,
+                        Estado = g.OrderByDescending(d => d.estado_validacion == "verificado")
+                                  .ThenByDescending(d => d.fecha_emision)
+                                  .Select(d => d.estado_validacion)
+                                  .FirstOrDefault(),
+                        Documento = g.OrderByDescending(d => d.fecha_emision)
+                                     .Select(d => new Documentos
+                                     {
+                                         id_documento = d.id_documento,
+                                         tipo_documento = d.tipo_documento,
+                                         fecha_emision = d.fecha_emision,
+                                         fecha_vencimiento = d.fecha_vencimiento,
+                                         estado_validacion = d.estado_validacion
+                                     })
+                                     .FirstOrDefault()
+                    })
                     .ToListAsync();
 
-                // Definir los tipos de documentos requeridos
-                var tiposRequeridos = new List<string> { "licencia", "carnet", "seguro", "tarjeta" }; // Ajusta según tus requisitos
+                // Determinar documentos faltantes con una sola operación
+                var documentosFaltantes = tiposRequeridos
+                    .Except(tiposDocumentosExistentes.Select(t => t.TipoDocumento))
+                    .ToList();
 
-                // Verificar qué documentos faltan
-                var tiposExistentes = documentosExistentes.Select(d => d.tipo_documento).ToList();
-                var documentosFaltantes = tiposRequeridos.Except(tiposExistentes).ToList();
+                // Verificar si todos los documentos están verificados con una sola operación
+                bool todosVerificados = tiposDocumentosExistentes.Count == tiposRequeridos.Count &&
+                                       tiposDocumentosExistentes.All(d => d.Estado == "verificado");
+
+                // Crear modelo con los documentos existentes
+                var documentosExistentes = tiposDocumentosExistentes
+                    .Where(t => t.Documento != null)
+                    .Select(t => t.Documento)
+                    .ToList();
 
                 var model = new CargaDocumentoViewModel
                 {
                     DocumentosExistentes = documentosExistentes,
-                    DocumentosFaltantes = documentosFaltantes 
+                    DocumentosFaltantes = documentosFaltantes,
+                    IdChofer = chofer.id_chofer
                 };
 
-                bool tieneTodosLosDocumentos = !documentosFaltantes.Any();
-                bool todosVerificados = documentosExistentes.All(d => d.estado_validacion == "verificado");
-
-                if (tieneTodosLosDocumentos && todosVerificados)
+                // Redireccionar si todos los documentos están verificados
+                if (todosVerificados)
                 {
                     TempData["InfoMessage"] = "Todos sus documentos ya están verificados.";
                     return RedirectToAction("Profile");
                 }
+
+                // Cachear los datos para reducir consultas futuras (válido por 5 minutos)
+                string cacheKey = $"documentos_chofer_{chofer.id_chofer}";
+                _cache.Set(cacheKey, new
+                {
+                    DocumentosExistentes = documentosExistentes,
+                    DocumentosFaltantes = documentosFaltantes
+                }, new MemoryCacheEntryOptions()
+                        .SetAbsoluteExpiration(TimeSpan.FromMinutes(5))
+                        .SetSize(1)
+                    );
 
                 return View(model);
             }
@@ -950,6 +991,7 @@ namespace COMAVI_SA.Controllers
                 return RedirectToAction("Profile");
             }
         }
+        
         [Authorize(Roles = "admin,user")]
         [HttpPost]
         public async Task<IActionResult> SubirDocumentos(CargaDocumentoViewModel model)
@@ -1044,18 +1086,15 @@ namespace COMAVI_SA.Controllers
                     .Where(u => u.rol == "admin")
                     .ToListAsync();
 
-                foreach (var admin in admins)
+                var notificaciones = admins.Select(admin => new Notificaciones_Usuario
                 {
-                    var notificacion = new Notificaciones_Usuario
-                    {
-                        id_usuario = admin.id_usuario,
-                        tipo_notificacion = "Documento Nuevo",
-                        fecha_hora = DateTime.Now,
-                        mensaje = $"El chofer {chofer.nombreCompleto} ha subido un nuevo documento ({model.TipoDocumento}) que requiere validación."
-                    };
+                    id_usuario = admin.id_usuario,
+                    tipo_notificacion = "Documento Nuevo",
+                    fecha_hora = DateTime.Now,
+                    mensaje = $"El chofer {chofer.nombreCompleto} ha subido un nuevo documento ({model.TipoDocumento})..."
+                }).ToList();
 
-                    _context.NotificacionesUsuario.Add(notificacion);
-                }
+                _context.NotificacionesUsuario.AddRange(notificaciones);
 
                 await _context.SaveChangesAsync();
 
@@ -1203,7 +1242,6 @@ namespace COMAVI_SA.Controllers
                 // Cerrar autenticación 
                 _logger.LogInformation("Cerrando autenticación por cookies");
                 await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-                await HttpContext.SignOutAsync("Identity.Application"); // Para asegurarnos
 
                 // Limpiar el principal de autenticación
                 HttpContext.User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity());
@@ -1376,6 +1414,7 @@ namespace COMAVI_SA.Controllers
             }
         }
 
+        [RateLimit(3, 900)] // 3 intentos en 15 minutos
         [AllowAnonymous]
         [HttpGet]
         public IActionResult ForgotPassword()
@@ -1430,7 +1469,6 @@ namespace COMAVI_SA.Controllers
                 return View();
             }
         }
-
 
         [Authorize]
         [HttpGet]

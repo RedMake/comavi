@@ -928,7 +928,7 @@ namespace COMAVI_SA.Services
 
                         foreach (var lic in licencias)
                         {
-                            int diasParaVencimiento = (int)(lic.fecha_venc_licencia - DateTime.Now).TotalDays;
+                            int diasParaVencimiento = ((int)(lic.fecha_venc_licencia - DateTime.Now).TotalDays);
 
                             licTable.AddCell(new Cell().Add(new Paragraph(lic.nombreCompleto)));
                             licTable.AddCell(new Cell().Add(new Paragraph(lic.licencia)));
@@ -973,10 +973,10 @@ namespace COMAVI_SA.Services
 
                         foreach (var doc in documentos)
                         {
-                            docsTable.AddCell(new Cell().Add(new Paragraph(doc.nombreChofer)));
+                            docsTable.AddCell(new Cell().Add(new Paragraph(doc.nombreCompleto)));
                             docsTable.AddCell(new Cell().Add(new Paragraph(doc.tipo_documento)));
                             docsTable.AddCell(new Cell().Add(new Paragraph(doc.fecha_vencimiento.ToString("dd/MM/yyyy"))));
-                            docsTable.AddCell(new Cell().Add(new Paragraph(doc.diasParaVencimiento > 0 ? doc.diasParaVencimiento.ToString() : "0 (VENCIDO)")));
+                            docsTable.AddCell(new Cell().Add(new Paragraph(doc.dias_para_vencimiento > 0 ? doc.dias_para_vencimiento.ToString() : "0 (VENCIDO)")));
 
                             Cell estadoCell = new Cell().Add(new Paragraph(doc.estadoDocumento.ToUpper()));
                             if (doc.estadoDocumento.ToLower() == "vencido")

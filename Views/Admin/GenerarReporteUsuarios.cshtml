@@ -1,0 +1,112 @@
+﻿@{
+    ViewData["Title"] = "Reporte de Usuarios";
+}
+
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Reporte de Usuarios</h1>
+    <div>
+        <a href="@Url.Action("ExportarReporteUsuariosPDF", "Admin", new { rol = ViewBag.Rol })" class="d-none d-sm-inline-block btn btn-sm btn-danger shadow-sm mr-2">
+            <i class="fas fa-file-pdf fa-sm text-white-50"></i> Exportar a PDF
+        </a>
+        <a href="@Url.Action("ReportesGenerales", "Admin")" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+            <i class="fas fa-arrow-left fa-sm text-white-50"></i> Volver a Reportes
+        </a>
+    </div>
+</div>
+
+<!-- Información del Reporte -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-info">Información del Reporte</h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>Fecha de Generación:</strong> @ViewBag.FechaGeneracion.ToString("dd/MM/yyyy HH:mm")</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>Filtro por Rol:</strong> 
+                    @if (string.IsNullOrEmpty(ViewBag.Rol))
+                    {
+                        <span>Todos los roles</span>
+                    }
+                    else
+                    {
+                        <span>@(ViewBag.Rol == "admin" ? "Administradores" : "Usuarios")</span>
+                    }
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla de Usuarios -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-info">Listado de Usuarios</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Email</th>
+                        <th>Rol</th>
+                        <th>Fecha Registro</th>
+                        <th>Último Acceso</th>
+                        <th>Estado</th>
+                        <th>Sesiones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var usuario in Model)
+                    {
+                            <tr>
+                                <td>@usuario.id_usuario</td>
+                                <td>@usuario.nombre_usuario</td>
+                                <td>@usuario.correo_electronico</td>
+                                <td>
+                                @if (usuario.rol == "admin")
+                                {
+                                            <span class="badge badge-primary">Administrador</span>
+                                }
+                                else
+                                {
+                                            <span class="badge badge-secondary">Usuario</span>
+                                }
+                                </td>
+                                <td>@usuario.fecha_registro.ToString("dd/MM/yyyy")</td>
+                                <td>
+                                @if (usuario.ultimo_ingreso != DateTime.MinValue)
+                                {
+                                    @usuario.ultimo_ingreso.ToString("dd/MM/yyyy HH:mm")
+                                }
+                                else
+                                {
+                                            <span class="text-muted">Nunca</span>
+                                }
+                                </td>
+                                <td>
+                                @if (usuario.estado_verificacion == "verificado")
+                                {
+                                            <span class="badge badge-success">Verificado</span>
+                                }
+                                else
+                                {
+                                            <span class="badge badge-warning">No Verificado</span>
+                                }
+                                </td>
+                                <td>@usuario.sesiones_activas</td>
+                            </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    
+}

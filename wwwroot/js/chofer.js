@@ -4,18 +4,33 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Validaciones para el formulario de registro de chofer
     if (document.getElementById('fecha_venc_licencia')) {
-        // Validar que la fecha de vencimiento sea mayor a la fecha actual
+        // Establecer la fecha mínima como mañana
+        var tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        // Formatear la fecha como YYYY-MM-DD para el atributo min
+        var year = tomorrow.getFullYear();
+        var month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+        var day = String(tomorrow.getDate()).padStart(2, '0');
+        var tomorrowFormatted = year + '-' + month + '-' + day;
+        
+        // Establecer el atributo min en el campo de fecha
+        $('#fecha_venc_licencia').attr('min', tomorrowFormatted);
+        
+        // Validar que la fecha de vencimiento sea al menos mañana
         $('#fecha_venc_licencia').change(function() {
             var selectedDate = new Date($(this).val());
-            var currentDate = new Date();
+            var tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(0, 0, 0, 0); // Resetear horas para comparación correcta
             
-            if (selectedDate <= currentDate) {
-                alert('La fecha de vencimiento debe ser posterior a la fecha actual.');
+            if (selectedDate < tomorrow) {
+                alert('La fecha de vencimiento debe ser como mínimo el día de mañana.');
                 $(this).val('');
             }
         });
     }
-    
+
     if (document.getElementById('edad')) {
         // Validar que la edad sea mayor de 18
         $('#edad').change(function() {
@@ -27,14 +42,24 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
-    // Configuración de dataTables
-    if ($.fn.dataTable && document.getElementById('dataTable')) {
-        $('#dataTable').DataTable({
-            language: {
-                url: '//cdn.datatables.net/plug-ins/1.10.25/i18n/Spanish.json'
-            },
-            responsive: true
+    if (document.getElementById('licencia')) {
+        // Validación cuando se envía el formulario
+        $('form').submit(function (event) {
+            if ($('#licencia').val() === '') {
+                $('#licencia').addClass('is-invalid');
+                $('[asp-validation-for="licencia"]').text('La licencia es requerida.');
+                event.preventDefault();
+            } else {
+                $('#licencia').removeClass('is-invalid').addClass('is-valid');
+                $('[asp-validation-for="licencia"]').text('');
+            }
+        });
+
+        $('#licencia').change(function () {
+            if ($(this).val() !== '') {
+                $(this).removeClass('is-invalid').addClass('is-valid');
+                $('[asp-validation-for="licencia"]').text('');
+            }
         });
     }
 });

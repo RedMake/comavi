@@ -103,6 +103,7 @@ namespace COMAVI_SA.Services
         {
             return cache.GetOrCreate(key, entry => {
                 entry.SetAbsoluteExpiration(expiration);
+                entry.SetSize(1);
                 return initialValue;
             }) + 1;
         }
@@ -156,9 +157,13 @@ namespace COMAVI_SA.Services
         // Establecer múltiples valores en caché de forma atómica
         public static void SetMany<T>(this IMemoryCache cache, IDictionary<string, T> items, TimeSpan expiration)
         {
+            var options = new MemoryCacheEntryOptions()
+                .SetAbsoluteExpiration(expiration)
+                .SetSize(1); 
+
             foreach (var item in items)
             {
-                cache.Set(item.Key, item.Value, expiration);
+                cache.Set(item.Key, item.Value, options);
             }
         }
     }

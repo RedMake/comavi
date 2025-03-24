@@ -27,17 +27,117 @@
             <li>
                 <hr class="sidebar-divider my-0" />
             </li>
-
             <li class="nav-item active">
-                <a class="nav-link" href="@Url.Action("Index", "Home")">
+                <a class="nav-link" href="@Url.Action(User.IsInRole("admin") ? "Dashboard" : "Index", User.IsInRole("admin") ? "Admin" : "Home")">
                     <i class="fas fa-fw fa-tachometer-alt"></i>
                     <span>Dashboard</span>
                 </a>
             </li>
-
+            
             <li>
-                <hr class="sidebar-divider" />
+                <hr class="sidebar-divider my-0" />
             </li>
+
+            
+            @if (User.IsInRole("admin"))
+            {
+                <li class="nav-item">
+                    <a class="nav-link" href="@Url.Action("Index", "Admin")">
+                        <i class="fas fa-fw fa-home"></i>
+                        <span>Panel Admin</span>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link collapsed" href="@Url.Action("ReportesGenerales", "Admin")">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Reportes</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link collapsed" href="@Url.Action("ListarUsuarios", "Admin")">
+                        <i class="fas fa-user-tie"></i>
+                        <span>Usuarios</span>
+                    </a>
+                </li>
+                <li>
+                    <hr class="sidebar-divider" />
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseDocumentos" aria-expanded="true" aria-controls="collapseDocumentos">
+                        <i class="fas fa-file-pdf"></i>
+                        <span>Documentos</span>
+                    </a>
+                    <div id="collapseDocumentos" class="collapse" aria-labelledby="headingDocumentos" data-parent="#accordionSidebar">
+                        <div class="bg-white py-2 collapse-inner rounded">
+                            <a class="collapse-item" href="@Url.Action("PendientesValidacion", "Documentos")">Pendientes Validación</a>
+                            <a class="collapse-item" href="@Url.Action("DocumentosPorVencer", "Documentos")">Por Vencer</a>
+                            <a class="collapse-item" href="@Url.Action("GenerarReporteDocumentos", "Documentos")">Generar Reporte</a>
+                        </div>
+                    </div>
+                </li>
+
+                <li class="nav-item my-2">
+                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseChoferes" aria-expanded="true" aria-controls="collapseChoferes">
+                        <i class="fas fa-users"></i>
+                        <span>Choferes</span>
+                    </a>
+                    <div id="collapseChoferes" class="collapse" aria-labelledby="headingChoferes" data-parent="#accordionSidebar">
+                        <div class="bg-white py-2 collapse-inner rounded">
+                            <a class="collapse-item" href="@Url.Action("MonitorearVencimientos", "Admin")">Monitorear Vencimientos</a>
+                            <a class="collapse-item" href="@Url.Action("ListarChoferes", "Admin")">Gestión de Choferes</a>
+                        </div>
+                    </div>
+                </li>
+
+                <li>
+                    <hr class="sidebar-divider my-0" />
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link collapsed" href="@Url.Action("ListarCamiones", "Admin")">
+                        <i class="fas fa-truck"></i>
+                        <span>Camiones</span>
+                    </a>
+                </li>
+                <li>
+                    <hr class="sidebar-divider my-0" />
+                </li>
+
+            }
+            
+
+            @if (User.IsInRole("user"))
+            {
+                <li class="nav-item">
+                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseAgenda" aria-expanded="true" aria-controls="collapseAgenda">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>Agenda</span>
+                    </a>
+                    <div id="collapseAgenda" class="collapse" aria-labelledby="headingAgenda" data-parent="#accordionSidebar">
+                        <div class="bg-white py-2 collapse-inner rounded">
+                            <a class="collapse-item" href="@Url.Action("Index", "Agenda")">Mi Agenda</a>
+                            <a class="collapse-item" href="@Url.Action("Calendar", "Agenda")">Calendario</a>
+                            <a class="collapse-item" href="@Url.Action("Create", "Agenda")">Crear Evento</a>
+                        </div>
+                    </div>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapsePerfil" aria-expanded="true" aria-controls="collapsePerfil">
+                        <i class="fas fa-id-card"></i>
+                        <span>Mi Perfil</span>
+                    </a>
+                    <div id="collapsePerfil" class="collapse" aria-labelledby="headingPerfil" data-parent="#accordionSidebar">
+                        <div class="bg-white py-2 collapse-inner rounded">
+                            <a class="collapse-item" href="@Url.Action("Profile", "Login")">Datos Personales</a>
+                            <a class="collapse-item" href="@Url.Action("CamionAsignado", "Camion")">Mi Camión</a>
+                            <a class="collapse-item" href="@Url.Action("Index", "Calendar")">Ver Vencimientos</a>
+                        </div>
+                    </div>
+                </li>
+            }
 
             @if (!User.Identity.IsAuthenticated)
             {
@@ -55,85 +155,9 @@
                     </div>
                 </li>
             }
-            else
-            {
-                <li class="nav-item">
-                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseAgenda" aria-expanded="true" aria-controls="collapseAgenda">
-                        <i class="fas fa-calendar-alt"></i>
-                        <span>Agenda</span>
-                    </a>
-                    <div id="collapseAgenda" class="collapse" aria-labelledby="headingAgenda" data-parent="#accordionSidebar">
-                        <div class="bg-white py-2 collapse-inner rounded">
-                            <a class="collapse-item" href="@Url.Action("Index", "Agenda")">Mi Agenda</a>
-                            <a class="collapse-item" href="@Url.Action("Calendar", "Agenda")">Calendario</a>
-                            <a class="collapse-item" href="@Url.Action("Create", "Agenda")">Crear Evento</a>
-                        </div>
-                    </div>
-                </li>
-            }
 
-            @if (User.IsInRole("user"))
-            {
-                <li class="nav-item">
-                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapsePerfil" aria-expanded="true" aria-controls="collapsePerfil">
-                        <i class="fas fa-id-card"></i>
-                        <span>Mi Perfil</span>
-                    </a>
-                    <div id="collapsePerfil" class="collapse" aria-labelledby="headingPerfil" data-parent="#accordionSidebar">
-                        <div class="bg-white py-2 collapse-inner rounded">
-                            <a class="collapse-item" href="@Url.Action("Profile", "Login")">Datos Personales</a>
-                            <a class="collapse-item" href="@Url.Action("CamionAsignado", "Camion")">Mi Camión</a>
-                            <a class="collapse-item" href="@Url.Action("Index", "Calendar")">Ver Vencimientos</a>
-                        </div>
-                    </div>
-                </li>
-            }
+           
 
-            @if (User.IsInRole("admin"))
-            {
-                <li class="nav-item">
-                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseDocumentos" aria-expanded="true" aria-controls="collapseDocumentos">
-                        <i class="fas fa-file-pdf"></i>
-                        <span>Documentos</span>
-                    </a>
-                    <div id="collapseDocumentos" class="collapse" aria-labelledby="headingDocumentos" data-parent="#accordionSidebar">
-                        <div class="bg-white py-2 collapse-inner rounded">
-                            <a class="collapse-item" href="@Url.Action("PendientesValidacion", "Documentos")">Pendientes Validación</a>
-                            <a class="collapse-item" href="@Url.Action("DocumentosPorVencer", "Documentos")">Por Vencer</a>
-                            <a class="collapse-item" href="@Url.Action("GenerarReporteDocumentos", "Documentos")">Generar Reporte</a>
-                        </div>
-                    </div>
-                </li>
-               
-                <li class="nav-item">
-                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseChoferes" aria-expanded="true" aria-controls="collapseChoferes">
-                        <i class="fas fa-users"></i>
-                        <span>Choferes</span>
-                    </a>
-                    <div id="collapseChoferes" class="collapse" aria-labelledby="headingChoferes" data-parent="#accordionSidebar">
-                        <div class="bg-white py-2 collapse-inner rounded">
-                            <a class="collapse-item" href="@Url.Action("RegistrarChofer", "Admin")">Registrar Chofer</a>
-                            <a class="collapse-item" href="@Url.Action("MonitorearVencimientos", "Admin")">Monitorear Vencimientos</a>
-                            <a class="collapse-item" href="@Url.Action("ListarChoferes", "Admin")">Listar Choferes</a>
-                        </div>
-                    </div>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseCamiones" aria-expanded="true" aria-controls="collapseCamiones">
-                        <i class="fas fa-truck"></i>
-                        <span>Camiones</span>
-                    </a>
-                    <div id="collapseCamiones" class="collapse" aria-labelledby="headingCamiones" data-parent="#accordionSidebar">
-                        <div class="bg-white py-2 collapse-inner rounded">
-                            <a class="collapse-item" href="@Url.Action("ListarCamiones", "Admin")">Listar Camiones</a>
-                            <a class="collapse-item" href="@Url.Action("NotificacionesMantenimiento", "Admin")">Mantenimientos</a>
-                            <a class="collapse-item" href="@Url.Action("ListarUsuarios", "Admin")">Gestión de Usuarios</a>
-                            <a class="collapse-item" href="@Url.Action("Dashboard", "Admin")">Dashboard</a>
-                        </div>
-                    </div>
-                </li>
-            }
         </ul>
 
         <div id="content-wrapper" class="d-flex flex-column">
@@ -262,18 +286,19 @@
                     @RenderBody()
                 </div>
 
-                <footer class="sticky-footer bg-white">
-                    <div class="container my-auto">
-                        <div class="copyright text-center my-auto">
-                            <span>Copyright &copy; COMAVI S.A 2025</span>
-                        </div>
-                    </div>
-                </footer>
+                
             </div>
-        </div>
+            <footer class="sticky-footer bg-white">
+                <div class="container my-auto">
+                    <div class="copyright text-center my-auto">
+                        <span>Copyright &copy; COMAVI S.A 2025</span>
+                    </div>
+                </div>
+            </footer>
+        </div> 
     </div>
 
-
+    
     <a class="scroll-to-top rounded" href="#page-top">
         <i class="fas fa-angle-up"></i>
     </a>
@@ -283,7 +308,7 @@
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLabel">Ready to Leave?</h5>
+                    <h5 class="modal-title" id="exampleModalLabel">Listo para irte?</h5>
                     <button class="close" type="button" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">×</span>
                     </button>

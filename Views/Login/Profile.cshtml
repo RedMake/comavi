@@ -111,15 +111,19 @@
                                 <div class="col-sm-6 mb-3 mb-sm-0">
                                     <label asp-for="Numero_Cedula" class="form-label">Número de Cédula</label>
                                     <input asp-for="Numero_Cedula" type="text" class="form-control"
-                                    required maxlength="20"
-                                    pattern="[0-9]{6,15}"
-                                    title="El número de cédula debe contener entre 6 y 15 dígitos" />
+                                           required maxlength="20"
+                                           pattern="[0-9]{6,15}"
+                                           title="El número de cédula debe contener entre 6 y 15 dígitos" />
                                     <span asp-validation-for="Numero_Cedula" class="text-danger"></span>
                                 </div>
                                 <div class="col-sm-6">
-                                    <label asp-for="Licencia" class="form-label">Número de Licencia</label>
-                                    <input asp-for="Licencia" type="text" class="form-control"
-                                    required maxlength="50" />
+                                    <label asp-for="Licencia">Licencia de Camión *</label>
+                                    <select asp-for="Licencia" class="form-control" required>
+                                        <option value="">Seleccione...</option>
+                                        <option value="A-IIIa">A-IIIa (Vehículos hasta 4000kg)</option>
+                                        <option value="A-IIIb">A-IIIb (Vehículos de transporte público)</option>
+                                        <option value="A-IIIc">A-IIIc (Vehículos pesados de más de 4000kg)</option>
+                                    </select>
                                     <span asp-validation-for="Licencia" class="text-danger"></span>
                                 </div>
                             </div>
@@ -260,7 +264,9 @@
                                                 {
                                                     licenciaBadgeClass = "badge-warning";
                                                     estadoText = "Por vencer";
-                                                }else{
+                                                }
+                                                else
+                                                {
                                                     licenciaBadgeClass = "badge-danger";
                                                     estadoText = "Vencida";
                                                 }
@@ -299,75 +305,147 @@
                     </div>
                 </div>
 
-                <!-- Seguridad de la cuenta -->
-                <div class="card shadow mb-4">
-                    <div class="card-header py-3">
-                        <h6 class="m-0 font-weight-bold text-primary">Seguridad de la cuenta</h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <h6 class="font-weight-bold">Autenticación de dos factores</h6>
-                            <div class="d-flex align-items-center mb-2">
-                                <div class="me-3">
-                                    @if (Model.MfaHabilitado)
-                                    {
-                                        <span class="badge badge-success">Habilitada</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge badge-warning">No habilitada</span>
-                                    }
-                                </div>
-
-                                @if (Model.MfaHabilitado)
-                                {
-                                    <a href="@Url.Action("ConfigurarMFA", "Login")" class="btn btn-outline-primary btn-sm">
-                                        <i class="fas fa-cog"></i> Gestionar
-                                    </a>
-                                }
-                                else
-                                {
-                                    <a href="@Url.Action("ConfigurarMFA", "Login")" class="btn btn-outline-success btn-sm">
-                                        <i class="fas fa-shield-alt"></i> Activar
-                                    </a>
-                                }
-                            </div>
-                            <p class="text-muted small">
-                                La autenticación de dos factores agrega una capa adicional de seguridad a su cuenta,
-                                requiriendo un código generado por su dispositivo móvil además de su contraseña.
-                            </p>
+                <!-- Seguridad de la cuenta (para usuarios normales) -->
+                @if (Model.Rol != "admin")
+                {
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Seguridad de la cuenta</h6>
                         </div>
-
-                        <div class="mb-3">
-                            <h6 class="font-weight-bold">Contraseña</h6>
-                            <div class="d-flex align-items-center">
-                                <div class="me-3">
-                                    <span class="text-muted">
-                                        Última actualización:
-                                        @if (Model.FechaActualizacionPassword.HasValue)
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <h6 class="font-weight-bold">Autenticación de dos factores</h6>
+                                <div class="d-flex align-items-center mb-2">
+                                    <div class="me-3">
+                                        @if (Model.MfaHabilitado)
                                         {
-                                            @Model.FechaActualizacionPassword.Value.ToString("dd/MM/yyyy HH:mm")
+                                            <span class="badge badge-success">Habilitada</span>
                                         }
                                         else
                                         {
-                                            <span>No disponible</span>
+                                            <span class="badge badge-warning">No habilitada</span>
                                         }
-                                    </span>
+                                    </div>
+
+                                    @if (Model.MfaHabilitado)
+                                    {
+                                        <a href="@Url.Action("ConfigurarMFA", "Login")" class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-cog"></i> Gestionar
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <a href="@Url.Action("ConfigurarMFA", "Login")" class="btn btn-outline-success btn-sm">
+                                            <i class="fas fa-shield-alt"></i> Activar
+                                        </a>
+                                    }
                                 </div>
-                                <a href="@Url.Action("CambiarContrasena", "Login")" class="btn btn-outline-primary btn-sm">
-                                    <i class="fas fa-key"></i> Cambiar
-                                </a>
+                                <p class="text-muted small">
+                                    La autenticación de dos factores agrega una capa adicional de seguridad a su cuenta,
+                                    requiriendo un código generado por su dispositivo móvil además de su contraseña.
+                                </p>
                             </div>
-                            <p class="text-muted small mt-2">
-                                Se recomienda cambiar su contraseña regularmente y utilizar contraseñas fuertes y únicas.
-                            </p>
+
+                            <div class="mb-3">
+                                <h6 class="font-weight-bold">Contraseña</h6>
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3">
+                                        <span class="text-muted">
+                                            Última actualización:
+                                            @if (Model.FechaActualizacionPassword.HasValue)
+                                            {
+                                                @Model.FechaActualizacionPassword.Value.ToString("dd/MM/yyyy HH:mm")
+                                            }
+                                            else
+                                            {
+                                                <span>No disponible</span>
+                                            }
+                                        </span>
+                                    </div>
+                                    <a href="@Url.Action("CambiarContrasena", "Login")" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-key"></i> Cambiar
+                                    </a>
+                                </div>
+                                <p class="text-muted small mt-2">
+                                    Se recomienda cambiar su contraseña regularmente y utilizar contraseñas fuertes y únicas.
+                                </p>
+                            </div>
                         </div>
                     </div>
-                </div>
+                }
             </div>
 
             <!-- Documentos y Acciones -->
             <div class="col-xl-6 col-lg-6">
+                @if (Model.Rol == "admin")
+                {
+                    <!-- Seguridad de la cuenta (para administradores) -->
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Seguridad de la cuenta</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <h6 class="font-weight-bold">Autenticación de dos factores</h6>
+                                <div class="d-flex align-items-center mb-2">
+                                    <div class="me-3">
+                                        @if (Model.MfaHabilitado)
+                                        {
+                                            <span class="badge badge-success">Habilitada</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge badge-warning">No habilitada</span>
+                                        }
+                                    </div>
+
+                                    @if (Model.MfaHabilitado)
+                                    {
+                                        <a href="@Url.Action("ConfigurarMFA", "Login")" class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-cog"></i> Gestionar
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <a href="@Url.Action("ConfigurarMFA", "Login")" class="btn btn-outline-success btn-sm">
+                                            <i class="fas fa-shield-alt"></i> Activar
+                                        </a>
+                                    }
+                                </div>
+                                <p class="text-muted small">
+                                    La autenticación de dos factores agrega una capa adicional de seguridad a su cuenta,
+                                    requiriendo un código generado por su dispositivo móvil además de su contraseña.
+                                </p>
+                            </div>
+
+                            <div class="mb-3">
+                                <h6 class="font-weight-bold">Contraseña</h6>
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3">
+                                        <span class="text-muted">
+                                            Última actualización:
+                                            @if (Model.FechaActualizacionPassword.HasValue)
+                                            {
+                                                @Model.FechaActualizacionPassword.Value.ToString("dd/MM/yyyy HH:mm")
+                                            }
+                                            else
+                                            {
+                                                <span>No disponible</span>
+                                            }
+                                        </span>
+                                    </div>
+                                    <a href="@Url.Action("CambiarContrasena", "Login")" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-key"></i> Cambiar
+                                    </a>
+                                </div>
+                                <p class="text-muted small mt-2">
+                                    Se recomienda cambiar su contraseña regularmente y utilizar contraseñas fuertes y únicas.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                }
+
                 @if (Model.Rol == "user" && perfilCompleto)
                 {
                     <!-- Documentos -->
@@ -427,9 +505,9 @@
                                                         <span class="badge @documentoBadgeClass">@estado.ToUpper()</span>
                                                     </td>
                                                     <td>
-                                                        <a href="@Url.Action("Ver", "Pdf", new { id = documento.id_documento })"
+                                                        <a href="@Url.Action("VerDocumento", "Documentos", new { id = documento.id_documento })" 
                                                            class="btn btn-sm btn-primary" target="_blank">
-                                                            <i class="fas fa-eye"></i>
+                                                            <i class="fas fa-eye"></i> Ver
                                                         </a>
                                                         @if (documento.estado_validacion == "rechazado")
                                                         {
@@ -520,16 +598,13 @@
                             }
                         </div>
                     </div>
-                }
 
-                <!-- Recursos disponibles -->
-                <div class="card shadow mb-4">
-                    <div class="card-header py-3">
-                        <h6 class="m-0 font-weight-bold text-primary">Recursos</h6>
-                    </div>
-                    <div class="card-body">
-                        @if (Model.Rol == "user" && perfilCompleto)
-                        {
+                    <!-- Recursos disponibles -->
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">Recursos</h6>
+                        </div>
+                        <div class="card-body">
                             <div class="mb-3">
                                 <a href="@Url.Action("DriverReport", "Reports")" class="btn btn-danger btn-block">
                                     <i class="fas fa-file-pdf"></i> Generar Reporte de Conductor PDF
@@ -550,27 +625,9 @@
                                     <i class="fas fa-cog"></i> Configurar Notificaciones
                                 </a>
                             </div>
-                        }
-                        else if (Model.Rol == "admin")
-                        {
-                            <div class="mb-3">
-                                <a href="@Url.Action("Index", "Admin")" class="btn btn-primary btn-block">
-                                    <i class="fas fa-tachometer-alt"></i> Panel de Administración
-                                </a>
-                            </div>
-                            <div class="mb-3">
-                                <a href="@Url.Action("Usuarios", "Sistema")" class="btn btn-info btn-block">
-                                    <i class="fas fa-users"></i> Gestionar Usuarios
-                                </a>
-                            </div>
-                            <div class="mb-3">
-                                <a href="@Url.Action("Notificaciones", "Sistema")" class="btn btn-warning btn-block">
-                                    <i class="fas fa-bell"></i> Notificaciones del Sistema
-                                </a>
-                            </div>
-                        }
+                        </div>
                     </div>
-                </div>
+                }
             </div>
         </div>
     }

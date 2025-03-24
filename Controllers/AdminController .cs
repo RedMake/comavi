@@ -1,4 +1,5 @@
-﻿using COMAVI_SA.Models;
+﻿using COMAVI_SA.Filters;
+using COMAVI_SA.Models;
 using COMAVI_SA.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -6,7 +7,9 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace COMAVI_SA.Controllers
 {
+    
     [Authorize(Policy = "RequireAdminRole")]
+    [VerificarAutenticacion]
     public class AdminController : Controller
     {
         private readonly IAdminService _adminService;
@@ -81,7 +84,7 @@ namespace COMAVI_SA.Controllers
                 _logger.LogError(ex, "Error al cargar dashboard");
                 await _auditService.LogExceptionAsync("Dashboard", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al cargar los datos del dashboard";
-                return View(new DashboardViewModel());
+                return View(new COMAVI_SA.Models.DashboardViewModel());
             }
         }
 
@@ -510,17 +513,16 @@ namespace COMAVI_SA.Controllers
         {
             try
             {
+                if (ModelState.ContainsKey("Chofer"))
+                {
+                    ModelState.Remove("Chofer");
+                }
+
                 if (!ModelState.IsValid)
                 {
                     return View(camion);
                 }
 
-                // Registrar evento de auditoría
-                await _auditService.LogAuditEventAsync(
-                    "CamionCreate",
-                    $"Intento de registro de camión: {camion.marca} {camion.modelo}",
-                    User.Identity.Name
-                );
 
                 var result = await _adminService.RegistrarCamionAsync(camion);
 
@@ -532,7 +534,7 @@ namespace COMAVI_SA.Controllers
                     await _auditService.LogAuditEventAsync(
                         "CamionCreate",
                         $"Registro exitoso de camión: {camion.marca} {camion.modelo}",
-                        User.Identity.Name
+                        User.Identity?.Name ?? "sistema"
                     );
 
                     return RedirectToAction("ListarCamiones");
@@ -546,7 +548,7 @@ namespace COMAVI_SA.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al registrar camión");
-                await _auditService.LogExceptionAsync("RegistrarCamion", ex.Message, User.Identity.Name);
+                await _auditService.LogExceptionAsync("RegistrarCamion", ex.Message, User.Identity.Name ?? "sistema");
                 TempData["Error"] = "Error al registrar el camión";
                 return View(camion);
             }
@@ -933,7 +935,6 @@ namespace COMAVI_SA.Controllers
             {
                 var usuarios = await _adminService.GetUsuariosSinChoferAsync();
                 ViewBag.Usuarios = usuarios;
-
                 return View(new Choferes { estado = "activo" });
             }
             catch (Exception ex)
@@ -950,34 +951,35 @@ namespace COMAVI_SA.Controllers
         {
             try
             {
+                if (ModelState.ContainsKey("Usuario"))
+                {
+                    ModelState.Remove("Usuario");
+                }
+                // Verificación de datos básica
                 if (!ModelState.IsValid)
                 {
-                    // Obtener usuarios disponibles para la vista
                     var usuarios = await _adminService.GetUsuariosSinChoferAsync();
                     ViewBag.Usuarios = usuarios;
                     return View(chofer);
                 }
 
+                // Intenta registrar el chofer
                 var result = await _adminService.RegistrarChoferAsync(chofer);
 
-                if (result)
+                if (result.success)
                 {
                     TempData["Success"] = "Chofer registrado exitosamente";
-
-                    // Registrar en auditoría
                     await _auditService.LogAuditEventAsync(
                         "ChoferCreate",
                         $"Registro exitoso de chofer: {chofer.nombreCompleto}",
-                        User.Identity.Name
+                         User.Identity?.Name ?? "sistema"  
                     );
-
                     return RedirectToAction("ListarChoferes");
                 }
                 else
                 {
-                    TempData["Error"] = "Error al registrar el chofer";
-
-                    // Recargar datos para la vista
+                    // Mejora: Obtén el mensaje específico del error desde el servicio
+                    TempData["Error"] = "Error al registrar el chofer. Verifique que la cédula y licencia no estén duplicadas.";
                     var usuarios = await _adminService.GetUsuariosSinChoferAsync();
                     ViewBag.Usuarios = usuarios;
                     return View(chofer);
@@ -986,10 +988,11 @@ namespace COMAVI_SA.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al registrar chofer");
-                await _auditService.LogExceptionAsync("RegistrarChofer", ex.Message, User.Identity.Name);
-                TempData["Error"] = "Error al registrar el chofer";
+                await _auditService.LogExceptionAsync("RegistrarChofer", ex.Message, User.Identity.Name ?? "sistema");
 
-                // Recargar datos para la vista
+                // Mejora: Muestra un mensaje más específico basado en la excepción
+                TempData["Error"] = $"Error al registrar el chofer: {ex.Message}";
+
                 var usuarios = await _adminService.GetUsuariosSinChoferAsync();
                 ViewBag.Usuarios = usuarios;
                 return View(chofer);

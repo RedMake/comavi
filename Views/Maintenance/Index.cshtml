@@ -1,0 +1,35 @@
+﻿@{
+    ViewData["Title"] = "Servicio temporalmente no disponible";
+    Layout = "~/Views/Shared/_MaintenanceLayout.cshtml";
+}
+
+<div class="maintenance-container">
+    <div class="maintenance-content">
+        <h1>Servicio temporalmente no disponible</h1>
+        <div class="status-icon">
+            <i class="fas fa-database"></i>
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <p>Estamos experimentando problemas de conexión con nuestros servidores. El equipo técnico ha sido notificado.</p>
+        <p>Por favor, inténtelo de nuevo en unos minutos.</p>
+
+        <div class="action-buttons">
+            <button onclick="window.location.reload()" class="btn btn-primary">
+                <i class="fas fa-sync-alt"></i> Intentar nuevamente
+            </button>
+        </div>
+
+        <div class="technical-info">
+            <small>Código de error: 40613 - Base de datos temporalmente no disponible</small>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Recargar automáticamente después de 30 segundos
+        setTimeout(function() {
+            window.location.reload();
+        }, 30000);
+    </script>
+}

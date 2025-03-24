@@ -1,0 +1,120 @@
+﻿@{
+    ViewData["Title"] = "Reporte de Mantenimientos";
+}
+
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Reporte de Mantenimientos</h1>
+    <div>
+        <a href="@Url.Action("ExportarReporteMantenimientosPDF", "Admin", new { fechaInicio = ViewBag.FechaInicio.ToString("yyyy-MM-dd"), fechaFin = ViewBag.FechaFin.ToString("yyyy-MM-dd") })" class="d-none d-sm-inline-block btn btn-sm btn-danger shadow-sm mr-2">
+            <i class="fas fa-file-pdf fa-sm text-white-50"></i> Exportar a PDF
+        </a>
+        <a href="@Url.Action("ReportesGenerales", "Admin")" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+            <i class="fas fa-arrow-left fa-sm text-white-50"></i> Volver a Reportes
+        </a>
+    </div>
+</div>
+
+<!-- Información del Reporte -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Información del Reporte</h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <p><strong>Fecha de Generación:</strong> @ViewBag.FechaGeneracion.ToString("dd/MM/yyyy HH:mm")</p>
+            </div>
+            <div class="col-md-3">
+                <p><strong>Período:</strong> @ViewBag.FechaInicio.ToString("dd/MM/yyyy") - @ViewBag.FechaFin.ToString("dd/MM/yyyy")</p>
+            </div>
+            <div class="col-md-3">
+                <p><strong>Total Mantenimientos:</strong> @Model.Count</p>
+            </div>
+            <div class="col-md-3">
+                <p><strong>Costo Total:</strong> $@ViewBag.TotalCostos.ToString("N2")</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Resumen Estadístico -->
+<div class="row mb-4">
+    <!-- Gráfico de Costos -->
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Costos por Camión</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="position: relative; height: 300px;">
+                    <canvas id="costoPorCamion"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Distribución de Mantenimientos -->
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Distribución por Mes</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="position: relative; height: 300px;">
+                    <canvas id="distribucionMensual"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla de Mantenimientos -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Historial de Mantenimientos</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" id="dataTableRecentAdminMaintenanceReport" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Camión</th>
+                        <th>Placa</th>
+                        <th>Marca/Modelo</th>
+                        <th>Fecha</th>
+                        <th>Descripción</th>
+                        <th>Costo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var mantenimiento in Model)
+                    {
+                        <tr>
+                            <td>@mantenimiento.id_mantenimiento</td>
+                            <td>@mantenimiento.id_camion</td>
+                            <td>@mantenimiento.numero_placa</td>
+                            <td>@mantenimiento.marca @mantenimiento.modelo</td>
+                            <td>@mantenimiento.fecha_mantenimiento.ToString("dd/MM/yyyy")</td>
+                            <td>@mantenimiento.descripcion</td>
+                            <td class="text-right">$@mantenimiento.costo.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <th colspan="6" class="text-right">Total:</th>
+                        <th class="text-right">$@ViewBag.TotalCostos.ToString("N2")</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/graficos-mantenimiento.js"></script>
+    <script id="datos-mantenimiento" type="application/json">
+        @Html.Raw(Json.Serialize(Model))
+    </script>
+}

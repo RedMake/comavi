@@ -72,7 +72,6 @@ ViewData["Title"] = "Gestión de Choferes";
                         <th>Nombre Completo</th>
                         <th>DNI</th>
                         <th>Licencia</th>
-                        <th>Teléfono</th>
                         <th>Estado</th>
                         <th>Camión Asignado</th>
                         <th>Acciones</th>
@@ -86,7 +85,6 @@ ViewData["Title"] = "Gestión de Choferes";
                             <td>@chofer.nombreCompleto</td>
                             <td>@chofer.numero_cedula</td>
                             <td>@chofer.licencia</td>
-                            <td>No disponible</td>
                             <td>
                                 <span class="badge badge-@(chofer.estado == "activo" ? "success" : "danger")">
                                     @chofer.estado

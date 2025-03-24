@@ -1,0 +1,171 @@
+﻿@model IEnumerable<dynamic>
+@{
+    ViewData["Title"] = "Reporte de Choferes";
+}
+
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Reporte de Choferes</h1>
+    <div>
+        <a href="@Url.Action("ExportarReporteChoferesPDF", "Admin", new { estado = ViewBag.Estado })" class="d-none d-sm-inline-block btn btn-sm btn-danger shadow-sm mr-2">
+            <i class="fas fa-file-pdf fa-sm text-white-50"></i> Exportar a PDF
+        </a>
+        <a href="@Url.Action("ReportesGenerales", "Admin")" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+            <i class="fas fa-arrow-left fa-sm text-white-50"></i> Volver a Reportes
+        </a>
+    </div>
+</div>
+
+<!-- Información del Reporte -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-danger">Información del Reporte</h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>Fecha de Generación:</strong> @ViewBag.FechaGeneracion.ToString("dd/MM/yyyy HH:mm")</p>
+            </div>
+            <div class="col-md-6">
+                <p>
+                    <strong>Filtro por Estado:</strong>
+                    @if (string.IsNullOrEmpty(ViewBag.Estado))
+                    {
+                        <span>Todos los estados</span>
+                    }
+                    else
+                    {
+                        <span>@ViewBag.Estado.ToUpper()</span>
+                    }
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Resumen Estadístico -->
+<div class="row mb-4">
+    <div class="col-xl-4 col-md-6 mb-4">
+        <div class="card border-left-danger shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Total Choferes</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.Count()</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-id-badge fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-4 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Activos</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.Count(c => c.estado == "activo")</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-4 col-md-6 mb-4">
+        <div class="card border-left-danger shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Inactivos</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.Count(c => c.estado == "inactivo")</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-times-circle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla de Choferes -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-danger">Listado de Choferes</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Cédula</th>
+                        <th>Edad</th>
+                        <th>Género</th>
+                        <th>Licencia</th>
+                        <th>Vencimiento</th>
+                        <th>Estado</th>
+                        <th>Camión Asignado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var chofer in Model)
+                    {
+                        <tr>
+                            <td>@chofer.id_chofer</td>
+                            <td>@chofer.nombreCompleto</td>
+                            <td>@chofer.numero_cedula</td>
+                            <td>@chofer.edad años</td>
+                            <td>@chofer.genero</td>
+                            <td>@chofer.licencia</td>
+                            <td>
+                                @if (chofer.estado_licencia == "vencida")
+                                {
+                                    <span class="text-danger">@chofer.fecha_venc_licencia.ToString("dd/MM/yyyy")</span>
+                                }
+                                else if (chofer.dias_para_vencimiento <= 30)
+                                {
+                                    <span class="text-warning">@chofer.fecha_venc_licencia.ToString("dd/MM/yyyy") (@chofer.dias_para_vencimiento días)</span>
+                                }
+                                else
+                                {
+                                    <span>@chofer.fecha_venc_licencia.ToString("dd/MM/yyyy")</span>
+                                }
+                            </td>
+                            <td>
+                                @if (chofer.estado == "activo")
+                                {
+                                    <span class="badge badge-success">Activo</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-danger">Inactivo</span>
+                                }
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(chofer.camion_asignado))
+                                {
+                                    @chofer.camion_asignado
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Sin asignar</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+
+}

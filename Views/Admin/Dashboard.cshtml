@@ -38,7 +38,7 @@
                         <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
                             En Mantenimiento
                         </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.TotalCamiones - CamionesActivos</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@(@Model.TotalCamiones - @Model.CamionesActivos)</div>
                     </div>
                     <div class="col-auto">
                         <i class="fas fa-tools fa-2x text-gray-300"></i>
@@ -149,9 +149,9 @@
                             {
                                 <tr>
                                     <td>@actividad.fecha.ToString("dd/MM/yyyy HH:mm")</td>
-                                    <td>@actividad.nombreUsuario</td>
-                                    <td>@actividad.tipoActividad</td>
+                                    <td>@actividad.tipo_actividad</td>
                                     <td>@actividad.descripcion</td>
+                                    <td>@actividad.detalles</td>
                                 </tr>
                             }
                         </tbody>

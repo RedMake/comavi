@@ -17,6 +17,7 @@ using COMAVI_SA.Controllers;
 using COMAVI_SA.Repository;
 using Microsoft.AspNetCore.DataProtection;
 using System.Security.Cryptography;
+using COMAVI_SA.Filters;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -95,7 +96,12 @@ else
 }
 
 
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options =>
+{
+    options.Filters.Add<VerificarAutenticacionAttribute>();
+});
+
+
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IPasswordService, PasswordService>();
 builder.Services.AddScoped<IOtpService, OtpService>();
@@ -233,7 +239,7 @@ builder.Services.AddAuthorization(options =>
 });
 
 
-builder.Services.AddSession(async options =>
+builder.Services.AddSession(options =>
 {
     // Tiempo de inactividad corto
     options.IdleTimeout = TimeSpan.FromMinutes(15); // Solo 15 minutos de inactividad
@@ -252,7 +258,7 @@ builder.Services.AddSession(async options =>
 
 builder.Services.AddMemoryCache(options =>
 {
-    options.SizeLimit = 1024 * 1024 * 100; 
+    options.SizeLimit = 1024; 
     options.CompactionPercentage = 0.2; 
 });
 
@@ -269,10 +275,11 @@ builder.Services.AddHangfireServer();
 
 builder.Services.AddAntiforgery(options =>
 {
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-    options.Cookie.HttpOnly = true;
-    options.Cookie.SameSite = SameSiteMode.Strict;
     options.HeaderName = "X-CSRF-TOKEN";
+    options.Cookie.Name = "CSRF-TOKEN";
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.Cookie.SameSite = SameSiteMode.Strict;
+    options.Cookie.HttpOnly = true;
     options.SuppressXFrameOptionsHeader = true;
 
 });
@@ -298,8 +305,9 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-
+app.UseMiddleware<SessionValidationMiddleware>();
 app.UseMiddleware<RateLimitingMiddleware>();
+app.UseDatabaseResilience();
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
@@ -357,6 +365,13 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .AllowAnonymous();
+
+app.MapControllerRoute(
+    name: "maintenance",
+    pattern: "Maintenance/{action=Index}/{id?}")
+    .AllowAnonymous();
+
+
 app.Run();
 
 public class HangfireAuthorizationFilter : IDashboardAuthorizationFilter

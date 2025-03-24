@@ -10,12 +10,6 @@ document.addEventListener('DOMContentLoaded', function () {
         // Verificar si la tabla existe en el DOM
         if (table.length === 0) return null;
 
-        // Verificar si ya está inicializada como DataTable
-        if ($.fn.dataTable.isDataTable(selector)) {
-            // Si ya existe, obtener la instancia y destruirla para reinicializarla
-            table.DataTable().destroy();
-        }
-
         // Configuración por defecto
         const defaultOptions = {
             language: {
@@ -27,63 +21,78 @@ document.addEventListener('DOMContentLoaded', function () {
             dom: 'Bfrtip',
             buttons: [
                 'copy', 'excel', 'pdf', 'print'
-            ]
+            ],
+            // Evitar problemas de reinicialización
+            destroy: true
         };
 
         // Combinar opciones por defecto con las proporcionadas
         const finalOptions = { ...defaultOptions, ...options };
 
         // Inicializar DataTable con las opciones finales
-        return table.DataTable(finalOptions);
+        try {
+            return table.DataTable(finalOptions);
+        } catch (error) {
+            console.error(`Error al inicializar DataTable ${selector}:`, error);
+            return null;
+        }
     }
 
-    // Inicializar tablas comunes
-    const tables = {
-        // Tabla principal de documentos
-        dataTable: initializeDataTable('#dataTable', {
-            order: [[3, 'asc']] // Ordenar por días restantes (o la columna que corresponda)
-        }),
-
-        // Tabla de documentos pendientes de validación
-        pendientesTable: initializeDataTable('#pendientesTable', {
-            order: [[4, 'desc']] // Ordenar por fecha de subida
-        }),
-
-        // Tabla de documentos por vencer
-        porVencerTable: initializeDataTable('#porVencerTable', {
+    // Configuraciones de tablas específicas
+    const tableConfigs = {
+        '#dataTable': {
             order: [[3, 'asc']] // Ordenar por días restantes
-        }),
-
-        // Tabla de historial de documentos
-        historialTable: initializeDataTable('#historialTable', {
+        },
+        '#pendientesTable': {
+            order: [[4, 'desc']] // Ordenar por fecha de subida
+        },
+        '#porVencerTable': {
+            order: [[5, 'asc']], // Ordenar por días restantes
+            columnDefs: [
+                { type: 'num', targets: 5 }
+            ]
+        },
+        '#historialTable': {
             order: [[2, 'desc']] // Ordenar por fecha de emisión
-        }),
-
-        // Tabla de choferes
-        choferesTable: initializeDataTable('#choferesTable', {
+        },
+        '#choferesTable': {
             pageLength: 25
-        }),
-
-        // Tabla de camiones
-        camionesTable: initializeDataTable('#camionesTable', {
+        },
+        '#camionesTable': {
             pageLength: 25
-        }),
-
-        // Tabla de usuarios
-        usuariosTable: initializeDataTable('#usuariosTable', {
+        },
+        '#usuariosTable': {
             pageLength: 25
-        }),
-
-        // Tabla de documentos específica
-        documentsTable: initializeDataTable('#documentsTable', {
+        },
+        '#documentsTable': {
             pageLength: 5
-        }),
-
-        // Tabla de licencias por vencer
-        licenciasTable: initializeDataTable('#licenciasTable', {
-            order: [[4, 'asc']] // Ordenar por días restantes
-        })
+        },
+        '#licenciasTable': {
+            order: [[4, 'asc']],
+            columnDefs: [
+                { type: 'num', targets: 4 }
+            ]
+        },
+        '#dataTableDocumentsAdmin': {
+            order: [[5, 'asc']]
+        },
+        '#dataTableLicenciasAdmin': {
+            order: [[4, 'asc']]
+        },
+        '#dataTableRecentAdminMaintenanceReport': {
+            order: [[4, 'desc']]
+        }
     };
+
+    // Objeto para almacenar las instancias de tablas inicializadas
+    const tables = {};
+
+    // Inicializar solo las tablas que existen en la página actual
+    Object.entries(tableConfigs).forEach(([selector, options]) => {
+        if ($(selector).length > 0) {
+            tables[selector.replace('#', '')] = initializeDataTable(selector, options);
+        }
+    });
 
     // Exponer el objeto de tablas globalmente para acceso desde otros scripts
     window.appTables = tables;

@@ -79,11 +79,25 @@ ViewData["Title"] = "Gestión de Usuarios";
                             <td>@usuario.id_usuario</td>
                             <td>@usuario.nombre_usuario</td>
                             <td>@usuario.correo_electronico</td>
-                            <td><span class="badge badge-@(usuario.rol == "admin" ? "primary" : usuario.rol == "user" ? "success" : "info")">@usuario.rol</span></td>
                             <td>
-                                <span class="badge badge-@(usuario.estado_verificacion == "activo" ? "success" : "danger")">
-                                    @usuario.estado_verificacion
-                                </span>
+                                @if (usuario.rol == "admin")
+                                {
+                                    <span class="badge badge-primary">Administrador</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-secondary">Usuario</span>
+                                }
+                            </td>
+                            <td>
+                                @if (usuario.estado_verificacion == "verificado")
+                                {
+                                    <span class="badge badge-success">Verificado</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-warning">No Verificado</span>
+                                }
                             </td>
                             <td>@(usuario.ultimo_ingreso.HasValue ? usuario.ultimo_ingreso.Value.ToString("dd/MM/yyyy HH:mm") : "Nunca")</td>
                             <td>

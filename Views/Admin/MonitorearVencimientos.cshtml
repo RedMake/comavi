@@ -1,6 +1,6 @@
 ﻿@model List<DocumentoVencimientoViewModel>
 @{
-ViewData["Title"] = "Monitoreo de Vencimientos";
+    ViewData["Title"] = "Monitoreo de Vencimientos";
 }
 <!-- Header -->
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
@@ -62,7 +62,6 @@ ViewData["Title"] = "Monitoreo de Vencimientos";
                     <tr>
                         <th>Chofer</th>
                         <th>Tipo</th>
-                        <th>Número</th>
                         <th>Fecha Emisión</th>
                         <th>Fecha Vencimiento</th>
                         <th>Días Restantes</th>
@@ -74,21 +73,20 @@ ViewData["Title"] = "Monitoreo de Vencimientos";
                     @foreach (var doc in Model)
                     {
                         <tr>
-                            <td>@doc.nombreChofer</td>
+                            <td>@doc.nombreCompleto</td>
                             <td>@doc.tipo_documento</td>
-                            <td>N/A</td>
                             <td>@doc.fecha_emision.ToString("dd/MM/yyyy")</td>
                             <td>@doc.fecha_vencimiento.ToString("dd/MM/yyyy")</td>
                             <td>
-                                @{
-                                    <span class="font-weight-bold text-@(doc.diasParaVencimiento <= 7 ? "danger" : doc.diasParaVencimiento <= 15 ? "warning" : "primary")">
-                                        @(doc.diasParaVencimiento < 0 ? "Vencido" : doc.diasParaVencimiento.ToString() + " días")
-                                    </span>
-                                }
+                                <span class="font-weight-bold text-@(doc.dias_para_vencimiento <= 0 ? "danger" :
+                                                                     doc.dias_para_vencimiento <= 30 ? "warning" : "primary")">
+                                    @(doc.dias_para_vencimiento < 0 ? "Vencido" : doc.dias_para_vencimiento.ToString() + " días")
+                                </span>
                             </td>
                             <td>
-                                <span class="badge badge-@(doc.estadoDocumento == "vigente" ? "success" : doc.estadoDocumento == "por_vencer" ? "warning" : "danger")">
-                                    @doc.estadoDocumento
+                                <span class="badge badge-@(doc.estadoDocumento == "Vigente" ? "success" :
+                                                           doc.estadoDocumento == "Por vencer" ? "warning" : "danger")">
+             <!-- Muestra el dato --> @doc.estadoDocumento
                                 </span>
                             </td>
                             <td>
@@ -113,9 +111,9 @@ ViewData["Title"] = "Monitoreo de Vencimientos";
             <table class="table table-bordered" id="licenciasTable" width="100%" cellspacing="0">
                 <thead>
                     <tr>
+                        <th>ID</th>
                         <th>Chofer</th>
                         <th>Tipo Licencia</th>
-                        <th>Número</th>
                         <th>Fecha Vencimiento</th>
                         <th>Días Restantes</th>
                         <th>Estado</th>
@@ -126,25 +124,36 @@ ViewData["Title"] = "Monitoreo de Vencimientos";
                     @foreach (var licencia in ViewBag.Licencias)
                     {
                         <tr>
-                            <td>@licencia.nombreChofer</td>
-                            <td>@licencia.tipoLicencia</td>
-                            <td>@licencia.numeroLicencia</td>
-                            <td>@licencia.fechaVencimiento.ToString("dd/MM/yyyy")</td>
+                            <td>@licencia.id_chofer</td>
+                            <td>@licencia.nombreCompleto</td>
+                            <td>@licencia.licencia</td>
+                            <td>@licencia.fecha_venc_licencia.ToString("dd/MM/yyyy")</td>
                             <td>
-                                @{
-                                    var diasRestantes = (licencia.fechaVencimiento - DateTime.Now).Days;
-                                    <span class="font-weight-bold text-@(diasRestantes <= 7 ? "danger" : diasRestantes <= 15 ? "warning" : "primary")">
-                                        @(diasRestantes < 0 ? "Vencido" : diasRestantes.ToString() + " días")
-                                    </span>
+                                @if (licencia.dias_para_vencimiento <= 0)
+                                {
+                                    <span class="text-danger">Vencido hace @Math.Abs(licencia.dias_para_vencimiento) días</span>
+                                }
+                                else
+                                {
+                                    <span class="@(licencia.dias_para_vencimiento <= 30 ? "text-warning" : "")">@licencia.dias_para_vencimiento días</span>
                                 }
                             </td>
                             <td>
-                                <span class="badge badge-@(licencia.estado == "vigente" ? "success" : licencia.estado == "por_vencer" ? "warning" : "danger")">
-                                    @licencia.estado
-                                </span>
+                                @if (licencia.estado_licencia == "vencida")
+                                {
+                                    <span class="badge badge-danger">Vencida</span>
+                                }
+                                else if (licencia.dias_para_vencimiento <= 30)
+                                {
+                                    <span class="badge badge-warning">Por vencer</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-success">Vigente</span>
+                                }
                             </td>
                             <td>
-                                <a href="@Url.Action("ActualizarDatosChofer", "Admin", new { id = licencia.idChofer })" class="btn btn-sm btn-warning">
+                                <a href="@Url.Action("ActualizarDatosChofer", "Admin", new { id = licencia.id_chofer })" class="btn btn-sm btn-warning">
                                     <i class="fas fa-edit"></i> Actualizar
                                 </a>
                             </td>

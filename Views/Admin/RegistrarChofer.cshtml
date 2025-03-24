@@ -50,28 +50,27 @@ ViewData["Title"] = "Registrar Chofer";
                 
                 <div class="form-group">
                     <label asp-for="edad">Edad *</label>
-                    <input asp-for="edad" type="number" class="form-control" required min="18" max="99" />
+                        <input asp-for="edad" type="number" class="form-control" required value=18 min="18" max="99" />
                     <span asp-validation-for="edad" class="text-danger"></span>
                 </div>
             </div>
             
             <div class="col-md-6">
                 <div class="form-group">
-                    <label asp-for="licencia">Licencia *</label>
+                    <label asp-for="licencia">Licencia de Camión *</label>
                     <select asp-for="licencia" class="form-control" required>
                         <option value="">Seleccione...</option>
-                        <option value="A-I">A-I</option>
-                        <option value="A-II">A-II</option>
-                        <option value="A-IIIa">A-IIIa</option>
-                        <option value="A-IIIb">A-IIIb</option>
-                        <option value="A-IIIc">A-IIIc</option>
+                        <option value="A-IIIa">A-IIIa (Vehículos hasta 4000kg)</option>
+                        <option value="A-IIIb">A-IIIb (Vehículos de transporte público)</option>
+                        <option value="A-IIIc">A-IIIc (Vehículos pesados de más de 4000kg)</option>
                     </select>
                     <span asp-validation-for="licencia" class="text-danger"></span>
+                    <small class="form-text text-muted">Seleccione la categoría de licencia según el tipo de camión que conduce.</small>
                 </div>
                 
                 <div class="form-group">
                     <label asp-for="fecha_venc_licencia">Fecha Vencimiento Licencia *</label>
-                    <input asp-for="fecha_venc_licencia" type="date" class="form-control" required />
+                        <input asp-for="fecha_venc_licencia" type="date" class="form-control" required value="@DateTime.Now.AddDays(1).ToString("yyyy-MM-dd")" />
                     <span asp-validation-for="fecha_venc_licencia" class="text-danger"></span>
                 </div>
                 
@@ -95,7 +94,7 @@ ViewData["Title"] = "Registrar Chofer";
                         <option value="">Sin asociar a usuario</option>
                         @foreach (var usuario in ViewBag.Usuarios)
                         {
-                            <option value="@usuario.id_usuario">@usuario.nombre_usuario (@usuario.correo_electronico)</option>
+                            <option value="@usuario.id_usuario">@usuario.nombre_usuario / (@usuario.correo_electronico)</option>
                         }
                     </select>
                     <span asp-validation-for="id_usuario" class="text-danger"></span>

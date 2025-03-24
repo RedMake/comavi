@@ -5,7 +5,7 @@ namespace COMAVI_SA.Services
 {
     public interface IAuditService
     {
-        Task LogAuditEventAsync(string eventType, string details, string username);
+        Task LogAuditEventAsync(string eventType, string details, string username, string? ip = null);
         Task LogExceptionAsync(string operation, string errorMessage, string username);
     }
 
@@ -26,7 +26,7 @@ namespace COMAVI_SA.Services
         }
 
 
-        public async Task LogAuditEventAsync(string eventType, string details, string username)
+        public async Task LogAuditEventAsync(string eventType, string details, string username, string? ip = null)
         {
             try
             {
@@ -38,7 +38,7 @@ namespace COMAVI_SA.Services
                         detalles = details,
                         usuario = username,
                         fecha_hora = DateTime.UtcNow,
-                        ip = GetCurrentUserIp()
+                        ip = ip ?? GetCurrentUserIp()
                     }
                 );
             }
@@ -53,11 +53,11 @@ namespace COMAVI_SA.Services
             try
             {
                 await _databaseRepository.ExecuteNonQueryProcedureAsync(
-                    "sp_RegistrarErrorAuditoria",
+                    "sp_RegistrarAuditoria",
                     new
                     {
-                        operacion = operation,
-                        mensaje_error = errorMessage,
+                        tipo_evento = "Error",
+                        detalles = $"Operación: {operation}, Error: {errorMessage}",
                         usuario = username,
                         fecha_hora = DateTime.UtcNow,
                         ip = GetCurrentUserIp()

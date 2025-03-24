@@ -1,0 +1,224 @@
+﻿@model List<Mantenimiento_Camiones>
+@{
+    ViewData["Title"] = "Historial de Mantenimiento";
+    var camion = ViewBag.Camion;
+}
+
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Historial de Mantenimiento</h1>
+    <div>
+        <button class="btn btn-success btn-sm" data-toggle="modal" data-target="#registrarMantenimientoModal">
+            <i class="fas fa-plus fa-sm"></i> Nuevo Mantenimiento
+        </button>
+        <a href="@Url.Action("ListarCamiones", "Admin")" class="btn btn-primary btn-sm ml-2">
+            <i class="fas fa-arrow-left fa-sm"></i> Volver a Camiones
+        </a>
+    </div>
+</div>
+
+<!-- Alertas -->
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <strong>¡Éxito!</strong> @TempData["Success"]
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">×</span>
+        </button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>¡Error!</strong> @TempData["Error"]
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">×</span>
+        </button>
+    </div>
+}
+
+<!-- Información del Camión -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Información del Camión</h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <p><strong>Marca:</strong> @camion.marca</p>
+            </div>
+            <div class="col-md-3">
+                <p><strong>Modelo:</strong> @camion.modelo</p>
+            </div>
+            <div class="col-md-3">
+                <p><strong>Año:</strong> @camion.anio</p>
+            </div>
+            <div class="col-md-3">
+                <p><strong>Placa:</strong> @camion.numero_placa</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-3">
+                <p>
+                    <strong>Estado:</strong>
+                    <span class="badge badge-@(camion.estado == "activo" ? "success" : camion.estado == "mantenimiento" ? "warning" : "danger")">
+                        @camion.estado
+                    </span>
+                </p>
+            </div>
+            <div class="col-md-9">
+                <p>
+                    <strong>Chofer asignado:</strong>
+                    @if (camion.Chofer != null)
+                    {
+                        @camion.Chofer.nombreCompleto
+                    }
+                    else
+                    {
+                        <span class="text-muted">Sin asignar</span>
+                    }
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Historial de Mantenimientos -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+        <h6 class="m-0 font-weight-bold text-primary">Historial de Mantenimientos</h6>
+    </div>
+    <div class="card-body">
+        @if (Model.Count > 0)
+        {
+            <div class="table-responsive">
+                <table class="table table-bordered" id="mantenimientosTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Fecha</th>
+                            <th>Descripción</th>
+                            <th>Costo</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var mantenimiento in Model.OrderByDescending(m => m.fecha_mantenimiento))
+                        {
+                            <tr>
+                                <td>@mantenimiento.id_mantenimiento</td>
+                                <td>@mantenimiento.fecha_mantenimiento.ToString("dd/MM/yyyy")</td>
+                                <td>@mantenimiento.descripcion</td>
+                                <td>$@mantenimiento.costo.ToString("N2")</td>
+                                <td>
+                                    <button class="btn btn-sm btn-info" data-toggle="modal" data-target="#detalleMantenimientoModal"
+                                            data-id="@mantenimiento.id_mantenimiento"
+                                            data-descripcion="@mantenimiento.descripcion"
+                                            data-fecha="@mantenimiento.fecha_mantenimiento.ToString("dd/MM/yyyy")"
+                                            data-costo="@mantenimiento.costo">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th colspan="3" class="text-right">Total:</th>
+                            <th>$@Model.Sum(m => m.costo).ToString("N2")</th>
+                            <th></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> No hay registros de mantenimiento para este camión.
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Modal Registrar Mantenimiento -->
+<div class="modal fade" id="registrarMantenimientoModal" tabindex="-1" role="dialog" aria-labelledby="registrarMantenimientoModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="registrarMantenimientoModalLabel">Registrar Nuevo Mantenimiento</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form method="post" action="@Url.Action("RegistrarMantenimiento", "Admin")">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <input type="hidden" name="id_camion" value="@ViewBag.Camion.id_camion" />
+
+                    <div class="form-group">
+                        <label for="fecha_mantenimiento">Fecha de Mantenimiento *</label>
+                        <input type="date" class="form-control" id="fecha_mantenimiento" name="fecha_mantenimiento" required value="@DateTime.Now.ToString("yyyy-MM-dd")">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="descripcion">Descripción *</label>
+                        <textarea class="form-control" id="descripcion" name="descripcion" rows="4" required maxlength="500"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="costo">Costo *</label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text">$</span>
+                            </div>
+                            <input type="number" class="form-control" id="costo" name="costo" required min="0" step="0.01">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Detalle Mantenimiento -->
+<div class="modal fade" id="detalleMantenimientoModal" tabindex="-1" role="dialog" aria-labelledby="detalleMantenimientoModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="detalleMantenimientoModalLabel">Detalle de Mantenimiento</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>ID:</label>
+                    <p id="detalle-id" class="font-weight-bold"></p>
+                </div>
+                <div class="form-group">
+                    <label>Fecha:</label>
+                    <p id="detalle-fecha" class="font-weight-bold"></p>
+                </div>
+                <div class="form-group">
+                    <label>Descripción:</label>
+                    <p id="detalle-descripcion"></p>
+                </div>
+                <div class="form-group">
+                    <label>Costo:</label>
+                    <p id="detalle-costo" class="font-weight-bold text-primary"></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/historial-mantenimiento.js"></script>
+}

@@ -1,8 +1,11 @@
 ﻿using COMAVI_SA.Models;
 using COMAVI_SA.Repository;
 using Hangfire.Logging;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Caching.Memory;
 using NPOI.SS.Formula.Functions;
+using System;
+using System.Collections;
 
 namespace COMAVI_SA.Services
 {
@@ -29,7 +32,7 @@ namespace COMAVI_SA.Services
 
         // Choferes
         Task<IEnumerable<ChoferViewModel>> GetChoferesAsync(string filtro = null, string estado = null);
-        Task<bool> RegistrarChoferAsync(Choferes chofer);
+        Task<(bool success, string message)> RegistrarChoferAsync(Choferes chofer);
         Task<List<Usuario>> GetUsuariosSinChoferAsync();
         Task<List<Documentos>> GetDocumentosChoferAsync(int idChofer);
         Task<Choferes> GetChoferByIdAsync(int id);
@@ -62,8 +65,8 @@ namespace COMAVI_SA.Services
         Task<List<ActividadRecienteViewModel>> GetActividadesRecientesAsync(int cantidad = 10);
         Task<List<MantenimientoReporteViewModel>> GenerarReporteMantenimientosAsync(DateTime? fechaInicio, DateTime? fechaFin);
 
-        // MÉTODOS INTERNOS DE ADMIN SERVICE NO USAR EN OTRO LADO!!!
-        Task<T> GetOrSetCacheAsync<T>(string cacheKey, Func<Task<T>> dataFactory, TimeSpan absoluteExpiration, TimeSpan? slidingExpiration = null, bool bypassCache = false);
+        // MÉTODOS INTERNOS DE ADMIN SERVICE NO USAR EN OTRO LADO (MANEJADOR DE CACHE TEMPORAL Y ESPACIO DEL MISMO)!!!
+        Task<T> GetOrSetCacheAsync<T>(string cacheKey, Func<Task<T>> dataFactory, TimeSpan absoluteExpiration, TimeSpan? slidingExpiration = null, bool bypassCache = false, int sizedCache = 1);
 
     }
 
@@ -206,6 +209,7 @@ namespace COMAVI_SA.Services
                 }
             }
         }
+        
         #endregion
 
         #region Gestión de Camiones
@@ -214,23 +218,19 @@ namespace COMAVI_SA.Services
         {
             string cacheKey = $"Camiones_Filtro_{filtro ?? "none"}_Estado_{estado ?? "all"}";
 
-            if (_cache.TryGetValue(cacheKey, out List<CamionViewModel> cachedData))
-            {
-                return cachedData;
-            }
-
-            var camiones = await _databaseRepository.ExecuteQueryProcedureAsync<CamionViewModel>(
-                "sp_BuscarCamiones",
-                new { filtro, estado }
+            return await GetOrSetCacheAsync(
+                cacheKey,
+                async () => {
+                    var camiones = await _databaseRepository.ExecuteQueryProcedureAsync<CamionViewModel>(
+                        "sp_BuscarCamiones",
+                        new { filtro, estado }
+                    );
+                    return camiones;
+                    //return camiones.ToList();
+                },
+                TimeSpan.FromMinutes(5)   // Expiración absoluta de 5 minutos
             );
 
-            var result = camiones.ToList();
-
-            // Guardar en caché con tiempo de expiración corto (los datos de camiones cambian con frecuencia)
-            _cache.Set(cacheKey, result, TimeSpan.FromMinutes(5));
-            _cacheKeyTracker.TrackKey(cacheKey);
-
-            return result;
         }
 
         public async Task<bool> RegistrarCamionAsync(Camiones camion)
@@ -323,7 +323,11 @@ namespace COMAVI_SA.Services
 
             if (camion != null)
             {
-                _cache.Set(cacheKey, camion, TimeSpan.FromMinutes(5));
+                var cacheEntryOptions = new MemoryCacheEntryOptions()
+                    .SetAbsoluteExpiration(TimeSpan.FromMinutes(5))
+                    .SetSize(1);
+
+                _cache.Set(cacheKey, camion, cacheEntryOptions);
                 _cacheKeyTracker.TrackKey(cacheKey);
             }
 
@@ -371,28 +375,6 @@ namespace COMAVI_SA.Services
             {
                 _logger.LogError(ex, "Error al activar camión");
                 return false;
-            }
-        }
-
-        private async Task InvalidarCacheCamionesAsync()
-        {
-            try
-            {
-                var cacheKeys = _cacheKeyTracker.GetKeysByPrefix("Camiones_");
-                foreach (var key in cacheKeys)
-                {
-                    _cache.Remove(key);
-                }
-
-                var dashboardKeys = _cacheKeyTracker.GetKeysByPrefix("AdminDashboard_");
-                foreach (var key in dashboardKeys)
-                {
-                    _cache.Remove(key);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al invalidar caché de camiones");
             }
         }
 
@@ -546,9 +528,30 @@ namespace COMAVI_SA.Services
             }
         }
 
+        private async Task InvalidarCacheCamionesAsync()
+        {
+            try
+            {
+                var cacheKeys = _cacheKeyTracker.GetKeysByPrefix("Camiones_");
+                foreach (var key in cacheKeys)
+                {
+                    _cache.Remove(key);
+                }
+
+                var dashboardKeys = _cacheKeyTracker.GetKeysByPrefix("AdminDashboard_");
+                foreach (var key in dashboardKeys)
+                {
+                    _cache.Remove(key);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al invalidar caché de camiones");
+            }
+        }
 
         #endregion
-       
+
         #region Gestión de Choferes
         public async Task<IEnumerable<ChoferViewModel>> GetChoferesAsync(string filtro = null, string estado = null)
         {
@@ -570,7 +573,7 @@ namespace COMAVI_SA.Services
             );
         }
 
-        public async Task<bool> RegistrarChoferAsync(Choferes chofer)
+        public async Task<(bool success, string message)> RegistrarChoferAsync(Choferes chofer)
         {
             try
             {
@@ -589,7 +592,6 @@ namespace COMAVI_SA.Services
                     }
                 );
 
-                // Si tiene un usuario asignado, notificarle
                 if (chofer.id_usuario.HasValue)
                 {
                     await _notificationService.CreateNotificationAsync(
@@ -599,15 +601,19 @@ namespace COMAVI_SA.Services
                     );
                 }
 
-                // Invalidar cachés relacionadas
                 await InvalidarCacheChoferesAsync();
-
-                return true;
+                return (true, "Chofer registrado exitosamente");
+            }
+            catch (SqlException sqlEx)
+            {
+                // Captura específicamente los mensajes de error SQL
+                _logger.LogError(sqlEx, "Error SQL al registrar chofer");
+                return (false, sqlEx.Message);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al registrar chofer");
-                return false;
+                return (false, "Error al registrar el chofer: " + ex.Message);
             }
         }
 
@@ -665,7 +671,6 @@ namespace COMAVI_SA.Services
                 TimeSpan.FromMinutes(5)
             );
         }
-
 
         public async Task<bool> ActualizarDocumentoAsync(Documentos documento)
         {
@@ -824,7 +829,6 @@ namespace COMAVI_SA.Services
             );
         }
 
-
         public async Task<bool> DesactivarChoferAsync(int id)
         {
             try
@@ -873,6 +877,7 @@ namespace COMAVI_SA.Services
                 return false;
             }
         }
+
         public async Task<bool> AsignarDocumentoAsync(Documentos documento)
         {
             try
@@ -1406,7 +1411,8 @@ namespace COMAVI_SA.Services
             Func<Task<T>> dataFactory,
             TimeSpan absoluteExpiration,
             TimeSpan? slidingExpiration = null,
-            bool bypassCache = false)
+            bool bypassCache = false,
+            int sizedCache = -1)
         {
             // Si se solicita bypass del caché o actualización forzada, no verificar caché
             if (!bypassCache && _cache.TryGetValue(cacheKey, out T cachedData))
@@ -1421,50 +1427,141 @@ namespace COMAVI_SA.Services
             try
             {
                 // Intentar adquirir un bloqueo distribuido
-                lockTaken = await _lockProvider.TryAcquireLockAsync(lockKey, TimeSpan.FromSeconds(30));
+                if (_lockProvider != null)
+                {
+                    try
+                    {
+                        lockTaken = await _lockProvider.TryAcquireLockAsync(lockKey, TimeSpan.FromSeconds(30));
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, $"Error al adquirir bloqueo para {lockKey}. Continuando sin bloqueo.");
+                    }
+                }
 
-                // Si no se pudo adquirir el bloqueo, esperar un momento y reintentar obtener del caché
+                // Si no se pudo adquirir el bloqueo, esperar un momento y reintentar
                 if (!lockTaken)
                 {
                     await Task.Delay(200);
-                    return await GetOrSetCacheAsync(cacheKey, dataFactory, absoluteExpiration, slidingExpiration, bypassCache);
-                }
 
-                // Doble verificación en caso de que otro thread haya actualizado el caché mientras esperábamos
-                if (!bypassCache && _cache.TryGetValue(cacheKey, out cachedData))
-                {
-                    return cachedData;
+                    // Verificar caché de nuevo
+                    if (!bypassCache && _cache.TryGetValue(cacheKey, out cachedData))
+                    {
+                        return cachedData;
+                    }
                 }
 
                 // Obtener datos frescos
                 var data = await dataFactory();
 
-                // Configurar opciones de caché
+                // Si los datos son nulos, no intentar cachear
+                if (data == null)
+                {
+                    return data;
+                }
+
+                // Determinar el tamaño a utilizar
+                int cacheSize = sizedCache;
+                if (cacheSize < 0)
+                {
+                    // Calcular tamaño automáticamente
+                    cacheSize = CalcularTamañoCache(data);
+                }
+
+                // Asegurarse de que el tamaño nunca sea menor que 1
+                if (cacheSize < 1)
+                {
+                    cacheSize = 1;
+                }
+
+                // Configurar opciones de caché CON tamaño (siempre)
                 var cacheOptions = new MemoryCacheEntryOptions()
                     .SetAbsoluteExpiration(absoluteExpiration)
-                    .SetPriority(CacheItemPriority.High);
+                    .SetPriority(CacheItemPriority.Normal)
+                    .SetSize(cacheSize); // Siempre establecer un tamaño
 
                 if (slidingExpiration.HasValue)
                 {
                     cacheOptions.SetSlidingExpiration(slidingExpiration.Value);
                 }
 
-                // Almacenar en caché
+                // Almacenar en caché con tamaño específico
                 _cache.Set(cacheKey, data, cacheOptions);
-                _cacheKeyTracker.TrackKey(cacheKey);
+
+                // Registrar clave en el tracker si está disponible
+                if (_cacheKeyTracker != null)
+                {
+                    try
+                    {
+                        _cacheKeyTracker.TrackKey(cacheKey);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, $"Error al registrar clave {cacheKey} en el tracker.");
+                    }
+                }
 
                 return data;
             }
             finally
             {
-                // Liberar el bloqueo si lo adquirimos
-                if (lockTaken)
+                // Liberar el bloqueo si fue adquirido
+                if (lockTaken && _lockProvider != null)
                 {
-                    await _lockProvider.ReleaseLockAsync(lockKey);
+                    try
+                    {
+                        await _lockProvider.ReleaseLockAsync(lockKey);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, $"Error al liberar bloqueo para {lockKey}");
+                    }
                 }
             }
         }
 
+        // Método auxiliar para calcular el tamaño de caché
+        private int CalcularTamañoCache<T>(T data)
+        {
+            try
+            {
+                int cacheSize = 1; // Valor por defecto
+
+                if (data == null)
+                {
+                    return cacheSize;
+                }
+
+                // Determinar tamaño basado en el tipo de datos
+                if (data is ICollection collection)
+                {
+                    int count = Math.Min(collection.Count, 1000);
+                    cacheSize = Math.Clamp(count / 20, 1, 50);
+                }
+                else if (data is System.Collections.IEnumerable enumerable && !(data is string)) // Excluir string
+                {
+                    int count = 0;
+                    foreach (var item in enumerable)
+                    {
+                        if (count++ == 1000) break;
+                    }
+                    cacheSize = Math.Clamp(count / 20, 1, 50);
+                }
+                else if (data is string str)
+                {
+                    cacheSize = Math.Clamp(str.Length / 1000, 1, 50);
+                }
+
+                return Math.Max(cacheSize, 1); // Garantizar que nunca sea menor que 1
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error al calcular tamaño de caché");
+                return 1; // Valor seguro por defecto
+            }
+        }
+        
+        
         #endregion
     }
 }

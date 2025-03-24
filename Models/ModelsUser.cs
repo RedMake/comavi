@@ -299,7 +299,7 @@ namespace COMAVI_SA.Models
         public int? chofer_asignado { get; set; }
 
         [ForeignKey("chofer_asignado")]
-        public Choferes Chofer { get; set; }
+        public Choferes? Chofer { get; set; }
     }
 
     public class Mantenimiento_Camiones
@@ -433,16 +433,19 @@ namespace COMAVI_SA.Models
     //ViewModel
     public class DocumentoVencimientoIndexViewModel
     {
-        public int Id { get; set; }
-        public string Descripcion { get; set; }
-        public DateTime FechaVencimiento { get; set; }
-        public int EntidadId { get; set; }
-        public string TipoEntidad { get; set; }
-        public string NombreEntidad { get; set; }
+        public int id_documento { get; set; }
+        public int id_chofer { get; set; }
+        public string nombreCompleto { get; set; }
+        public string tipo_documento { get; set; }
+        public DateTime fecha_emision { get; set; }
+        public DateTime fecha_vencimiento { get; set; }
+        public int dias_para_vencimiento { get; set; }
+        public string estado_validacion { get; set; }
 
-        // Propiedades calculadas
-        public int DiasRestantes => (FechaVencimiento - DateTime.Today).Days;
-        public string EstadoAlerta => DiasRestantes <= 7 ? "Crítico" : DiasRestantes <= 15 ? "Advertencia" : "Normal";
+        // Propiedades calculadas (puedes mantenerlas)
+        public string EstadoAlerta => dias_para_vencimiento <= 0 ? "Vencido" :
+                                     dias_para_vencimiento <= 7 ? "Crítico" :
+                                     dias_para_vencimiento <= 15 ? "Advertencia" : "Normal";
     }
 
     public class AdminDashboardViewModel
@@ -469,18 +472,24 @@ namespace COMAVI_SA.Models
         public string estado { get; set; }
         public int? chofer_asignado { get; set; }
         public string NombreChofer { get; set; }
+        public string estado_operativo { get; set; }
     }
 
     public class DocumentoVencimientoViewModel
     {
         public int id_documento { get; set; }
         public int id_chofer { get; set; }
-        public string nombreChofer { get; set; }
+        public string nombreCompleto { get; set; } // En el SP se llama "nombreChofer"
         public string tipo_documento { get; set; }
         public DateTime fecha_emision { get; set; }
         public DateTime fecha_vencimiento { get; set; }
-        public int diasParaVencimiento { get; set; }
-        public string estadoDocumento { get; set; } // Vencido, Por vencer, Vigente
+        public int dias_para_vencimiento { get; set; }
+        public string estado_validacion { get; set; }
+
+        // Propiedad calculada que no está en el SP
+        [NotMapped]
+        public string estadoDocumento => dias_para_vencimiento <= 0 ? "Vencido" :
+                                       dias_para_vencimiento <= 30 ? "Por vencer" : "Vigente";
     }
 
     public class UsuarioAdminViewModel
@@ -524,25 +533,31 @@ namespace COMAVI_SA.Models
 
     public class ActividadRecienteViewModel
     {
-        public int id_actividad { get; set; }
         public string tipo_actividad { get; set; }
         public string descripcion { get; set; }
-        public DateTime fecha_hora { get; set; }
-        public int? id_usuario { get; set; }
-        public string usuario { get; set; }
+        public DateTime fecha { get; set; }
+        public string detalles { get; set; }
+
     }
 
     public class DashboardViewModel
     {
+        // Propiedades que coinciden con el SP
         public int TotalCamiones { get; set; }
         public int CamionesActivos { get; set; }
+        public int CamionesEnMantenimiento { get; set; }
+        public int CamionesInactivos { get; set; } 
         public int TotalChoferes { get; set; }
         public int ChoferesActivos { get; set; }
-        public int TotalUsuarios { get; set; }
-        public int UsuariosActivos { get; set; }
+        public int ChoferesLicenciaPorVencer { get; set; } 
+        public int ChoferesLicenciaVencida { get; set; } 
+        public int TotalDocumentos { get; set; } 
+        public int DocumentosVerificados { get; set; } 
+        public int DocumentosPendientes { get; set; } 
+        public int DocumentosRechazados { get; set; } 
         public int DocumentosProximosVencer { get; set; }
-        public int MantenimientosDelMes { get; set; }
-        public decimal CostoMantenimientoMes { get; set; }
+        public int MantenimientosUltimoMes { get; set; } 
+        public decimal CostoMantenimientoUltimoMes { get; set; } 
     }
 
     public class MantenimientoReporteViewModel
@@ -607,22 +622,6 @@ namespace COMAVI_SA.Models
         [Display(Name = "Confirmar Nueva Contraseña")]
         [Compare("NuevaPassword", ErrorMessage = "La nueva contraseña y la confirmación no coinciden.")]
         public string ConfirmarPassword { get; set; }
-    }
-
-    public class PreferenciasAutenticacionViewModel
-    {
-        public bool HabilitarMFA { get; set; }
-
-        [Display(Name = "Método de autenticación preferido")]
-        public string MetodoAutenticacionPreferido { get; set; }
-
-        public List<string> CodigosRespaldo { get; set; }
-
-        public string MFASecret { get; set; }
-
-        [Required(ErrorMessage = "El código OTP es requerido para verificar la configuración")]
-        [StringLength(6, MinimumLength = 6, ErrorMessage = "El código OTP debe tener 6 dígitos")]
-        public string OtpCode { get; set; }
     }
 
     public class CodigosRespaldoViewModel
@@ -745,20 +744,12 @@ namespace COMAVI_SA.Models
         public DateTime fecha_venc_licencia { get; set; }
         public string estado { get; set; }
         public string genero { get; set; }
+        public int dias_para_vencimiento { get; set; }
         public string estado_licencia { get; set; }
         public int? id_camion { get; set; }
         public string camion_asignado { get; set; }
         public int total_documentos { get; set; }
-        public int numero_registro { get; set; }
-    }
-
-    public class PaginacionViewModel
-    {
-        public int total_registros { get; set; }
-        public int registro_inicio { get; set; }
-        public int registro_fin { get; set; }
-        public int total_paginas { get; set; }
-        public int pagina_actual { get; set; }
+        public int? numero_registro { get; set; } // Puede ser nulo en algunos casos
     }
 
     public class VerificacionViewModel

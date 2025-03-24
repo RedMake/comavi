@@ -1,5 +1,6 @@
 ﻿using COMAVI_SA.Data;
 using COMAVI_SA.Models;
+using DocumentFormat.OpenXml.InkML;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
 
@@ -58,7 +59,27 @@ namespace COMAVI_SA.Services
         {
             try
             {
-                var user = await _context.Usuarios.FirstOrDefaultAsync(u => u.correo_electronico == email);
+                var user = await _context.Usuarios
+                            .AsNoTracking()
+                            .Where(u => u.correo_electronico == email)
+                            .Select(u => new Usuario
+                            {
+                                id_usuario = u.id_usuario,
+                                nombre_usuario = u.nombre_usuario,
+                                correo_electronico = u.correo_electronico,
+                                contrasena = u.contrasena,
+                                rol = u.rol,
+                                ultimo_ingreso = u.ultimo_ingreso,
+                                estado_verificacion = u.estado_verificacion,
+                                fecha_verificacion = u.fecha_verificacion,
+                                token_verificacion = u.token_verificacion,
+                                fecha_expiracion_token = u.fecha_expiracion_token,
+                                fecha_registro = u.fecha_registro,
+                                mfa_habilitado = u.mfa_habilitado,
+                                fecha_actualizacion_password = u.fecha_actualizacion_password
+                            })
+                            .FirstOrDefaultAsync();
+
                 if (user == null)
                     return null;
 
@@ -120,18 +141,16 @@ namespace COMAVI_SA.Services
             {
                 var maxFailedAttempts = _configuration.GetValue<int>("SecuritySettings:Lockout:MaxFailedAttempts", 5);
                 var lockoutTime = _configuration.GetValue<int>("SecuritySettings:Lockout:LockoutTimeInMinutes", 15);
+                var cutoffTime = DateTime.Now.AddMinutes(-lockoutTime);
 
-                var user = await _context.Usuarios.FirstOrDefaultAsync(u => u.correo_electronico == email);
-                if (user == null)
-                    return false;
-
-                var recentFailedAttempts = await _context.IntentosLogin
-                    .Where(i => i.id_usuario == user.id_usuario &&
-                            !i.exitoso &&
-                            i.fecha_hora >= DateTime.Now.AddMinutes(-lockoutTime))
-                    .CountAsync();
-
-                return recentFailedAttempts >= maxFailedAttempts;
+                return await _context.Usuarios
+                    .Where(u => u.correo_electronico == email)
+                    .Join(_context.IntentosLogin,
+                          u => u.id_usuario,
+                          i => i.id_usuario,
+                          (u, i) => new { User = u, Attempt = i })
+                    .Where(x => !x.Attempt.exitoso && x.Attempt.fecha_hora >= cutoffTime)
+                    .CountAsync() >= maxFailedAttempts;
             }
             catch (Exception ex)
             {
@@ -433,18 +452,13 @@ namespace COMAVI_SA.Services
 
                 // Generar nuevos códigos
                 var backupCodes = _otpService.GenerateBackupCodes();
-                var codesEntities = new List<CodigosRespaldoMFA>();
-
-                foreach (var code in backupCodes)
+                var codesEntities = backupCodes.Select(code => new CodigosRespaldoMFA
                 {
-                    codesEntities.Add(new CodigosRespaldoMFA
-                    {
-                        id_usuario = userId,
-                        codigo = code,
-                        fecha_generacion = DateTime.Now,
-                        usado = false
-                    });
-                }
+                    id_usuario = userId,
+                    codigo = code,
+                    fecha_generacion = DateTime.Now,
+                    usado = false
+                }).ToList();
 
                 _context.CodigosRespaldoMFA.AddRange(codesEntities);
                 await _context.SaveChangesAsync();
@@ -468,43 +482,35 @@ namespace COMAVI_SA.Services
                 // Normalizar el código (eliminar espacios, guiones, etc.)
                 backupCode = backupCode.Replace("-", "").Replace(" ", "").ToUpper();
 
-                // Si el código proporcionado está en formato XXXXX, buscar cualquier código que comience así
-                string searchCode = backupCode;
+                CodigosRespaldoMFA backupCodeRecord = null;
+
                 if (backupCode.Length == 5)
                 {
-                    // Buscar códigos que comiencen con estos 5 caracteres
-                    var matchingCodes = await _context.CodigosRespaldoMFA
+                    var matchingCode = await _context.CodigosRespaldoMFA
                         .Where(c => c.id_usuario == userId &&
-                               !c.usado &&
-                               c.codigo.Replace("-", "").StartsWith(backupCode))
-                        .ToListAsync();
+                                    c.usado == false &&
+                                    EF.Functions.Like(c.codigo.Replace("-", ""), backupCode + "%"))
+                        .FirstOrDefaultAsync();
 
-                    if (matchingCodes.Any())
-                    {
-                        // Usar el primer código coincidente
-                        var codeToUse = matchingCodes.First();
-                        codeToUse.usado = true;
-                        await _context.SaveChangesAsync();
-                        return true;
-                    }
-                    return false;
+                    backupCodeRecord = matchingCode;
                 }
 
                 // Buscar el código completo (10 caracteres)
-                if (backupCode.Length == 10)
+                else if (backupCode.Length == 10)
                 {
-                    var backupCodeRecord = await _context.CodigosRespaldoMFA
-                        .FirstOrDefaultAsync(c => c.id_usuario == userId &&
-                                           !c.usado &&
-                                           c.codigo.Replace("-", "") == backupCode);
-
-                    if (backupCodeRecord != null)
-                    {
-                        backupCodeRecord.usado = true;
-                        await _context.SaveChangesAsync();
-                        return true;
-                    }
+                    backupCodeRecord = await _context.CodigosRespaldoMFA
+                        .Where(c => c.id_usuario == userId && !c.usado)
+                        .FirstOrDefaultAsync(c => EF.Functions.Like(
+                            c.codigo.Replace("-", ""), backupCode));
                 }
+
+                if (backupCodeRecord != null)
+                {
+                    backupCodeRecord.usado = true;
+                    await _context.SaveChangesAsync();
+                    return true;
+                }
+
 
                 return false;
             }
@@ -520,12 +526,12 @@ namespace COMAVI_SA.Services
             try
             {
                 // Obtener intentos fallidos de MFA en los últimos 15 minutos
-                var failedAttempts = await _context.IntentosLogin
-                    .CountAsync(i => i.id_usuario == userId &&
-                               !i.exitoso &&
-                               i.fecha_hora >= DateTime.Now.AddMinutes(-15));
-
-                return failedAttempts;
+                return await _context.IntentosLogin
+                    .Where(i => i.id_usuario == userId &&
+                           !i.exitoso &&
+                           i.fecha_hora >= DateTime.Now.AddMinutes(-15) &&
+                           i.direccion_ip == "OTP_Verification")
+                    .CountAsync();
             }
             catch (Exception ex)
             {

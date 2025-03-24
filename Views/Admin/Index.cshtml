@@ -1,0 +1,253 @@
+﻿@model AdminDashboardViewModel
+@{
+    ViewData["Title"] = "Panel de Administración";
+}
+
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Panel de Administración</h1>
+    <a href="@Url.Action("Dashboard", "Admin")" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+        <i class="fas fa-chart-line fa-sm text-white-50"></i> Ver Dashboard Detallado
+    </a>
+</div>
+
+<!-- Alertas -->
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>¡Error!</strong> @TempData["Error"]
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">×</span>
+        </button>
+    </div>
+}
+
+<!-- Contenido Principal -->
+<div class="row">
+    <!-- Tarjetas de Estadísticas -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Camiones Registrados
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.TotalCamiones</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-truck fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Choferes Activos
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.ChoferesActivos</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-users fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Usuarios Registrados
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.TotalUsuarios</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-user-tie fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Documentos por Vencer
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.DocumentosProximosVencer</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Accesos Rápidos -->
+<div class="row">
+    <div class="col-lg-12 mb-4">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Accesos Rápidos</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-3 col-md-6 mb-4">
+                        <a href="@Url.Action("ListarCamiones", "Admin")" class="btn btn-primary btn-icon-split btn-lg w-100">
+                            <span class="icon text-white-50">
+                                <i class="fas fa-truck"></i>
+                            </span>
+                            <span class="text">Gestionar Camiones</span>
+                        </a>
+                    </div>
+                    <div class="col-lg-3 col-md-6 mb-4">
+                        <a href="@Url.Action("ListarChoferes", "Admin")" class="btn btn-success btn-icon-split btn-lg w-100">
+                            <span class="icon text-white-50">
+                                <i class="fas fa-users"></i>
+                            </span>
+                            <span class="text">Gestionar Choferes</span>
+                        </a>
+                    </div>
+                    <div class="col-lg-3 col-md-6 mb-4">
+                        <a href="@Url.Action("ListarUsuarios", "Admin")" class="btn btn-info btn-icon-split btn-lg w-100">
+                            <span class="icon text-white-50">
+                                <i class="fas fa-user-tie"></i>
+                            </span>
+                            <span class="text">Gestionar Usuarios</span>
+                        </a>
+                    </div>
+                    <div class="col-lg-3 col-md-6 mb-4">
+                        <a href="@Url.Action("MonitorearVencimientos", "Admin")" class="btn btn-warning btn-icon-split btn-lg w-100">
+                            <span class="icon text-white-50">
+                                <i class="fas fa-file-pdf"></i>
+                            </span>
+                            <span class="text">Ver Vencimientos</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-lg-3 col-md-6 mb-4">
+                        <a href="@Url.Action("NotificacionesMantenimiento", "Admin")" class="btn btn-danger btn-icon-split btn-lg w-100">
+                            <span class="icon text-white-50">
+                                <i class="fas fa-tools"></i>
+                            </span>
+                            <span class="text">Mantenimientos</span>
+                        </a>
+                    </div>
+                    <div class="col-lg-3 col-md-6 mb-4">
+                        <a href="@Url.Action("ReportesGenerales", "Admin")" class="btn btn-secondary btn-icon-split btn-lg w-100">
+                            <span class="icon text-white-50">
+                                <i class="fas fa-chart-bar"></i>
+                            </span>
+                            <span class="text">Reportes</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Camiones Recientes -->
+@if (Model.Camiones.Any())
+{
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Camiones Recientes</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Placa</th>
+                                    <th>Marca/Modelo</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var camion in Model.Camiones.Take(5))
+                                {
+                                    <tr>
+                                        <td>@camion.numero_placa</td>
+                                        <td>@camion.marca @camion.modelo</td>
+                                        <td>
+                                            <span class="badge badge-@(camion.estado == "activo" ? "success" : camion.estado == "mantenimiento" ? "warning" : "danger")">
+                                                @camion.estado
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <a href="@Url.Action("ActualizarCamion", "Admin", new { id = camion.id_camion })" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Documentos por Vencer -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Documentos por Vencer</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Chofer</th>
+                                    <th>Documento</th>
+                                    <th>Vencimiento</th>
+                                    <th>Días</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var doc in Model.DocumentosProximosVencimiento.Take(5))
+                                {
+                                    <tr>
+                                        <td>@doc.nombreCompleto</td>
+                                        <td>@doc.tipo_documento</td>
+                                        <td>@doc.fecha_vencimiento.ToString("dd/MM/yyyy")</td>
+                                        <td>
+                                            <span class="badge badge-@(doc.dias_para_vencimiento <= 7 ? "danger" : doc.dias_para_vencimiento <= 15 ? "warning" : "info")">
+                                                @doc.dias_para_vencimiento días
+                                            </span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script src="~/js/admin-index.js"></script>
+
+}
