@@ -93,8 +93,9 @@
                             <div class="form-group row">
                                 <div class="col-sm-6 mb-3 mb-sm-0">
                                     <label asp-for="Edad" class="form-label">Edad</label>
-                                    <input asp-for="Edad" type="number" class="form-control" min="18" max="99" required />
+                                    <input asp-for="Edad" type="number" class="form-control" min="18" max="70" required />
                                     <span asp-validation-for="Edad" class="text-danger"></span>
+                                    <small class="form-text text-muted">La edad mínima para conducir camiones es 18 años.</small>
                                 </div>
                                 <div class="col-sm-6">
                                     <label asp-for="Genero" class="form-label">Género</label>
@@ -112,26 +113,47 @@
                                     <label asp-for="Numero_Cedula" class="form-label">Número de Cédula</label>
                                     <input asp-for="Numero_Cedula" type="text" class="form-control"
                                            required maxlength="20"
-                                           pattern="[0-9]{6,15}"
-                                           title="El número de cédula debe contener entre 6 y 15 dígitos" />
+                                           pattern="[0-9]{9}"
+                                           title="El número de cédula debe tener 9 dígitos numéricos" />
                                     <span asp-validation-for="Numero_Cedula" class="text-danger"></span>
+                                    <small class="form-text text-muted">Formato: 9 dígitos sin guiones ni espacios.</small>
                                 </div>
                                 <div class="col-sm-6">
-                                    <label asp-for="Licencia">Licencia de Camión *</label>
+                                    <label asp-for="Licencia">Tipo de Licencia *</label>
                                     <select asp-for="Licencia" class="form-control" required>
                                         <option value="">Seleccione...</option>
                                         <option value="A-IIIa">A-IIIa (Vehículos hasta 4000kg)</option>
                                         <option value="A-IIIb">A-IIIb (Vehículos de transporte público)</option>
                                         <option value="A-IIIc">A-IIIc (Vehículos pesados de más de 4000kg)</option>
+                                        <option value="B-3">B-3 (Camiones articulados)</option>
+                                        <option value="B-4">B-4 (Equipo especial)</option>
+                                        <option value="E-1">E-1 (Tractores y maquinaria especial)</option>
+                                        <option value="E-2">E-2 (Vehículos pesados de más de 10 ton.)</option>
                                     </select>
                                     <span asp-validation-for="Licencia" class="text-danger"></span>
+                                    <small class="form-text text-muted">Debe corresponder con el tipo de vehículo que conducirá.</small>
                                 </div>
                             </div>
 
                             <div class="form-group">
                                 <label asp-for="Fecha_Venc_Licencia" class="form-label">Fecha de Vencimiento de Licencia</label>
-                                <input asp-for="Fecha_Venc_Licencia" type="date" class="form-control" required />
+                                <input asp-for="Fecha_Venc_Licencia" type="date" class="form-control" required min="@DateTime.Now.ToString("yyyy-MM-dd")" />
                                 <span asp-validation-for="Fecha_Venc_Licencia" class="text-danger"></span>
+                                <small class="form-text text-muted">La licencia debe estar vigente para poder operar vehículos.</small>
+                            </div>
+
+                            <div class="form-group mt-4">
+                                <div class="alert alert-info">
+                                    <h5><i class="fas fa-info-circle"></i> Renovación de Licencia en Costa Rica</h5>
+                                    <p>Para renovar su licencia, deberá presentar:</p>
+                                    <ul>
+                                        <li>Cédula vigente</li>
+                                        <li>Licencia por renovar</li>
+                                        <li>Dictamen médico vigente</li>
+                                        <li>Comprobante de pago del derecho de licencia</li>
+                                    </ul>
+                                    <p>Tramitar en el COSEVI o en sedes habilitadas del MOPT.</p>
+                                </div>
                             </div>
 
                             <div class="form-group d-grid mt-4">

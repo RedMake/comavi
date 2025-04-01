@@ -97,6 +97,7 @@
                         <label asp-for="FechaVencimiento" class="form-label">Fecha de Vencimiento</label>
                         <input asp-for="FechaVencimiento" type="date" class="form-control" required />
                         <span asp-validation-for="FechaVencimiento" class="text-danger"></span>
+                        <small class="form-text text-muted">La fecha de vencimiento debe ser posterior a la fecha actual.</small>
                     </div>
                 </div>
 
@@ -126,9 +127,20 @@
                                 <ul>
                                     <li>PDF escaneado de licencia original</li>
                                     <li>Debe ser claramente legible</li>
-                                    <li>Debe mostrar nombre completo, número de licencia, categoría y fecha de
-                                        vencimiento</li>
+                                    <li>
+                                        Debe mostrar nombre completo, número de licencia, categoría y fecha de
+                                        vencimiento
+                                    </li>
                                     <li>Debe estar vigente (no vencida)</li>
+                                    <li>
+                                        Si está por vencer, recuerde que necesitará:
+                                        <ul>
+                                            <li>Cédula vigente</li>
+                                            <li>Licencia por renovar</li>
+                                            <li>Dictamen médico vigente</li>
+                                            <li>Comprobante de pago del derecho de licencia</li>
+                                        </ul>
+                                    </li>
                                 </ul>
                                 <a href="@Url.Action("DescargarPlantilla", "Plantillas", new { tipoDocumento = "licencia" })"
                                     class="btn btn-sm btn-primary">
@@ -154,10 +166,12 @@
                                 <ul>
                                     <li>PDF escaneado de cédula original (ambos lados)</li>
                                     <li>Debe ser claramente legible</li>
-                                    <li>Debe mostrar nombre completo, número de identificación y fecha de nacimiento
+                                    <li>
+                                        Debe mostrar nombre completo, número de identificación y fecha de nacimiento
                                     </li>
                                     <li>Debe incluir nacionalidad y datos personales completos</li>
                                     <li>El documento debe ser válido y no estar alterado</li>
+                                    <li>La cédula debe tener 9 dígitos numéricos conforme al formato de Costa Rica</li>
                                 </ul>
                                 <a href="@Url.Action("DescargarPlantilla", "Plantillas", new { tipoDocumento = "cedula" })"
                                     class="btn btn-sm btn-primary">
@@ -187,6 +201,14 @@
                                     <li>Debe incluir información completa del propietario</li>
                                     <li>El registro debe estar vigente y a nombre del propietario actual</li>
                                     <li>Debe contener los sellos y firmas de la autoridad emisora</li>
+                                    <li>
+                                        Recordar que el pago del marchamo varía según el peso:
+                                        <ul>
+                                            <li>Camiones livianos (menos de 3.5 toneladas): ₡90,000 - ₡150,000</li>
+                                            <li>Camiones medianos (3.5 a 8 toneladas): ₡150,000 - ₡250,000</li>
+                                            <li>Camiones pesados (más de 8 toneladas): ₡250,000 - ₡400,000</li>
+                                        </ul>
+                                    </li>
                                 </ul>
                                 <a href="@Url.Action("DescargarPlantilla", "Plantillas", new { tipoDocumento = "inscripcion" })"
                                     class="btn btn-sm btn-primary">

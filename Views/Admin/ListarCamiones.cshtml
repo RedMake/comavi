@@ -92,7 +92,11 @@ ViewData["Title"] = "Gestión de Camiones";
                                     @(camion.estado.Substring(0, 1).ToUpper() + camion.estado.Substring(1, camion.estado.Length-1))
                             </span>
                         </td>
-                        <td>@(string.IsNullOrEmpty(camion.NombreChofer) ? "Sin asignar" : camion.NombreChofer)</td>
+                            <td>
+                                <span class="@(string.IsNullOrEmpty(camion.NombreChofer) ? "text-muted" : "text-success")">
+                                    @(string.IsNullOrEmpty(camion.NombreChofer) ? "Sin asignar" : camion.NombreChofer)
+                                </span>
+                            </td>
                             <td>@(string.IsNullOrEmpty(camion.ultima_fecha_mantenimiento) ? "Sin registro" : camion.ultima_fecha_mantenimiento)</td>
                             <td>
                             <div class="btn-group" role="group">
@@ -155,19 +159,37 @@ ViewData["Title"] = "Gestión de Camiones";
                 <div class="modal-body">
                     <div class="form-group">
                         <label for="numero_placa">Placa *</label>
-                        <input type="text" class="form-control" id="numero_placa" name="numero_placa" required maxlength="10">
+                        <input type="text" class="form-control" id="numero_placa" name="numero_placa" required maxlength="10"
+                               pattern="[A-Z0-9]{6,8}" title="Formato de placa válido para Costa Rica (ej. CL123456)" />
+                        <small class="form-text text-muted">Formato de placa de Costa Rica (ej. CL123456)</small>
                     </div>
                     <div class="form-group">
                         <label for="marca">Marca *</label>
-                        <input type="text" class="form-control" id="marca" name="marca" required maxlength="50">
+                        <select class="form-control" id="marca" name="marca" required>
+                            <option value="">-- Seleccione una marca --</option>
+                            <option value="Freightliner">Freightliner</option>
+                            <option value="Kenworth">Kenworth</option>
+                            <option value="International">International</option>
+                            <option value="Volvo">Volvo</option>
+                            <option value="Mack">Mack</option>
+                            <option value="Peterbilt">Peterbilt</option>
+                            <option value="Mercedes-Benz">Mercedes-Benz</option>
+                            <option value="Scania">Scania</option>
+                            <option value="Isuzu">Isuzu</option>
+                            <option value="Hino">Hino</option>
+                            <option value="MAN">MAN</option>
+                            <option value="Hyundai">Hyundai</option>
+                            <option value="Mitsubishi">Mitsubishi</option>
+                            <option value="DAF">DAF</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label for="modelo">Modelo *</label>
-                        <input type="text" class="form-control" id="modelo" name="modelo" required maxlength="50">
+                        <input type="text" class="form-control" id="modelo" name="modelo" required maxlength="50" />
                     </div>
                     <div class="form-group">
                         <label for="anio">Año *</label>
-                        <input type="number" class="form-control" id="anio" name="anio" required min="1990" max="2025">
+                        <input type="number" class="form-control" id="anio" name="anio" required min="1990" max="@DateTime.Now.Year" value="@DateTime.Now.Year" />
                     </div>
                     <div class="form-group">
                         <label for="estado">Estado *</label>
@@ -175,6 +197,14 @@ ViewData["Title"] = "Gestión de Camiones";
                             <option value="activo">Activo</option>
                             <option value="inactivo">Inactivo</option>
                         </select>
+                    </div>
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle"></i> Recuerde que el costo del marchamo depende del peso:
+                        <ul class="mb-0 mt-1">
+                            <li>Camiones livianos: ₡90,000 - ₡150,000</li>
+                            <li>Camiones medianos: ₡150,000 - ₡250,000</li>
+                            <li>Camiones pesados: ₡250,000 - ₡400,000</li>
+                        </ul>
                     </div>
                 </div>
                 <div class="modal-footer">

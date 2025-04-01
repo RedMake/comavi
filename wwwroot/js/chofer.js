@@ -62,4 +62,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    const cedulaInput = document.querySelector('input[name="numero_cedula"]');
+    cedulaInput.addEventListener('blur', function () {
+        const cedula = this.value.trim();
+        if (cedula.length !== 9 || isNaN(Number(cedula))) {
+            this.setCustomValidity('El número de cédula debe tener 9 dígitos numéricos');
+        } else {
+            this.setCustomValidity('');
+        }
+    });
 });

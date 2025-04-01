@@ -44,7 +44,7 @@
 
                     <div class="form-group">
                         <label asp-for="nombre_usuario">Nombre de Usuario</label>
-                        <input asp-for="nombre_usuario" class="form-control" required />
+                        <input asp-for="nombre_usuario" class="form-control" required maxlength="50" />
                         <span asp-validation-for="nombre_usuario" class="text-danger"></span>
                     </div>
 
@@ -59,6 +59,7 @@
                             </div>
                         </div>
                         <span asp-validation-for="correo_electronico" class="text-danger"></span>
+                        <small class="form-text text-muted">El correo electrónico no puede ser modificado.</small>
                     </div>
 
 
@@ -66,11 +67,31 @@
                         <label asp-for="rol">Rol</label>
                         <select asp-for="rol" class="form-control" required>
                             <option value="admin">Administrador</option>
-                            <option value="user">Usuario</option>
+                            <option value="user">Usuario (Chofer)</option>
                         </select>
                         <span asp-validation-for="rol" class="text-danger"></span>
+                        <small class="form-text text-muted">
+                            <ul>
+                                <li><strong>Administrador:</strong> Acceso completo al sistema</li>
+                                <li><strong>Usuario (Chofer):</strong> Acceso limitado a funciones de conductor</li>
+                            </ul>
+                        </small>
                     </div>
-
+                    <div class="form-group">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle"></i> Información importante:
+                                    <ul>
+                                        <li>Al cambiar el rol de un usuario, sus permisos y acceso al sistema cambiarán inmediatamente.</li>
+                                        <li>Si cambia de "Usuario" a "Administrador", se le otorgarán todos los privilegios administrativos.</li>
+                                        <li>Si cambia de "Administrador" a "Usuario", perderá el acceso a las funciones administrativas.</li>
+                                        <li>Esta acción quedará registrada en el sistema de auditoría.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="form-group mt-4">
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-save"></i> Guardar Cambios
