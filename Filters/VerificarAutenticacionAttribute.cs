@@ -1,13 +1,16 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace COMAVI_SA.Filters
 {
     public class VerificarAutenticacionAttribute : ActionFilterAttribute
     {
-        private readonly List<string> _rutasPublicas = new List<string>
-        {
+        private readonly List<string> rutasPublicas = new List<string> {
             "/Home/Index",
             "/Login/Index",
             "/Login/VerifyOtp",
@@ -23,7 +26,7 @@ namespace COMAVI_SA.Filters
             var rutaActual = $"/{context.RouteData.Values["controller"]}/{context.RouteData.Values["action"]}";
 
             // Verificar si la ruta actual está en la lista de rutas públicas
-            bool esRutaPublica = _rutasPublicas.Any(ruta =>
+            bool esRutaPublica = rutasPublicas.Any(ruta =>
                 string.Equals(ruta, rutaActual, System.StringComparison.OrdinalIgnoreCase));
 
             // Si es una ruta pública, permitir el acceso sin verificar autenticación
@@ -33,27 +36,42 @@ namespace COMAVI_SA.Filters
                 return;
             }
 
+
             // Verificar si el usuario está autenticado
             if (!context.HttpContext.User.Identity.IsAuthenticated)
             {
-                // Si no está autenticado, redirige a la página de login
                 var controller = context.Controller as Controller;
+
                 if (controller != null)
                 {
-                    controller.TempData["Error"] = "Debe iniciar sesión para acceder a esta página.";
+                    // Determinar si viene de una expiración de sesión
 
-                    // Guardar la URL a la que intentaba acceder para redirigir después del login
-                    var urlAnterior = context.HttpContext.Request.Path + context.HttpContext.Request.QueryString;
-                    controller.TempData["ReturnUrl"] = urlAnterior;
+                    // Y en el filtro
+                    bool sesionExpirada = context.HttpContext.Items.ContainsKey("SesionExpirada") ||
+                                          (context.HttpContext.Request.Cookies.ContainsKey("COMAVI.Auth") &&
+                                          !context.HttpContext.User.Identity.IsAuthenticated);
 
-                    context.Result = new RedirectToActionResult("Index", "Login", null);
+                    if (sesionExpirada)
+                    {
+                        // Limpiar la cookie explícitamente
+                        await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+
+                        // Redirigir a la página de sesión expirada
+                        context.Result = new RedirectToActionResult("SesionExpirada", "Home", null);
+                    }
+                    else
+                    {
+                        // Guardar la URL a la que intentaba acceder para redirigir después del login
+                        var urlAnterior = context.HttpContext.Request.Path + context.HttpContext.Request.QueryString;
+                        controller.TempData["ReturnUrl"] = urlAnterior;
+
+                        context.Result = new RedirectToActionResult("Index", "Login", null);
+                    }
                     return;
                 }
             }
-
-            // Si está autenticado, continúa con la ejecución normal
+            
             await next();
         }
-    
     }
 }

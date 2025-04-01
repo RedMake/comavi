@@ -10,6 +10,7 @@ using iText.Layout.Element;
 using iText.Layout.Properties;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
+using iText.Layout.Borders;
 
 namespace COMAVI_SA.Services
 {
@@ -792,73 +793,347 @@ namespace COMAVI_SA.Services
 
                     document.Add(new Paragraph("\n"));
 
-                    // Tabla de mantenimientos
-                    Table table = new Table(5).UseAllAvailableWidth();
+                    // Datos generales
+                    // Dividir por moneda para totales
+                    var costosTotalesPorMoneda = new Dictionary<string, decimal>();
+                    foreach (var grupo in mantenimientos.GroupBy(m => m.moneda ?? "CRC"))
+                    {
+                        costosTotalesPorMoneda[grupo.Key] = grupo.Sum(m => m.costo);
+                    }
+
+                    Table infoTable = new Table(2).UseAllAvailableWidth();
+                    infoTable.AddCell(new Cell().Add(new Paragraph("Total de Mantenimientos:")).SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD)).SetBorder(Border.NO_BORDER));
+                    infoTable.AddCell(new Cell().Add(new Paragraph($"{mantenimientos.Count}")).SetBorder(Border.NO_BORDER));
+
+                    foreach (var costo in costosTotalesPorMoneda)
+                    {
+                        string simbolo = costo.Key == "USD" ? "$" : "₡";
+                        infoTable.AddCell(new Cell().Add(new Paragraph($"Costo Total ({costo.Key}):")).SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD)).SetBorder(Border.NO_BORDER));
+                        infoTable.AddCell(new Cell().Add(new Paragraph($"{simbolo}{costo.Value:N2}")).SetBorder(Border.NO_BORDER));
+                    }
+
+                    document.Add(infoTable);
+                    document.Add(new Paragraph("\n"));
+
+                    // Tabla de mantenimientos con desglose
+                    Table table = new Table(7).UseAllAvailableWidth();
                     table.AddHeaderCell(new Cell().Add(new Paragraph("Camión")).SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD)));
+                    table.AddHeaderCell(new Cell().Add(new Paragraph("Placa")).SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD)));
                     table.AddHeaderCell(new Cell().Add(new Paragraph("Fecha")).SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD)));
-                    table.AddHeaderCell(new Cell().Add(new Paragraph("Descripción")).SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD)));
-                    table.AddHeaderCell(new Cell().Add(new Paragraph("Costo")).SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD)));
-                    table.AddHeaderCell(new Cell().Add(new Paragraph("Estado")).SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD)));
+                    table.AddHeaderCell(new Cell().Add(new Paragraph("Costo Base")).SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD)));
+                    table.AddHeaderCell(new Cell().Add(new Paragraph("Impuestos")).SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD)));
+                    table.AddHeaderCell(new Cell().Add(new Paragraph("Otros Costos")).SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD)));
+                    table.AddHeaderCell(new Cell().Add(new Paragraph("Total")).SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD)));
 
                     foreach (var mantenimiento in mantenimientos)
                     {
-                        table.AddCell(new Cell().Add(new Paragraph(mantenimiento.marca +" - "+ mantenimiento.modelo)));
+                        // Procesar detalles_costo si existe
+                        dynamic detallesCosto = null;
+                        try
+                        {
+                            if (!string.IsNullOrEmpty(mantenimiento.detalles_costo))
+                            {
+                                detallesCosto = Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(mantenimiento.detalles_costo);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning($"Error al deserializar detalles_costo: {ex.Message}");
+                        }
+
+                        string simbolo = mantenimiento.moneda == "USD" ? "$" : "₡";
+
+                        table.AddCell(new Cell().Add(new Paragraph($"{mantenimiento.marca} {mantenimiento.modelo}")));
+                        table.AddCell(new Cell().Add(new Paragraph(mantenimiento.numero_placa)));
                         table.AddCell(new Cell().Add(new Paragraph(mantenimiento.fecha_mantenimiento.ToString("dd/MM/yyyy"))));
-                        table.AddCell(new Cell().Add(new Paragraph(mantenimiento.descripcion)));
-                        table.AddCell(new Cell().Add(new Paragraph($"${mantenimiento.costo:N2}")));
 
-                        // Determinar estado según la fecha
-                        string estado = DateTime.Now.Date > mantenimiento.fecha_mantenimiento.Date
-                            ? "COMPLETADO"
-                            : "PROGRAMADO";
-
-                        Cell estadoCell = new Cell().Add(new Paragraph(estado));
-                        if (estado == "COMPLETADO")
-                            estadoCell.SetBackgroundColor(ColorConstants.GREEN);
+                        // Costo Base
+                        if (detallesCosto != null && detallesCosto.costo_base != null)
+                        {
+                            table.AddCell(new Cell().Add(new Paragraph($"{simbolo}{(double)detallesCosto.costo_base:N2}")));
+                        }
                         else
-                            estadoCell.SetBackgroundColor(ColorConstants.ORANGE);
+                        {
+                            table.AddCell(new Cell().Add(new Paragraph($"{simbolo}{mantenimiento.costo:N2}")));
+                        }
 
-                        table.AddCell(estadoCell);
+                        // Impuestos
+                        if (detallesCosto != null && detallesCosto.impuesto_iva != null)
+                        {
+                            table.AddCell(new Cell().Add(new Paragraph($"{simbolo}{(double)detallesCosto.impuesto_iva:N2}")));
+                        }
+                        else
+                        {
+                            table.AddCell(new Cell().Add(new Paragraph("N/A")));
+                        }
+
+                        // Otros Costos
+                        if (detallesCosto != null && detallesCosto.otros_costos != null)
+                        {
+                            table.AddCell(new Cell().Add(new Paragraph($"{simbolo}{(double)detallesCosto.otros_costos:N2}")));
+                        }
+                        else
+                        {
+                            table.AddCell(new Cell().Add(new Paragraph("N/A")));
+                        }
+
+                        // Total
+                        table.AddCell(new Cell().Add(new Paragraph($"{simbolo}{mantenimiento.costo:N2}"))
+                            .SetBackgroundColor(ColorConstants.LIGHT_GRAY)
+                            .SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD)));
                     }
 
                     document.Add(table);
 
-                    // Resumen financiero
+                    // Sección de observaciones en formato requerido
                     document.Add(new Paragraph("\n"));
-                    document.Add(new Paragraph("RESUMEN FINANCIERO")
-                        .SetFontSize(14)
+                    document.Add(new Paragraph("DETALLES DE MANTENIMIENTOS")
+                        .SetTextAlignment(TextAlignment.CENTER)
+                        .SetFontSize(16)
                         .SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD))
                         .SetBackgroundColor(ColorConstants.LIGHT_GRAY));
 
-                    Table summaryTable = new Table(2).UseAllAvailableWidth();
+                    document.Add(new Paragraph("\n"));
 
-                    // Calcular costos totales
-                    decimal costoTotal = mantenimientos.Sum(m => m.costo);
-                    var costosPorMes = mantenimientos
-                        .GroupBy(m => new { m.fecha_mantenimiento.Year, m.fecha_mantenimiento.Month })
+                    // Agrupar por camión para mejor organización
+                    var camionesAgrupados = mantenimientos
+                        .GroupBy(m => m.id_camion)
+                        .OrderBy(g => g.First().numero_placa);
+
+                    foreach (var grupoCamion in camionesAgrupados)
+                    {
+                        var primerMantenimiento = grupoCamion.First();
+
+                        foreach (var mantenimiento in grupoCamion.OrderByDescending(m => m.fecha_mantenimiento))
+                        {
+                            // Formato solicitado para cada observación
+                            Paragraph observacion = new Paragraph()
+                                .SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA))
+                                .SetFontSize(11)
+                                .SetTextAlignment(TextAlignment.JUSTIFIED);
+
+                            observacion.Add(new Text($"Camión con placa {mantenimiento.numero_placa}: ")
+                                .SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD)));
+
+                            observacion.Add(new Text($"Tiene las siguientes observaciones: {mantenimiento.descripcion}"));
+
+                            document.Add(observacion);
+                            document.Add(new Paragraph("\n"));
+                        }
+                    }
+
+                    // Resumen financiero
+                    document.Add(new Paragraph("RESUMEN FINANCIERO")
+                        .SetTextAlignment(TextAlignment.CENTER)
+                        .SetFontSize(16)
+                        .SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD))
+                        .SetBackgroundColor(ColorConstants.LIGHT_GRAY));
+
+                    document.Add(new Paragraph("\n"));
+
+                    Table summaryTable = new Table(3).UseAllAvailableWidth();
+                    summaryTable.AddHeaderCell(new Cell().Add(new Paragraph("Concepto")).SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD)));
+                    summaryTable.AddHeaderCell(new Cell().Add(new Paragraph("CRC")).SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD)));
+                    summaryTable.AddHeaderCell(new Cell().Add(new Paragraph("USD")).SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD)));
+
+                    // Total por moneda
+                    decimal totalCRC = mantenimientos.Where(m => m.moneda != "USD").Sum(m => m.costo);
+                    decimal totalUSD = mantenimientos.Where(m => m.moneda == "USD").Sum(m => m.costo);
+
+                    summaryTable.AddCell(new Cell().Add(new Paragraph("Total:")));
+                    summaryTable.AddCell(new Cell().Add(new Paragraph($"₡{totalCRC:N2}")));
+                    summaryTable.AddCell(new Cell().Add(new Paragraph($"${totalUSD:N2}")));
+
+                    // Bases imponibles por moneda
+                    decimal baseCRC = mantenimientos.Where(m => m.moneda != "USD")
+                        .Sum(m => {
+                            try
+                            {
+                                if (!string.IsNullOrEmpty(m.detalles_costo))
+                                {
+                                    var detalles = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, decimal>>(m.detalles_costo);
+                                    return detalles.ContainsKey("costo_base") ? detalles["costo_base"] : m.costo;
+                                }
+                                return m.costo;
+                            }
+                            catch { return m.costo; }
+                        });
+
+                    decimal baseUSD = mantenimientos.Where(m => m.moneda == "USD")
+                        .Sum(m => {
+                            try
+                            {
+                                if (!string.IsNullOrEmpty(m.detalles_costo))
+                                {
+                                    var detalles = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, decimal>>(m.detalles_costo);
+                                    return detalles.ContainsKey("costo_base") ? detalles["costo_base"] : m.costo;
+                                }
+                                return m.costo;
+                            }
+                            catch { return m.costo; }
+                        });
+
+                    summaryTable.AddCell(new Cell().Add(new Paragraph("Base imponible:")));
+                    summaryTable.AddCell(new Cell().Add(new Paragraph($"₡{baseCRC:N2}")));
+                    summaryTable.AddCell(new Cell().Add(new Paragraph($"${baseUSD:N2}")));
+
+                    // Impuestos por moneda
+                    decimal impuestosCRC = mantenimientos.Where(m => m.moneda != "USD")
+                        .Sum(m => {
+                            try
+                            {
+                                if (!string.IsNullOrEmpty(m.detalles_costo))
+                                {
+                                    var detalles = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, decimal>>(m.detalles_costo);
+                                    return detalles.ContainsKey("impuesto_iva") ? detalles["impuesto_iva"] : 0;
+                                }
+                                return 0;
+                            }
+                            catch { return 0; }
+                        });
+
+                    decimal impuestosUSD = mantenimientos.Where(m => m.moneda == "USD")
+                        .Sum(m => {
+                            try
+                            {
+                                if (!string.IsNullOrEmpty(m.detalles_costo))
+                                {
+                                    var detalles = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, decimal>>(m.detalles_costo);
+                                    return detalles.ContainsKey("impuesto_iva") ? detalles["impuesto_iva"] : 0;
+                                }
+                                return 0;
+                            }
+                            catch { return 0; }
+                        });
+
+                    summaryTable.AddCell(new Cell().Add(new Paragraph("Impuestos:")));
+                    summaryTable.AddCell(new Cell().Add(new Paragraph($"₡{impuestosCRC:N2}")));
+                    summaryTable.AddCell(new Cell().Add(new Paragraph($"${impuestosUSD:N2}")));
+
+                    // Otros costos por moneda
+                    decimal otrosCRC = mantenimientos.Where(m => m.moneda != "USD")
+                        .Sum(m => {
+                            try
+                            {
+                                if (!string.IsNullOrEmpty(m.detalles_costo))
+                                {
+                                    var detalles = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, decimal>>(m.detalles_costo);
+                                    return detalles.ContainsKey("otros_costos") ? detalles["otros_costos"] : 0;
+                                }
+                                return 0;
+                            }
+                            catch { return 0; }
+                        });
+
+                    decimal otrosUSD = mantenimientos.Where(m => m.moneda == "USD")
+                        .Sum(m => {
+                            try
+                            {
+                                if (!string.IsNullOrEmpty(m.detalles_costo))
+                                {
+                                    var detalles = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, decimal>>(m.detalles_costo);
+                                    return detalles.ContainsKey("otros_costos") ? detalles["otros_costos"] : 0;
+                                }
+                                return 0;
+                            }
+                            catch { return 0; }
+                        });
+
+                    summaryTable.AddCell(new Cell().Add(new Paragraph("Otros costos:")));
+                    summaryTable.AddCell(new Cell().Add(new Paragraph($"₡{otrosCRC:N2}")));
+                    summaryTable.AddCell(new Cell().Add(new Paragraph($"${otrosUSD:N2}")));
+
+                    // Calcular datos financieros por mes y moneda
+                    var costosPorMesMoneda = mantenimientos
+                        .GroupBy(m => new {
+                            Año = m.fecha_mantenimiento.Year,
+                            Mes = m.fecha_mantenimiento.Month,
+                            Moneda = m.moneda ?? "CRC"
+                        })
+                        .OrderBy(g => new DateTime(g.Key.Año, g.Key.Mes, 1))
+                        .ThenBy(g => g.Key.Moneda)
                         .Select(g => new {
-                            Mes = new DateTime(g.Key.Year, g.Key.Month, 1).ToString("MMMM yyyy", new CultureInfo("es-ES")),
+                            Mes = new DateTime(g.Key.Año, g.Key.Mes, 1).ToString("MMMM yyyy", new CultureInfo("es-ES")),
+                            Moneda = g.Key.Moneda,
                             Total = g.Sum(m => m.costo)
                         });
 
-                    summaryTable.AddCell(new Cell().Add(new Paragraph("Costo total:")).SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD)));
-                    summaryTable.AddCell(new Cell().Add(new Paragraph($"${costoTotal:N2}")));
-
-                    foreach (var costoMes in costosPorMes)
-                    {
-                        summaryTable.AddCell(new Cell().Add(new Paragraph($"Costo {costoMes.Mes}:")).SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD)));
-                        summaryTable.AddCell(new Cell().Add(new Paragraph($"${costoMes.Total:N2}")));
-                    }
-
-                    // Costo promedio por mantenimiento
-                    if (mantenimientos.Count > 0)
-                    {
-                        decimal costoPromedio = costoTotal / mantenimientos.Count;
-                        summaryTable.AddCell(new Cell().Add(new Paragraph("Costo promedio por mantenimiento:")).SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD)));
-                        summaryTable.AddCell(new Cell().Add(new Paragraph($"${costoPromedio:N2}")));
-                    }
-
                     document.Add(summaryTable);
+
+                    // Tabla de costos por mes
+                    document.Add(new Paragraph("\n"));
+                    document.Add(new Paragraph("COSTOS MENSUALES")
+                        .SetFontSize(14)
+                        .SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD))
+                        .SetTextAlignment(TextAlignment.CENTER));
+
+                    Table mesTable = new Table(3).UseAllAvailableWidth();
+                    mesTable.AddHeaderCell(new Cell().Add(new Paragraph("Mes")).SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD)));
+                    mesTable.AddHeaderCell(new Cell().Add(new Paragraph("Moneda")).SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD)));
+                    mesTable.AddHeaderCell(new Cell().Add(new Paragraph("Total")).SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD)));
+
+                    foreach (var costoMes in costosPorMesMoneda)
+                    {
+                        mesTable.AddCell(new Cell().Add(new Paragraph(costoMes.Mes.Substring(0, 1).ToUpper() + costoMes.Mes.Substring(1, costoMes.Mes.Length - 1))));
+                        mesTable.AddCell(new Cell().Add(new Paragraph(costoMes.Moneda)));
+
+                        string simbolo = costoMes.Moneda == "USD" ? "$" : "₡";
+                        mesTable.AddCell(new Cell().Add(new Paragraph($"{simbolo}{costoMes.Total:N2}")));
+                    }
+
+                    document.Add(mesTable);
+
+                    // Sección de camiones con más costos
+                    document.Add(new Paragraph("\n"));
+                    document.Add(new Paragraph("CAMIONES CON MAYOR COSTO DE MANTENIMIENTO")
+                        .SetFontSize(14)
+                        .SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD))
+                        .SetTextAlignment(TextAlignment.CENTER));
+
+                    // Separar por moneda
+                    var topCamionesCRC = mantenimientos
+                        .Where(m => m.moneda != "USD")
+                        .GroupBy(m => new { m.id_camion, m.numero_placa, m.marca, m.modelo })
+                        .Select(g => new {
+                            Camion = $"{g.Key.marca} {g.Key.modelo} ({g.Key.numero_placa})",
+                            TotalMantenimientos = g.Count(),
+                            CostoTotal = g.Sum(m => m.costo),
+                            Moneda = "CRC"
+                        })
+                        .OrderByDescending(x => x.CostoTotal)
+                        .Take(3);
+
+                    var topCamionesUSD = mantenimientos
+                        .Where(m => m.moneda == "USD")
+                        .GroupBy(m => new { m.id_camion, m.numero_placa, m.marca, m.modelo })
+                        .Select(g => new {
+                            Camion = $"{g.Key.marca} {g.Key.modelo} ({g.Key.numero_placa})",
+                            TotalMantenimientos = g.Count(),
+                            CostoTotal = g.Sum(m => m.costo),
+                            Moneda = "USD"
+                        })
+                        .OrderByDescending(x => x.CostoTotal)
+                        .Take(3);
+
+                    var topCamiones = topCamionesCRC.Concat(topCamionesUSD);
+
+                    Table topTable = new Table(4).UseAllAvailableWidth();
+                    topTable.AddHeaderCell(new Cell().Add(new Paragraph("Camión")).SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD)));
+                    topTable.AddHeaderCell(new Cell().Add(new Paragraph("# Mant.")).SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD)));
+                    topTable.AddHeaderCell(new Cell().Add(new Paragraph("Moneda")).SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD)));
+                    topTable.AddHeaderCell(new Cell().Add(new Paragraph("Costo Total")).SetFont(PdfFontFactory.CreateFont(StandardFonts.HELVETICA_BOLD)));
+
+                    foreach (var camion in topCamiones)
+                    {
+                        topTable.AddCell(new Cell().Add(new Paragraph(camion.Camion)));
+                        topTable.AddCell(new Cell().Add(new Paragraph(camion.TotalMantenimientos.ToString())));
+                        topTable.AddCell(new Cell().Add(new Paragraph(camion.Moneda)));
+
+                        string simbolo = camion.Moneda == "USD" ? "$" : "₡";
+                        topTable.AddCell(new Cell().Add(new Paragraph($"{simbolo}{camion.CostoTotal:N2}")));
+                    }
+
+                    document.Add(topTable);
 
                     // Pie de página
                     document.Add(new Paragraph("\n\n"));
@@ -873,7 +1148,7 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al generar reporte de mantenimientos en PDF");
+                _logger.LogError(ex, "Error al generar reporte de mantenimientos en PDF: {Message}", ex.Message);
                 throw;
             }
         }

@@ -293,7 +293,7 @@ namespace COMAVI_SA.Models
         public string numero_placa { get; set; }
 
         [Required]
-        [StringLength(10)]
+        [StringLength(15)]
         public string estado { get; set; } // mantenimiento, activo, inactivo
 
         public int? chofer_asignado { get; set; }
@@ -321,7 +321,12 @@ namespace COMAVI_SA.Models
         public DateTime fecha_mantenimiento { get; set; }
 
         [Required]
+        [Column(TypeName = "decimal(18,2)")]
         public decimal costo { get; set; }
+
+        public string? moneda { get; set; }
+        public string? detalles_costo { get; set; }
+
     }
 
     public class Documentos
@@ -473,6 +478,7 @@ namespace COMAVI_SA.Models
         public int? chofer_asignado { get; set; }
         public string NombreChofer { get; set; }
         public string estado_operativo { get; set; }
+        public string? ultima_fecha_mantenimiento { get; set; }
     }
 
     public class DocumentoVencimientoViewModel
@@ -518,17 +524,28 @@ namespace COMAVI_SA.Models
         public int id_usuario { get; set; }
         public string nombre_usuario { get; set; }
         public string dispositivo { get; set; }
-        public string ubicacion { get; set; }
         public DateTime fecha_inicio { get; set; }
         public DateTime fecha_ultima_actividad { get; set; }
-        public string token_sesion { get; set; }
     }
 
     public class GraficoDataViewModel
     {
-        public string label { get; set; }
-        public int value { get; set; }
-        public string color { get; set; }
+        public string Label { get; set; }
+        public int Value { get; set; }
+        public string Color { get; set; }
+        public Dictionary<string, object> Extra { get; set; } = new Dictionary<string, object>();
+
+        public string Nombre
+        {
+            get => Label;
+            set => Label = value;
+        }
+
+        public int Valor
+        {
+            get => Value;
+            set => Value = value;
+        }
     }
 
     public class ActividadRecienteViewModel
@@ -569,9 +586,67 @@ namespace COMAVI_SA.Models
         public string numero_placa { get; set; }
         public string descripcion { get; set; }
         public DateTime fecha_mantenimiento { get; set; }
-        public decimal costo { get; set; }
+        public decimal costo { get; set; } // Aseguramos que es decimal
+        public string moneda { get; set; } = "CRC";
+        public string detalles_costo { get; set; }
+
+        // Propiedades para mostrar detalles de costo - todas como decimal
+        public decimal costo_base { get; set; }
+        public decimal impuesto_iva { get; set; }
+        public decimal otros_costos { get; set; }
+        public decimal tipo_cambio { get; set; } = 625m; // Añadimos sufijo 'm' para decimal literal
+
+        // Métodos para obtener símbolos monetarios
+        public string SimboloMoneda => moneda == "USD" ? "$" : "₡";
+
+        // Valor total formateado con símbolo
+        public string CostoFormateado => $"{SimboloMoneda}{costo:N2}";
+
+        // Método para obtener detalles costo como diccionario
+        public Dictionary<string, decimal> ObtenerDetallesCosto()
+        {
+            if (string.IsNullOrEmpty(detalles_costo))
+            {
+                return new Dictionary<string, decimal>
+            {
+                { "costo_base", costo },
+                { "impuesto_iva", 0m },
+                { "otros_costos", 0m },
+                { "tipo_cambio", 625m }
+            };
+            }
+
+            try
+            {
+                return Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, decimal>>(detalles_costo);
+            }
+            catch
+            {
+                return new Dictionary<string, decimal>
+            {
+                { "costo_base", costo },
+                { "impuesto_iva", 0m },
+                { "otros_costos", 0m },
+                { "tipo_cambio", 625m }
+            };
+            }
+        }
+
+        // Método auxiliar para convertir cualquier valor a decimal de manera segura
+        public static decimal ToDecimal(object value)
+        {
+            try
+            {
+                if (value == null) return 0m;
+                return Convert.ToDecimal(value);
+            }
+            catch
+            {
+                return 0m;
+            }
+        }
     }
-    
+
     public class NotificacionesViewModel
     {
         public List<Notificaciones_Usuario> Notificaciones { get; set; }
@@ -794,5 +869,41 @@ namespace COMAVI_SA.Models
         public string PasosVerificacion { get; set; }
         public string TokenVerificacion { get; set; }
         public DateTime FechaExpiracion { get; set; }
+    }
+
+    public class MantenimientoNotificacionViewModel
+    {
+        // ID del mantenimiento
+        public int id_mantenimiento { get; set; }
+
+        // ID del camión
+        public int id_camion { get; set; }
+
+        // Datos del camión
+        public string numero_placa { get; set; }
+        public string marca { get; set; }
+        public string modelo { get; set; }
+
+        // Datos del mantenimiento
+        public string descripcion { get; set; }
+        public string? fecha_mantenimiento { get; set; }
+
+        // Campos calculados desde la BD
+        public int dias_restantes { get; set; }
+        public string estado_camion { get; set; }
+        public bool es_hoy { get; set; }
+
+        // Propiedades calculadas adicionales para la UI
+        [NotMapped]
+        public string EstadoAlerta =>
+            es_hoy ? "danger" :
+            dias_restantes <= 7 ? "danger" :
+            dias_restantes <= 15 ? "warning" : "info";
+
+
+        [NotMapped]
+        public string EstadoTexto =>
+            es_hoy ? "HOY" :
+            $"{dias_restantes} días";
     }
 }

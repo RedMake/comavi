@@ -399,8 +399,23 @@ namespace COMAVI_SA.Controllers
                     if (elapsed.TotalMinutes > 5)
                     {
                         _logger.LogWarning("OTP expirado para usuario {Email}", email);
-                        TempData["Error"] = "El código OTP ha expirado. Por favor, inicie sesión nuevamente.";
-                        return RedirectToAction("Index");
+
+                        // Verificar si el usuario es administrador
+                        var user_obtain = await _userService.GetUserByIdAsync(userId.Value);
+
+                        if (user_obtain != null && user_obtain.rol == "admin")
+                        {
+                            // Para administradores, permitir regenerar el OTP
+                            TempData["RegenerateOtp"] = true;
+                            TempData["Error"] = "El código OTP ha expirado. Como administrador, puede regenerarlo.";
+                            return View(model);
+                        }
+                        else
+                        {
+                            // Para usuarios normales, comportamiento normal
+                            TempData["Error"] = "El código OTP ha expirado. Por favor, inicie sesión nuevamente.";
+                            return RedirectToAction("Index");
+                        }
                     }
                 }
 
@@ -570,6 +585,42 @@ namespace COMAVI_SA.Controllers
                 ModelState.AddModelError("", "Error en el servidor. Por favor, intente más tarde.");
                 return View(model);
             }
+        }
+
+        [HttpPost]
+        [AllowAnonymous]
+        public async Task<IActionResult> RegenerateOtp()
+        {
+            var userId = TempData["UserId"] as int?;
+            var email = TempData["UserEmail"] as string;
+
+            if (!userId.HasValue || string.IsNullOrEmpty(email))
+            {
+                TempData["Error"] = "Su sesión ha expirado. Por favor, inicie sesión nuevamente.";
+                return RedirectToAction("Index");
+            }
+
+            // Verificar que el usuario sea administrador
+            var user = await _userService.GetUserByIdAsync(userId.Value);
+            if (user == null || user.rol != "admin")
+            {
+                TempData["Error"] = "No tiene permisos para regenerar el código OTP.";
+                return RedirectToAction("Index");
+            }
+
+            // Reiniciar el timestamp para extender el tiempo
+            TempData["OtpTimestamp"] = DateTime.Now.Ticks.ToString();
+
+            // Mantener los datos del usuario en TempData para la siguiente solicitud
+            TempData.Keep("UserId");
+            TempData.Keep("UserEmail");
+            TempData.Keep("RememberMe");
+            TempData.Keep("ReturnUrl");
+
+            _logger.LogInformation("OTP regenerado para administrador {Email}", email);
+
+            var model = new OtpViewModel { Email = email };
+            return View("VerifyOtp", model);
         }
 
         [Authorize]

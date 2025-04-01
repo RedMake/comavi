@@ -1,5 +1,4 @@
-﻿// Script mejorado para manejo de notificaciones y barra de búsqueda
-$(document).ready(function () {
+﻿$(document).ready(function () {
     // Número máximo de notificaciones a mostrar en el dropdown
     const MAX_NOTIFICATIONS_DISPLAYED = 3;
 
@@ -97,11 +96,23 @@ $(document).ready(function () {
         window.location.href = '/Notifications/Index';
     });
 
-    // Cargar notificaciones al iniciar
-    cargarNotificaciones();
+    // Mostrar elemento de carga inicialmente
+    $('#notificationsContainer').html(
+        '<a class="dropdown-item d-flex align-items-center" href="#">' +
+        '<div class="w-100 text-center">' +
+        '<span class="font-weight-bold">Cargando notificaciones...</span>' +
+        '</div>' +
+        '</a>'
+    );
 
-    // Actualizar notificaciones cada 60 segundos
-    setInterval(cargarNotificaciones, 60000);
+    // Cargar notificaciones después de 10 segundos
+    setTimeout(function () {
+        console.log("Cargando notificaciones después de 10 segundos");
+        cargarNotificaciones();
+
+        // Actualizar notificaciones cada 60 segundos después de la primera carga
+        setInterval(cargarNotificaciones, 30000);
+    }, 10000); // 10000 ms = 10 segundos
 
     // Términos de búsqueda actualizados según el navbar
     const searchTerms = {
@@ -120,25 +131,6 @@ $(document).ready(function () {
         'mi camión': '/Camion/CamionAsignado',
         'camion': '/Camion/CamionAsignado',
         'vencimientos': '/Calendar/Index',
-
-        // Documentos (para admin)
-        'documentos': '/Documentos/PendientesValidacion',
-        'pendientes validación': '/Documentos/PendientesValidacion',
-        'por vencer': '/Documentos/DocumentosPorVencer',
-        'generar reporte': '/Documentos/GenerarReporteDocumentos',
-
-        // Choferes (para admin)
-        'choferes': '/Admin/ListarChoferes',
-        'registrar chofer': '/Admin/RegistrarChofer',
-        'monitorear vencimientos': '/Admin/MonitorearVencimientos',
-        'listar choferes': '/Admin/ListarChoferes',
-
-        // Camiones (para admin)
-        'camiones': '/Admin/ListarCamiones',
-        'listar camiones': '/Admin/ListarCamiones',
-        'mantenimientos': '/Admin/NotificacionesMantenimiento',
-        'usuarios': '/Admin/ListarUsuarios',
-        'dashboard': '/Admin/Dashboard',
 
         // Configuración
         'contraseña': '/Login/CambiarContrasena',

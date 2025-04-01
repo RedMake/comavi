@@ -1,5 +1,6 @@
 ﻿using COMAVI_SA.Data;
 using COMAVI_SA.Models;
+using COMAVI_SA.Repository;
 using DocumentFormat.OpenXml.InkML;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
@@ -30,6 +31,7 @@ namespace COMAVI_SA.Services
         Task RecordMfaAttemptAsync(int userId, bool success);
         Task ResetMfaFailedAttemptsAsync(int userId);
         string HashPassword(string password);
+        Task<List<Usuario>> GetAllUsersAsync();
 
     }
 
@@ -40,19 +42,24 @@ namespace COMAVI_SA.Services
         private readonly IOtpService _otpService;
         private readonly ILogger<UserService> _logger;
         private readonly IConfiguration _configuration;
+        private readonly IDatabaseRepository _databaseRepository;
 
         public UserService(
             ComaviDbContext context,
             IPasswordService passwordService,
             IOtpService otpService,
             ILogger<UserService> logger,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IDatabaseRepository databaseRepository)
+
         {
             _context = context;
             _passwordService = passwordService;
             _otpService = otpService;
             _logger = logger;
             _configuration = configuration;
+            _databaseRepository = databaseRepository;
+
         }
 
         public async Task<Usuario> AuthenticateAsync(string email, string password)
@@ -632,6 +639,25 @@ namespace COMAVI_SA.Services
             {
                 _logger.LogError(ex, "Error al verificar código MFA");
                 return false;
+            }
+        }
+
+        public async Task<List<Usuario>> GetAllUsersAsync()
+        {
+            try
+            {
+                // Obtener todos los usuarios activos
+                var usuarios = await _databaseRepository.ExecuteQueryProcedureAsync<Usuario>(
+                    "sp_ObtenerTodosUsuarios",
+                    new { estado_verificacion = "verificado" }
+                );
+
+                return usuarios.ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener todos los usuarios");
+                return new List<Usuario>();
             }
         }
 

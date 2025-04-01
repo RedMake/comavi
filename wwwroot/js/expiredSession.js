@@ -4,7 +4,6 @@
     const loginBtn = document.getElementById('loginBtn');
     
     // Establecer el atributo href para el botón de inicio de sesión
-    // En Razor Pages, podemos usar rutas relativas o una variable global definida en el cshtml
     loginBtn.setAttribute('href', loginUrl); // loginUrl se define en el cshtml
     
     const timer = setInterval(() => {
@@ -22,4 +21,12 @@
             window.location.href = loginUrl;
         }
     }, 1000);
+    
+    window.addEventListener('pagehide', function() {
+        clearInterval(timer);
+    });
+    
+    window.addEventListener('beforeunload', function() {
+        clearInterval(timer);
+    });
 });

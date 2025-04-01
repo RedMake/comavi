@@ -82,32 +82,36 @@ ViewData["Title"] = "Gestión de Camiones";
                 <tbody>
                     @foreach (var camion in Model)
                     {
-                        <tr>
-                            <td>@camion.id_camion</td>
-                            <td>@camion.numero_placa</td>
-                            <td>@camion.marca @camion.modelo</td>
-                            <td>@camion.anio</td>
+                    <tr>
+                        <td>@camion.id_camion</td>
+                        <td>@camion.numero_placa</td>
+                        <td>@camion.marca / @camion.modelo</td>
+                        <td>@camion.anio</td>
+                        <td>
+                            <span class="badge badge-@(camion.estado == "activo" ? "success" : camion.estado == "mantenimiento" ? "warning" : "danger")">
+                                    @(camion.estado.Substring(0, 1).ToUpper() + camion.estado.Substring(1, camion.estado.Length-1))
+                            </span>
+                        </td>
+                        <td>@(string.IsNullOrEmpty(camion.NombreChofer) ? "Sin asignar" : camion.NombreChofer)</td>
+                            <td>@(string.IsNullOrEmpty(camion.ultima_fecha_mantenimiento) ? "Sin registro" : camion.ultima_fecha_mantenimiento)</td>
                             <td>
-                                <span class="badge badge-@(camion.estado == "activo" ? "success" : camion.estado == "mantenimiento" ? "warning" : "danger")">
-                                    @camion.estado
-                                </span>
-                            </td>
-                            <td>@(string.IsNullOrEmpty(camion.NombreChofer) ? "Sin asignar" : camion.NombreChofer)</td>
-                            <td>Sin registro</td>
-                            <td>
-                                <div class="btn-group" role="group">
-                                    <a href="@Url.Action("ActualizarCamion", "Admin", new { id = camion.id_camion })" class="btn btn-sm btn-primary">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                <a href="@Url.Action("HistorialMantenimiento", "Admin", new { idCamion = camion.id_camion })" class="btn btn-sm btn-info">
-                                    <i class="fas fa-tools"></i>
+                            <div class="btn-group" role="group">
+                                <a href="@Url.Action("ActualizarCamion", "Admin", new { id = camion.id_camion })" class="btn btn-sm btn-primary" title="Actualizar Camion">
+                                    <i class="fas fa-edit"></i>
                                 </a>
                                 
+                                @if (camion.estado != "mantenimiento")
+                                {
+                                    <a href="@Url.Action("HistorialMantenimiento", "Admin", new { idCamion = camion.id_camion })" class="btn btn-sm btn-warning" title="Enviar a mantenimiento">
+                                        <i class="fas fa-wrench"></i>
+                                    </a>
+                                }
+
                                 @if (camion.estado == "activo")
                                 {
                                     <form method="post" action="@Url.Action("DesactivarCamion", "Admin")" style="display: inline;">
                                         <input type="hidden" name="id" value="@camion.id_camion" />
-                                        <button type="submit" class="btn btn-sm btn-warning">
+                                            <button type="submit" class="btn btn-sm btn-warning" title="Desactivar Camion">
                                             <i class="fas fa-ban"></i>
                                         </button>
                                     </form>
@@ -116,7 +120,7 @@ ViewData["Title"] = "Gestión de Camiones";
                                 {
                                     <form method="post" action="@Url.Action("ActivarCamion", "Admin")" style="display: inline;">
                                         <input type="hidden" name="id" value="@camion.id_camion" />
-                                        <button type="submit" class="btn btn-sm btn-success">
+                                            <button type="submit" class="btn btn-sm btn-success" title="Activar Camion">
                                             <i class="fas fa-check"></i>
                                         </button>
                                     </form>
@@ -124,7 +128,7 @@ ViewData["Title"] = "Gestión de Camiones";
                                 
                                 <form method="post" action="@Url.Action("EliminarCamion", "Admin")" style="display: inline;">
                                     <input type="hidden" name="id" value="@camion.id_camion" />
-                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Está seguro de eliminar este camión?')">
+                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Está seguro de eliminar este camión?')" title="Eliminar Camion">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </form>
@@ -132,10 +136,10 @@ ViewData["Title"] = "Gestión de Camiones";
                         </td>
                     </tr>
                 }
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+        </div>
     </div>
-</div>
 </div>
 <!-- Modal Registrar Camión -->
 <div class="modal fade" id="registrarCamionModal" tabindex="-1" role="dialog" aria-labelledby="registrarCamionModalLabel" aria-hidden="true">
@@ -147,7 +151,7 @@ ViewData["Title"] = "Gestión de Camiones";
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-            <form method="post" action="@Url.Action("RegistrarCamion", "Admin")">
+            <form asp-controller="Admin" asp-action="RegistrarCamion" method="post">
                 <div class="modal-body">
                     <div class="form-group">
                         <label for="numero_placa">Placa *</label>
@@ -169,7 +173,6 @@ ViewData["Title"] = "Gestión de Camiones";
                         <label for="estado">Estado *</label>
                         <select class="form-control" id="estado" name="estado" required>
                             <option value="activo">Activo</option>
-                            <option value="mantenimiento">En Mantenimiento</option>
                             <option value="inactivo">Inactivo</option>
                         </select>
                     </div>

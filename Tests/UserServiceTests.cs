@@ -1,5 +1,6 @@
 ﻿using COMAVI_SA.Data;
 using COMAVI_SA.Models;
+using COMAVI_SA.Repository;
 using COMAVI_SA.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -17,6 +18,7 @@ namespace COMAVIxUnitTest
     {
         private readonly ComaviDbContext _context;
         private readonly Mock<IPasswordService> _mockPasswordService;
+        private readonly Mock<IDatabaseRepository> _mockDatabaseRepository;
         private readonly Mock<IOtpService> _mockOtpService;
         private readonly Mock<ILogger<UserService>> _mockLogger;
         private readonly Mock<IConfiguration> _mockConfiguration;
@@ -103,7 +105,8 @@ namespace COMAVIxUnitTest
                 _mockPasswordService.Object,
                 _mockOtpService.Object,
                 _mockLogger.Object,
-                _mockConfiguration.Object);
+                _mockConfiguration.Object,
+                _mockDatabaseRepository.Object);
         }
 
         [Fact]

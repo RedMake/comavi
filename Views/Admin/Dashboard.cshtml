@@ -1,4 +1,5 @@
 ﻿@model DashboardViewModel
+@using System.Globalization
 @{
     ViewData["Title"] = "Dashboard Administrativo";
 }
@@ -29,6 +30,7 @@
             </div>
         </div>
     </div>
+
     <!-- Camiones en Mantenimiento -->
     <div class="col-xl-3 col-md-6 mb-4">
         <div class="card border-left-warning shadow h-100 py-2">
@@ -38,10 +40,29 @@
                         <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
                             En Mantenimiento
                         </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">@(@Model.TotalCamiones - @Model.CamionesActivos)</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.CamionesEnMantenimiento</div>
                     </div>
                     <div class="col-auto">
                         <i class="fas fa-tools fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Camiones Inactivos -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-danger shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                            Camiones Inactivos
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.CamionesInactivos</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-ban fa-2x text-gray-300"></i>
                     </div>
                 </div>
             </div>
@@ -60,31 +81,91 @@
                         <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.ChoferesActivos</div>
                     </div>
                     <div class="col-auto">
-                        <i class="fas fa-users fa-2x text-gray-300"></i>
+                        <i class="fas fa-user-check fa-2x text-gray-300"></i>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Documentos Por Vencer -->
+    <!-- Choferes Inactivos -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-secondary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">
+                            Choferes Inactivos
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@(@Model.TotalChoferes - @Model.ChoferesActivos)</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-user-times fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Licencias por Vencer -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Licencias por Vencer
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.ChoferesLicenciaPorVencer</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-id-card fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Licencias Vencidas -->
     <div class="col-xl-3 col-md-6 mb-4">
         <div class="card border-left-danger shadow h-100 py-2">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
                         <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
-                            Documentos Por Vencer
+                            Licencias Vencidas
                         </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.DocumentosProximosVencer</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.ChoferesLicenciaVencida</div>
                     </div>
                     <div class="col-auto">
-                        <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                        <i class="fas fa-user-times fa-2x text-gray-300"></i>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Costo de Mantenimientos Último Mes -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-dark shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-dark text-uppercase mb-1">
+                            Costo de Mantenimiento (Último Mes)
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            @Model.CostoMantenimientoUltimoMes.ToString("₡ #,##0.00", CultureInfo.InvariantCulture)
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-coins fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 <!-- Gráficos -->
 <div class="row">
@@ -101,6 +182,7 @@
             </div>
         </div>
     </div>
+
     <!-- Gráfico de Estado de Camiones -->
     <div class="col-xl-4 col-lg-5">
         <div class="card shadow mb-4">
@@ -116,7 +198,7 @@
                         <i class="fas fa-circle text-primary"></i> Activos
                     </span>
                     <span class="mr-2">
-                        <i class="fas fa-circle text-warning"></i> En Mantenimiento
+                        <i class="fas fa-circle text-warning"></i> Mantenimiento
                     </span>
                     <span class="mr-2">
                         <i class="fas fa-circle text-danger"></i> Inactivos
@@ -125,7 +207,34 @@
             </div>
         </div>
     </div>
+    <!-- Gráfico de Estado de Documentos -->
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Estado de Documentos</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-pie pt-4 pb-2">
+                    <canvas id="documentosChart"></canvas>
+                </div>
+                <div class="mt-4 text-center small">
+                    <span class="mr-2">
+                        <i class="fas fa-circle text-success"></i> Verificado
+                    </span>
+                    <span class="mr-2">
+                        <i class="fas fa-circle text-warning"></i> Pendiente
+                    </span>
+                    <span class="mr-2">
+                        <i class="fas fa-circle text-danger"></i> Rechazado
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+
+
 <!-- Actividades Recientes -->
 <div class="row">
     <div class="col-lg-12">
@@ -145,13 +254,22 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var actividad in ViewBag.Actividades)
+                            @if (ViewBag.Actividades != null)
+                            {
+                                @foreach (var actividad in ViewBag.Actividades)
+                                {
+                                    <tr>
+                                        <td>@actividad.fecha.ToString("dd/MM/yyyy HH:mm")</td>
+                                        <td>@actividad.tipo_actividad</td>
+                                        <td>@actividad.descripcion</td>
+                                        <td>@actividad.detalles</td>
+                                    </tr>
+                                }
+                            }
+                            else
                             {
                                 <tr>
-                                    <td>@actividad.fecha.ToString("dd/MM/yyyy HH:mm")</td>
-                                    <td>@actividad.tipo_actividad</td>
-                                    <td>@actividad.descripcion</td>
-                                    <td>@actividad.detalles</td>
+                                    <td colspan="4" class="text-center">No hay actividades recientes disponibles</td>
                                 </tr>
                             }
                         </tbody>
@@ -167,6 +285,13 @@
         // Datos para los gráficos
         var mantenimientosPorMes = @Html.Raw(Json.Serialize(ViewBag.MantenimientosPorMes));
         var camionesEstados = @Html.Raw(Json.Serialize(ViewBag.CamionesEstados));
+        var documentosEstados = @Html.Raw(Json.Serialize(ViewBag.DocumentosEstados));
+
+        // Verificación en consola para debug
+        console.log("Mantenimientos por mes:", mantenimientosPorMes);
+        console.log("Estados de camiones:", camionesEstados);
+        console.log("Estados de documentos:", documentosEstados);
+
     </script>
     <script src="~/js/dashboard.js"></script>
 }

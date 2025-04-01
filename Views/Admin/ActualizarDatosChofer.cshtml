@@ -1,0 +1,143 @@
+﻿@model Choferes
+@{
+    ViewData["Title"] = "Actualizar Datos del Chofer";
+}
+
+<!-- Header -->
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Actualizar Datos del Chofer</h1>
+    <a href="@Url.Action("ListarChoferes", "Admin")" class="d-none d-sm-inline-block btn btn-sm btn-secondary shadow-sm">
+        <i class="fas fa-arrow-left fa-sm text-white-50"></i> Volver a la lista
+    </a>
+</div>
+
+<!-- Mensajes de alerta -->
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <strong>¡Éxito!</strong> @TempData["Success"]
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">×</span>
+        </button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>¡Error!</strong> @TempData["Error"]
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">×</span>
+        </button>
+    </div>
+}
+
+<!-- Formulario -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Datos del Chofer</h6>
+    </div>
+    <div class="card-body">
+        <form asp-controller="Admin" asp-action="ActualizarDatosChofer" method="post">
+            <input type="hidden" asp-for="id_chofer" />
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="nombreCompleto">Nombre Completo *</label>
+                        <input asp-for="nombreCompleto" class="form-control" required maxlength="100" />
+                        <span asp-validation-for="nombreCompleto" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="edad">Edad *</label>
+                        <input asp-for="edad" class="form-control" type="number" required min="18" max="99" />
+                        <span asp-validation-for="edad" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="numero_cedula">Número de Cédula *</label>
+                        <input asp-for="numero_cedula" class="form-control" required maxlength="20" />
+                        <span asp-validation-for="numero_cedula" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="genero">Género *</label>
+                        <select asp-for="genero" class="form-control" required>
+                            <option value="m">Masculino</option>
+                            <option value="f">Femenino</option>
+                        </select>
+                        <span asp-validation-for="genero" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="licencia">Número de Licencia *</label>
+                        <input asp-for="licencia" class="form-control" required maxlength="50" />
+                        <span asp-validation-for="licencia" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="fecha_venc_licencia">Fecha de Vencimiento de Licencia *</label>
+                        <input asp-for="fecha_venc_licencia" class="form-control" type="date" required />
+                        <span asp-validation-for="fecha_venc_licencia" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="id_usuario">Usuario Asociado</label>
+                <select asp-for="id_usuario" class="form-control">
+                    <option value="">-- Sin usuario asociado --</option>
+                    @foreach (var usuario in ViewBag.Usuarios)
+                    {
+                        <option value="@usuario.id_usuario">@usuario.nombre_usuario (@usuario.correo_electronico)</option>
+                    }
+                </select>
+                <small class="form-text text-muted">El usuario podrá acceder a funcionalidades específicas para choferes.</small>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="estado">Estado *</label>
+                <select asp-for="estado" class="form-control" required>
+                    <option value="activo">Activo</option>
+                    <option value="inactivo">Inactivo</option>
+                </select>
+                <span asp-validation-for="estado" class="text-danger"></span>
+            </div>
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Guardar Cambios
+                </button>
+                <a href="@Url.Action("ListarChoferes", "Admin")" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Formatear fecha para el input date
+            const fechaVencimiento = document.querySelector('input[name="fecha_venc_licencia"]');
+            if (fechaVencimiento && fechaVencimiento.value) {
+                const fecha = new Date(fechaVencimiento.value);
+                if (!isNaN(fecha.getTime())) {
+                    fechaVencimiento.value = fecha.toISOString().split('T')[0];
+                }
+            }
+        });
+    </script>
+}

@@ -50,9 +50,17 @@
 
                     <div class="form-group">
                         <label asp-for="correo_electronico">Correo Electrónico</label>
-                        <input asp-for="correo_electronico" type="email" class="form-control" required />
+                        <div class="input-group">
+                            <input asp-for="correo_electronico" type="email" class="form-control text-muted bg-light" readonly />
+                            <div class="input-group-append">
+                                <span class="input-group-text text-danger">
+                                    <i class="fas fa-ban"></i>
+                                </span>
+                            </div>
+                        </div>
                         <span asp-validation-for="correo_electronico" class="text-danger"></span>
                     </div>
+
 
                     <div class="form-group">
                         <label asp-for="rol">Rol</label>

@@ -3,7 +3,6 @@ using COMAVI_SA.Models;
 using COMAVI_SA.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace COMAVI_SA.Controllers
 {
@@ -19,6 +18,7 @@ namespace COMAVI_SA.Controllers
         private readonly IEmailService _emailService;
         private readonly IReportService _reportService;
         private readonly IUserService _userService;
+        private readonly IMantenimientoService _mantenimientoService;
 
         public AdminController(
             IAdminService adminService,
@@ -27,7 +27,8 @@ namespace COMAVI_SA.Controllers
             INotificationService notificationService,
             IEmailService emailService,
             IReportService reportService,
-            IUserService userService)
+            IUserService userService,
+            IMantenimientoService mantenimientoService) 
         {
             _adminService = adminService;
             _auditService = auditService;
@@ -36,6 +37,7 @@ namespace COMAVI_SA.Controllers
             _emailService = emailService;
             _reportService = reportService;
             _userService = userService;
+            _mantenimientoService = mantenimientoService; 
         }
 
         #region Dashboard y Reportes
@@ -45,15 +47,37 @@ namespace COMAVI_SA.Controllers
         {
             try
             {
-                var viewModel = await _adminService.GetDashboardDataAsync();
-                return View(viewModel);
+                // Usar CancellationToken con timeout para evitar espera infinita
+                using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+
+                Task<AdminDashboardViewModel> task = _adminService.GetDashboardDataAsync();
+                var completedTask = await Task.WhenAny(task, Task.Delay(15000, cts.Token));
+
+                if (completedTask == task)
+                {
+                    // La tarea se completó dentro del tiempo límite
+                    return View(await task);
+                }
+                else
+                {
+                    // Timeout ocurrió
+                    _logger.LogWarning("Timeout al cargar el dashboard de administración");
+                    TempData["Warning"] = "El dashboard está tardando demasiado en cargar. Mostrando datos básicos.";
+                    return View(new AdminDashboardViewModel());
+                }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al cargar el dashboard de administración");
-                TempData["Error"] = "Error al activar el chofer";
+                TempData["Error"] = "Error al cargar el dashboard de administración";
                 return RedirectToAction("ListarChoferes");
             }
+        }
+
+        [HttpGet]
+        public IActionResult ConsejosAdvertencias()
+        {
+            return View();
         }
 
         [HttpGet]
@@ -61,27 +85,74 @@ namespace COMAVI_SA.Controllers
         {
             try
             {
+                // Inicializar ViewBag con valores por defecto para evitar NullReferenceException
+                ViewBag.MantenimientosPorMes = new List<GraficoDataViewModel>();
+                ViewBag.CamionesEstados = new List<GraficoDataViewModel>();
+                ViewBag.DocumentosEstados = new List<GraficoDataViewModel>();
+                ViewBag.Actividades = new List<dynamic>();
+
                 // Obtener indicadores para el dashboard
                 var dashboardData = await _adminService.GetDashboardIndicadoresAsync();
 
-                // Obtener datos para gráficos
-                var mantenimientosPorMes = await _adminService.GetMantenimientosPorMesAsync(DateTime.Now.Year);
-                var camionesEstados = await _adminService.GetEstadosCamionesAsync();
-                var documentosEstados = await _adminService.GetEstadosDocumentosAsync();
+                try
+                {
+                    // Obtener datos para gráficos
+                    var mantenimientosPorMes = await _adminService.GetMantenimientosPorMesAsync(DateTime.Now.Year);
+                    ViewBag.MantenimientosPorMes = mantenimientosPorMes;
+                    _logger.LogInformation("MantenimientosPorMes obtenidos correctamente: {0} registros",
+                        mantenimientosPorMes?.Count ?? 0);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error al obtener mantenimientos por mes");
+                    // No propagar la excepción, continuar con el resto de datos
+                }
 
-                // Recientes actividades
-                var actividades = await _adminService.GetActividadesRecientesAsync(10);
+                try
+                {
+                    var camionesEstados = await _adminService.GetEstadosCamionesAsync();
+                    ViewBag.CamionesEstados = camionesEstados;
+                    _logger.LogInformation("CamionesEstados: {0}",
+                        System.Text.Json.JsonSerializer.Serialize(camionesEstados));
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error al obtener estados de camiones");
+                    // No propagar la excepción, continuar con el resto de datos
+                }
 
-                ViewBag.MantenimientosPorMes = mantenimientosPorMes;
-                ViewBag.CamionesEstados = camionesEstados;
-                ViewBag.DocumentosEstados = documentosEstados;
-                ViewBag.Actividades = actividades;
+                try
+                {
+                    var documentosEstados = await _adminService.GetEstadosDocumentosAsync();
+                    ViewBag.DocumentosEstados = documentosEstados;
+                    _logger.LogInformation("DocumentosEstados obtenidos correctamente: {0} registros",
+                        documentosEstados?.Count ?? 0);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error al obtener estados de documentos");
+                    // No propagar la excepción, continuar con el resto de datos
+                }
+
+                try
+                {
+                    // Recientes actividades
+                    var actividades = await _adminService.GetActividadesRecientesAsync(10);
+                    ViewBag.Actividades = actividades;
+                    _logger.LogInformation("Actividades recientes obtenidas correctamente: {0} registros",
+                        actividades?.Count ?? 0);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error al obtener actividades recientes");
+                    // No propagar la excepción, continuar con el resto de datos
+                }
 
                 return View(dashboardData);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al cargar dashboard");
+                _logger.LogError(ex, "Error general al cargar dashboard");
                 await _auditService.LogExceptionAsync("Dashboard", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al cargar los datos del dashboard";
                 return View(new COMAVI_SA.Models.DashboardViewModel());
@@ -277,8 +348,11 @@ namespace COMAVI_SA.Controllers
         public async Task<IActionResult> EditarUsuario(COMAVI_SA.Models.EditarUsuarioViewModel model)
         {
             if (!ModelState.IsValid)
+            {
+                TempData["Error"] = "Error en el Formulario/Modelo";
                 return View(model);
-
+            }
+               
             try
             {
                 var result = await _adminService.ActualizarUsuarioAsync(model);
@@ -298,7 +372,7 @@ namespace COMAVI_SA.Controllers
                 }
                 else
                 {
-                    ModelState.AddModelError("correo_electronico", "Este correo electrónico ya está en uso");
+                    TempData["Error"] = "Error al Actualizar";
                     return View(model);
                 }
             }
@@ -426,16 +500,16 @@ namespace COMAVI_SA.Controllers
                 }
                 else
                 {
+
                     TempData["Error"] = "Error al cerrar la sesión";
+                    
                 }
 
                 return RedirectToAction("VerSesionesActivas", new { id = Request.Query["idUsuario"] });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al cerrar sesión");
                 await _auditService.LogExceptionAsync("CerrarSesion", ex.Message, User.Identity.Name);
-                TempData["Error"] = "Error al cerrar la sesión";
                 return RedirectToAction("ListarUsuarios");
             }
         }
@@ -520,7 +594,7 @@ namespace COMAVI_SA.Controllers
 
                 if (!ModelState.IsValid)
                 {
-                    return View(camion);
+                    return RedirectToAction("ListarCamiones");
                 }
 
 
@@ -536,21 +610,19 @@ namespace COMAVI_SA.Controllers
                         $"Registro exitoso de camión: {camion.marca} {camion.modelo}",
                         User.Identity?.Name ?? "sistema"
                     );
-
-                    return RedirectToAction("ListarCamiones");
                 }
                 else
                 {
                     TempData["Error"] = "Error al registrar el camión";
-                    return View(camion);
                 }
+                return RedirectToAction("ListarCamiones");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al registrar camión");
                 await _auditService.LogExceptionAsync("RegistrarCamion", ex.Message, User.Identity.Name ?? "sistema");
                 TempData["Error"] = "Error al registrar el camión";
-                return View(camion);
+                return RedirectToAction("ListarCamiones");
             }
         }
 
@@ -588,7 +660,7 @@ namespace COMAVI_SA.Controllers
             {
                 if (!ModelState.IsValid)
                 {
-                    return View(camion);
+                    return RedirectToAction("ListarCamiones");
                 }
 
                 var result = await _adminService.ActualizarCamionAsync(camion);
@@ -803,6 +875,24 @@ namespace COMAVI_SA.Controllers
                 TempData["Error"] = "Error al obtener el historial de mantenimiento";
                 return RedirectToAction("ListarCamiones");
             }
+        } 
+
+        [HttpGet]
+        public async Task<IActionResult> ActualizarEstadoMantenimiento()
+        {
+            try
+            {
+                await _mantenimientoService.ActualizarEstadosCamionesAsync();
+                TempData["Success"] = "Estados de camiones actualizados correctamente";
+                return RedirectToAction("NotificacionesMantenimiento");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al actualizar estados de mantenimiento");
+                await _auditService.LogExceptionAsync("ActualizarEstadoMantenimiento", ex.Message, User.Identity.Name);
+                TempData["Error"] = "Error al actualizar estados de mantenimiento";
+                return RedirectToAction("NotificacionesMantenimiento");
+            }
         }
 
         [HttpPost]
@@ -810,22 +900,27 @@ namespace COMAVI_SA.Controllers
         {
             try
             {
+                if (ModelState.ContainsKey("Camion"))
+                {
+                    ModelState.Remove("Camion");
+                }
                 if (!ModelState.IsValid)
                 {
                     return RedirectToAction("HistorialMantenimiento", new { idCamion = mantenimiento.id_camion });
                 }
 
-                var result = await _adminService.RegistrarMantenimientoAsync(mantenimiento);
+                // Usar el servicio de mantenimiento para programar y notificar
+                var result = await _mantenimientoService.ProgramarMantenimientoAsync(mantenimiento);
 
                 if (result)
                 {
-                    TempData["Success"] = "Mantenimiento registrado exitosamente";
+                    TempData["Success"] = "Mantenimiento programado exitosamente. Se han enviado notificaciones.";
 
                     // Registrar en auditoría
                     await _auditService.LogAuditEventAsync(
                         "MantenimientoRegistrar",
                         $"Registro de mantenimiento para camión ID: {mantenimiento.id_camion}",
-                        User.Identity.Name
+                        User.Identity.Name ?? "sistema"
                     );
                 }
                 else
@@ -849,7 +944,13 @@ namespace COMAVI_SA.Controllers
         {
             try
             {
-                var notificaciones = await _adminService.GetNotificacionesMantenimientoAsync(diasAntelacion);
+                var notificaciones = await _mantenimientoService.GetMantenimientosProgramadosAsync(diasAntelacion);
+
+                var camionesSinMantenimiento = await _adminService.GetCamionesAsync(estado: "activo");
+
+                ViewBag.CamionesSinMantenimiento = camionesSinMantenimiento;
+                ViewBag.DiasAntelacion = diasAntelacion;
+
                 return View(notificaciones);
             }
             catch (Exception ex)
@@ -860,6 +961,7 @@ namespace COMAVI_SA.Controllers
                 return RedirectToAction("Index");
             }
         }
+
 
         [HttpGet]
         public async Task<IActionResult> GenerarReporteCamiones(string estado = null)
@@ -1218,73 +1320,7 @@ namespace COMAVI_SA.Controllers
                 return RedirectToAction("GenerarReporteChoferes", new { estado });
             }
         }
-
-        [HttpGet]
-        public async Task<IActionResult> AsignarDocumentos(int idChofer)
-        {
-            try
-            {
-                var chofer = await _adminService.GetChoferByIdAsync(idChofer);
-
-                if (chofer == null)
-                {
-                    var choferes = await _adminService.GetChoferesAsync(estado: "activo");
-                    ViewBag.Choferes = choferes;
-                    return View();
-                }
-
-                ViewBag.IdChofer = idChofer;
-                ViewBag.Chofer = chofer;
-                return View();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al cargar datos para asignar documentos");
-                await _auditService.LogExceptionAsync("AsignarDocumentosForm", ex.Message, User.Identity.Name);
-                TempData["Error"] = "Error al cargar los datos necesarios";
-                return RedirectToAction("ListarChoferes");
-            }
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> AsignarDocumento(Documentos documento)
-        {
-            try
-            {
-                if (!ModelState.IsValid)
-                {
-                    return RedirectToAction("AsignarDocumentos", new { idChofer = documento.id_chofer });
-                }
-
-                var result = await _adminService.AsignarDocumentoAsync(documento);
-
-                if (result)
-                {
-                    TempData["Success"] = "Documento asignado exitosamente";
-
-                    // Registrar en auditoría
-                    await _auditService.LogAuditEventAsync(
-                        "DocumentoAsignar",
-                        $"Asignación de documento tipo: {documento.tipo_documento} a chofer ID: {documento.id_chofer}",
-                        User.Identity.Name
-                    );
-                }
-                else
-                {
-                    TempData["Error"] = "Error al asignar el documento";
-                }
-
-                return RedirectToAction("ObtenerDocumentosChofer", new { idChofer = documento.id_chofer });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al asignar documento");
-                await _auditService.LogExceptionAsync("AsignarDocumento", ex.Message, User.Identity.Name);
-                TempData["Error"] = "Error al asignar el documento";
-                return RedirectToAction("AsignarDocumentos", new { idChofer = documento.id_chofer });
-            }
-        }
-
+        
         [HttpGet]
         public async Task<IActionResult> ObtenerDocumentosChofer(int idChofer)
         {

@@ -1,6 +1,8 @@
 using COMAVI_SA.Data;
 using COMAVI_SA.Models;
 using Dapper;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
@@ -38,6 +40,12 @@ namespace COMAVI_SA.Controllers
 
         public IActionResult SesionExpirada()
         {
+            // Limpiar cookies de autenticación
+            HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+
+            // Limpiar cookies de sesión
+            Response.Cookies.Delete("COMAVI.Session");
+
             return View();
         }
     }

@@ -18,6 +18,8 @@ namespace COMAVI_SA.Middleware
         private static DateTime _lastCheckTime = DateTime.MinValue;
         private static bool _isDbAvailable = true;
         private static readonly TimeSpan _checkInterval = TimeSpan.FromSeconds(15);
+        private static int _lastErrorCode = 0;
+        private static string _lastErrorMessage = string.Empty;
 
         public DatabaseResilienceMiddleware(
             RequestDelegate next,
@@ -51,7 +53,7 @@ namespace COMAVI_SA.Middleware
             if (!_isDbAvailable && !context.Request.Path.StartsWithSegments("/Maintenance"))
             {
                 _logger.LogWarning("Base de datos no disponible. Redirigiendo a página de mantenimiento");
-                context.Response.Redirect("/Maintenance");
+                RedirectToMaintenance(context);
                 return;
             }
 
@@ -67,12 +69,47 @@ namespace COMAVI_SA.Middleware
                 _isDbAvailable = false;
                 _lastCheckTime = DateTime.UtcNow;
 
+                // Extraer información del error
+                ExtractErrorInfo(ex);
+
                 // Redirigir a página de mantenimiento si no estamos ya ahí
                 if (!context.Request.Path.StartsWithSegments("/Maintenance"))
                 {
-                    context.Response.Redirect("/Maintenance");
+                    RedirectToMaintenance(context);
                 }
             }
+        }
+
+        private void RedirectToMaintenance(HttpContext context)
+        {
+            // Añadir código de error y mensaje a la redirección
+            string redirectUrl = $"/Maintenance?errorCode={_lastErrorCode}&errorMessage={Uri.EscapeDataString(_lastErrorMessage)}";
+            context.Response.Redirect(redirectUrl);
+        }
+
+        private void ExtractErrorInfo(Exception ex)
+        {
+            if (ex is SqlException sqlEx)
+            {
+                _lastErrorCode = sqlEx.Number;
+                _lastErrorMessage = sqlEx.Message;
+            }
+            else if (ex.InnerException != null)
+            {
+                // Intentar extraer información del error interno
+                ExtractErrorInfo(ex.InnerException);
+            }
+            else
+            {
+                // Si no es un SqlException específico
+                _lastErrorCode = -1;
+                _lastErrorMessage = ex.Message;
+            }
+
+            // Sanitizar el mensaje para evitar inyección
+            _lastErrorMessage = _lastErrorMessage?.Replace("<", "&lt;").Replace(">", "&gt;") ?? "Error desconocido";
+
+            _logger.LogError("Información de error: Código {ErrorCode}, Mensaje: {ErrorMessage}", _lastErrorCode, _lastErrorMessage);
         }
 
         private async Task CheckDatabaseStatusAsync()
@@ -92,6 +129,7 @@ namespace COMAVI_SA.Middleware
             {
                 _isDbAvailable = false;
                 _logger.LogWarning(ex, "Base de datos sigue sin estar disponible");
+                ExtractErrorInfo(ex);
             }
             finally
             {

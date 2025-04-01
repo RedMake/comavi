@@ -65,7 +65,7 @@ namespace COMAVI_SA.Middleware
                     }
 
                     // Redireccionar al login
-                    context.Response.Redirect("/Login/Index?expired=true");
+                    context.Items["SesionExpirada"] = true;
                     return;
                 }
             }

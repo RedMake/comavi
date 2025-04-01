@@ -7,9 +7,6 @@
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800">Documentos del Chofer</h1>
     <div>
-        <a href="@Url.Action("AsignarDocumentos", "Admin", new { idChofer = ViewBag.IdChofer })" class="btn btn-success btn-sm mr-2">
-            <i class="fas fa-plus fa-sm"></i> Nuevo Documento
-        </a>
         <a href="@Url.Action("ListarChoferes", "Admin")" class="btn btn-primary btn-sm">
             <i class="fas fa-arrow-left fa-sm"></i> Volver a Choferes
         </a>
@@ -53,7 +50,7 @@
                 <p>
                     <strong>Estado:</strong>
                     <span class="badge badge-@(chofer.estado == "activo" ? "success" : "danger")">
-                        @chofer.estado
+                        @(chofer.estado.Substring(0, 1).ToUpper() + chofer.estado.Substring(1, chofer.estado.Length - 1))
                     </span>
                 </p>
             </div>
@@ -88,7 +85,6 @@
                             <th>Estado</th>
                             <th>Días Restantes</th>
                             <th>Archivo</th>
-                            <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -108,7 +104,7 @@
                                 <td>
                                     <span class="badge badge-@(doc.estado_validacion == "validado" ? "success" :
                                                             doc.estado_validacion == "rechazado" ? "danger" : "warning")">
-                                        @doc.estado_validacion
+                                        @(doc.estado_validacion.Substring(0, 1).ToUpper() + doc.estado_validacion.Substring(1, doc.estado_validacion.Length - 1))
                                     </span>
                                 </td>
                                 <td>
@@ -119,7 +115,8 @@
                                 <td class="text-center">
                                     @if (!string.IsNullOrEmpty(doc.ruta_archivo) || doc.contenido_archivo != null)
                                     {
-                                        <a href="#" class="btn btn-sm btn-info">
+                                        <a href="@Url.Action("VerDocumento", "Documentos", new { id = doc.id_documento })"
+                                           class="btn btn-sm btn-info" target="_blank">
                                             <i class="fas fa-file-pdf"></i>
                                         </a>
                                     }
@@ -127,18 +124,6 @@
                                     {
                                         <span class="text-muted">No disponible</span>
                                     }
-                                </td>
-                                <td>
-                                    <div class="btn-group" role="group">
-                                        <button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#actualizarDocumentoModal"
-                                                data-id="@doc.id_documento"
-                                                data-tipo="@doc.tipo_documento"
-                                                data-emision="@doc.fecha_emision.ToString("yyyy-MM-dd")"
-                                                data-vencimiento="@doc.fecha_vencimiento.ToString("yyyy-MM-dd")"
-                                                data-estado="@doc.estado_validacion">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                    </div>
                                 </td>
                             </tr>
                         }
@@ -155,60 +140,7 @@
     </div>
 </div>
 
-<!-- Modal Actualizar Documento -->
-<div class="modal fade" id="actualizarDocumentoModal" tabindex="-1" role="dialog" aria-labelledby="actualizarDocumentoModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="actualizarDocumentoModalLabel">Actualizar Documento</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-            <form method="post" action="@Url.Action("ActualizarDocumentos", "Admin")" enctype="multipart/form-data">
-                @Html.AntiForgeryToken()
-                <div class="modal-body">
-                    <input type="hidden" id="id_documento" name="id_documento" />
-                    <input type="hidden" id="id_chofer" name="id_chofer" value="@ViewBag.IdChofer" />
 
-                    <div class="form-group">
-                        <label for="tipo_documento">Tipo de Documento</label>
-                        <input type="text" class="form-control" id="tipo_documento" name="tipo_documento" readonly />
-                    </div>
-
-                    <div class="form-group">
-                        <label for="fecha_emision">Fecha de Emisión</label>
-                        <input type="date" class="form-control" id="fecha_emision" name="fecha_emision" required />
-                    </div>
-
-                    <div class="form-group">
-                        <label for="fecha_vencimiento">Fecha de Vencimiento</label>
-                        <input type="date" class="form-control" id="fecha_vencimiento" name="fecha_vencimiento" required />
-                    </div>
-
-                    <div class="form-group">
-                        <label for="estado_validacion">Estado de Validación</label>
-                        <select class="form-control" id="estado_validacion" name="estado_validacion" required>
-                            <option value="pendiente">Pendiente</option>
-                            <option value="validado">Validado</option>
-                            <option value="rechazado">Rechazado</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="archivo">Subir nuevo archivo (opcional)</label>
-                        <input type="file" class="form-control-file" id="archivo" name="archivo" accept=".pdf" />
-                        <small class="form-text text-muted">Deje en blanco para mantener el archivo actual.</small>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 @section Scripts {
     <script src="~/js/documentos-chofer.js"></script>
 }

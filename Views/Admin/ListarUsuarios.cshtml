@@ -105,38 +105,38 @@ ViewData["Title"] = "Gestión de Usuarios";
                                     <a href="@Url.Action("EditarUsuario", "Admin", new { id = usuario.id_usuario })" class="btn btn-sm btn-primary">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    @if (usuario.estado_verificacion == "activo")
-                                {
-                                    <form method="post" action="@Url.Action("CambiarEstadoUsuario", "Admin")" style="display: inline;">
+                                    @if (usuario.estado_verificacion == "verificado")
+                                    {
+                                        <form method="post" action="@Url.Action("CambiarEstadoUsuario", "Admin")" style="display: inline;">
+                                            <input type="hidden" name="id" value="@usuario.id_usuario" />
+                                            <input type="hidden" name="estado" value="pendiente" />
+                                            <button type="submit" class="btn btn-sm btn-warning">
+                                                <i class="fas fa-ban"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <form method="post" action="@Url.Action("CambiarEstadoUsuario", "Admin")" style="display: inline;">
+                                            <input type="hidden" name="id" value="@usuario.id_usuario" />
+                                            <input type="hidden" name="estado" value="verificado" />
+                                            <button type="submit" class="btn btn-sm btn-success">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                
+                                    <form method="post" action="@Url.Action("ResetearContrasena", "Admin")" style="display: inline;">
                                         <input type="hidden" name="id" value="@usuario.id_usuario" />
-                                        <input type="hidden" name="estado" value="inactivo" />
-                                        <button type="submit" class="btn btn-sm btn-warning">
-                                            <i class="fas fa-ban"></i>
+                                        <button type="submit" class="btn btn-sm btn-info" onclick="return confirm('¿Está seguro de resetear la contraseña del usuario?')">
+                                            <i class="fas fa-key"></i>
                                         </button>
                                     </form>
-                                }
-                                else
-                                {
-                                    <form method="post" action="@Url.Action("CambiarEstadoUsuario", "Admin")" style="display: inline;">
-                                        <input type="hidden" name="id" value="@usuario.id_usuario" />
-                                        <input type="hidden" name="estado" value="activo" />
-                                        <button type="submit" class="btn btn-sm btn-success">
-                                            <i class="fas fa-check"></i>
-                                        </button>
-                                    </form>
-                                }
                                 
-                                <form method="post" action="@Url.Action("ResetearContrasena", "Admin")" style="display: inline;">
-                                    <input type="hidden" name="id" value="@usuario.id_usuario" />
-                                    <button type="submit" class="btn btn-sm btn-info" onclick="return confirm('¿Está seguro de resetear la contraseña del usuario?')">
-                                        <i class="fas fa-key"></i>
-                                    </button>
-                                </form>
-                                
-                                <a href="@Url.Action("VerSesionesActivas", "Admin", new { id = usuario.id_usuario })" class="btn btn-sm btn-secondary">
-                                    <i class="fas fa-sign-in-alt"></i>
-                                </a>
-                            </div>
+                                    <a href="@Url.Action("VerSesionesActivas", "Admin", new { id = usuario.id_usuario })" class="btn btn-sm btn-secondary">
+                                        <i class="fas fa-sign-in-alt"></i>
+                                    </a>
+                                 </div>
                         </td>
                     </tr>
                 }

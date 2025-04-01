@@ -1,9 +1,11 @@
-﻿using COMAVI_SA.Models;
+﻿using COMAVI_SA.Filters;
+using COMAVI_SA.Models;
 using COMAVI_SA.Repository;
 using Hangfire.Logging;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Caching.Memory;
 using NPOI.SS.Formula.Functions;
+using Org.BouncyCastle.Asn1.Pkcs;
 using System;
 using System.Collections;
 
@@ -24,11 +26,9 @@ namespace COMAVI_SA.Services
         Task<bool> DesactivarCamionAsync(int id);
         Task<bool> ActivarCamionAsync(int id);
         Task<List<Mantenimiento_Camiones>> GetHistorialMantenimientoAsync(int idCamion);
-        Task<List<Mantenimiento_Camiones>> GetNotificacionesMantenimientoAsync(int diasAntelacion = 30);
         Task<bool> AsignarChoferAsync(int idCamion, int idChofer);
         Task<IEnumerable<Camiones>> GetCamionesActivosAsync();
         Task<bool> EliminarCamionAsync(int id);
-        Task<bool> RegistrarMantenimientoAsync(Mantenimiento_Camiones mantenimiento);
 
         // Choferes
         Task<IEnumerable<ChoferViewModel>> GetChoferesAsync(string filtro = null, string estado = null);
@@ -43,7 +43,6 @@ namespace COMAVI_SA.Services
         Task<List<Usuario>> GetUsuariosDisponiblesParaChoferAsync(int idChofer);
         Task<bool> DesactivarChoferAsync(int id);
         Task<bool> ActivarChoferAsync(int id);
-        Task<bool> AsignarDocumentoAsync(Documentos documento);
         Task<bool> EliminarChoferAsync(int id);
         Task<List<ChoferViewModel>> GenerarReporteChoferesAsync(string estado = null);
 
@@ -59,7 +58,7 @@ namespace COMAVI_SA.Services
 
         // Dashboard y Reportes
         Task<DashboardViewModel> GetDashboardIndicadoresAsync();
-        Task<List<GraficoDataViewModel>> GetMantenimientosPorMesAsync(int anio);
+        Task<List<GraficoDataViewModel>> GetMantenimientosPorMesAsync(int? anio = null);
         Task<List<GraficoDataViewModel>> GetEstadosCamionesAsync();
         Task<List<GraficoDataViewModel>> GetEstadosDocumentosAsync();
         Task<List<ActividadRecienteViewModel>> GetActividadesRecientesAsync(int cantidad = 10);
@@ -70,6 +69,7 @@ namespace COMAVI_SA.Services
 
     }
 
+    [VerificarAutenticacion]
     public class AdminService : IAdminService
     {
         private readonly IDatabaseRepository _databaseRepository;
@@ -113,103 +113,56 @@ namespace COMAVI_SA.Services
         {
             string cacheKey = $"AdminDashboard_{DateTime.Now:yyyyMMdd_HH}";
 
-            if (!forceRefresh && _cache.TryGetValue(cacheKey, out AdminDashboardViewModel cachedData))
-            {
-                return cachedData;
-            }
+            return await GetOrSetCacheAsync<AdminDashboardViewModel>(
+                cacheKey,
+                async () => {
+                    // Función para obtener los datos frescos
+                    var estadisticas = await _databaseRepository.ExecuteScalarProcedureAsync<DashboardStats>(
+                        "sp_ObtenerDatosDashboardAdmin",
+                        new
+                        {
+                            LimiteCamiones = 5,
+                            LimiteChoferes = 5,
+                            LimiteDocumentos = 5,
+                            DiasPreviosVencimiento = 30
+                        }
+                    );
 
-            // Usar bloqueo distribuido para evitar múltiples actualizaciones simultáneas
-            string lockKey = $"lock_{cacheKey}";
-            bool lockTaken = false;
+                    var camiones = await _databaseRepository.ExecuteQueryProcedureAsync<Camiones>(
+                        "sp_ObtenerCamionesRecientes",
+                        new { Limite = 5 }
+                    );
 
-            try
-            {
-                lockTaken = await _lockProvider.TryAcquireLockAsync(lockKey, TimeSpan.FromSeconds(30));
+                    var choferes = await _databaseRepository.ExecuteQueryProcedureAsync<Choferes>(
+                        "sp_ObtenerChoferesActivos",
+                        new { Limite = 5 }
+                    );
 
-                // Si no se pudo obtener el bloqueo, verificar nuevamente el caché
-                if (!lockTaken)
-                {
-                    if (_cache.TryGetValue(cacheKey, out cachedData))
+                    var documentos = await _databaseRepository.ExecuteQueryProcedureAsync<DocumentoVencimientoViewModel>(
+                        "sp_ObtenerDocumentosProximosVencer",
+                        new { dias_anticipacion = 30, Limite = 5 }
+                    );
+
+                    return new AdminDashboardViewModel
                     {
-                        return cachedData;
-                    }
-
-                    // Si todavía no está en caché, esperar brevemente y reintentar
-                    await Task.Delay(200);
-                    return await GetDashboardDataAsync(forceRefresh);
-                }
-
-                // Verificar doblemente para evitar trabajo redundante
-                if (!forceRefresh && _cache.TryGetValue(cacheKey, out cachedData))
-                {
-                    return cachedData;
-                }
-
-                // Obtener datos frescos
-                var estadisticas = await _databaseRepository.ExecuteScalarProcedureAsync<DashboardStats>(
-                    "sp_ObtenerDatosDashboardAdmin",
-                    new
-                    {
-                        LimiteCamiones = 5,
-                        LimiteChoferes = 5,
-                        LimiteDocumentos = 5,
-                        DiasPreviosVencimiento = 30
-                    }
-                );
-
-                var camiones = await _databaseRepository.ExecuteQueryProcedureAsync<Camiones>(
-                    "sp_ObtenerCamionesRecientes",
-                    new { Limite = 5 }
-                );
-
-                var choferes = await _databaseRepository.ExecuteQueryProcedureAsync<Choferes>(
-                    "sp_ObtenerChoferesActivos",
-                    new { Limite = 5 }
-                );
-
-                var documentos = await _databaseRepository.ExecuteQueryProcedureAsync<DocumentoVencimientoIndexViewModel>(
-                    "sp_ObtenerDocumentosProximosVencer",
-                    new { dias_anticipacion = 30, Limite = 5 }
-                );
-
-                var viewModel = new AdminDashboardViewModel
-                {
-                    TotalCamiones = estadisticas.TotalCamiones,
-                    CamionesActivos = estadisticas.CamionesActivos,
-                    TotalChoferes = estadisticas.TotalChoferes,
-                    ChoferesActivos = estadisticas.ChoferesActivos,
-                    TotalUsuarios = estadisticas.TotalUsuarios,
-                    UsuariosActivos = estadisticas.UsuariosActivos,
-                    DocumentosProximosVencer = documentos.Count(),
-                    Camiones = camiones.ToList(),
-                    Choferes = choferes.ToList()
-                };
-
-                // Establecer en caché con tiempo de expiración
-                var cacheOptions = new MemoryCacheEntryOptions()
-                    .SetAbsoluteExpiration(TimeSpan.FromHours(1))
-                    .SetSlidingExpiration(TimeSpan.FromMinutes(10))
-                    .SetPriority(CacheItemPriority.High);
-
-                _cache.Set(cacheKey, viewModel, cacheOptions);
-                _cacheKeyTracker.TrackKey(cacheKey);
-
-                return viewModel;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al obtener datos del dashboard");
-                throw new ApplicationException("Error al obtener datos del dashboard", ex);
-            }
-            finally
-            {
-                if (lockTaken)
-                {
-                    await _lockProvider.ReleaseLockAsync(lockKey);
-                }
-            }
+                        TotalCamiones = estadisticas.TotalCamiones,
+                        CamionesActivos = estadisticas.CamionesActivos,
+                        TotalChoferes = estadisticas.TotalChoferes,
+                        ChoferesActivos = estadisticas.ChoferesActivos,
+                        TotalUsuarios = estadisticas.TotalUsuarios,
+                        UsuariosActivos = estadisticas.UsuariosActivos,
+                        DocumentosProximosVencer = documentos.Count(),
+                        DocumentosProximosVencimiento = documentos.ToList(),
+                        Camiones = camiones.ToList(),
+                        Choferes = choferes.ToList()
+                    };
+                },
+                TimeSpan.FromHours(1),        // Expiración absoluta
+                TimeSpan.FromMinutes(10),     // Expiración deslizante
+                bypassCache: forceRefresh     // Permitir bypass de caché
+            );
         }
-        
+
         #endregion
 
         #region Gestión de Camiones
@@ -225,8 +178,8 @@ namespace COMAVI_SA.Services
                         "sp_BuscarCamiones",
                         new { filtro, estado }
                     );
-                    return camiones;
-                    //return camiones.ToList();
+                    //return camiones;
+                    return camiones.ToList();
                 },
                 TimeSpan.FromMinutes(5)   // Expiración absoluta de 5 minutos
             );
@@ -396,25 +349,6 @@ namespace COMAVI_SA.Services
             );
         }
 
-        public async Task<List<Mantenimiento_Camiones>> GetNotificacionesMantenimientoAsync(int diasAntelacion = 30)
-        {
-            string cacheKey = $"NotificacionesMantenimiento_{diasAntelacion}";
-
-            return await GetOrSetCacheAsync(
-                cacheKey,
-                async () =>
-                {
-                    // Utiliza el procedimiento almacenado sp_ObtenerNotificacionesMantenimiento
-                    var notificaciones = await _databaseRepository.ExecuteQueryProcedureAsync<Mantenimiento_Camiones>(
-                        "sp_ObtenerNotificacionesMantenimiento",
-                        new { dias_antelacion = diasAntelacion }
-                    );
-                    return notificaciones.ToList();
-                },
-                TimeSpan.FromHours(6)
-            );
-        }
-
         public async Task<bool> AsignarChoferAsync(int idCamion, int idChofer)
         {
             try
@@ -493,37 +427,6 @@ namespace COMAVI_SA.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al eliminar camión");
-                return false;
-            }
-        }
-
-        public async Task<bool> RegistrarMantenimientoAsync(Mantenimiento_Camiones mantenimiento)
-        {
-            try
-            {
-                // Utiliza el procedimiento almacenado sp_RegistrarMantenimiento
-                await _databaseRepository.ExecuteNonQueryProcedureAsync(
-                    "sp_RegistrarMantenimiento",
-                    new
-                    {
-                        id_camion = mantenimiento.id_camion,
-                        descripcion = mantenimiento.descripcion,
-                        fecha_mantenimiento = mantenimiento.fecha_mantenimiento,
-                        costo = mantenimiento.costo
-                    }
-                );
-
-
-                // Invalidar cachés relacionadas
-                _cache.Remove($"Camion_{mantenimiento.id_camion}");
-                _cache.Remove($"HistorialMantenimiento_{mantenimiento.id_camion}");
-                await InvalidarCacheCamionesAsync();
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al registrar mantenimiento");
                 return false;
             }
         }
@@ -878,56 +781,6 @@ namespace COMAVI_SA.Services
             }
         }
 
-        public async Task<bool> AsignarDocumentoAsync(Documentos documento)
-        {
-            try
-            {
-                // Utiliza el procedimiento almacenado sp_RegistrarDocumento
-                await _databaseRepository.ExecuteNonQueryProcedureAsync(
-                    "sp_RegistrarDocumento",
-                    new
-                    {
-                        id_chofer = documento.id_chofer,
-                        tipo_documento = documento.tipo_documento,
-                        fecha_emision = documento.fecha_emision,
-                        fecha_vencimiento = documento.fecha_vencimiento,
-                        estado_validacion = documento.estado_validacion ?? "pendiente",
-                        ruta_archivo = documento.ruta_archivo,
-                        contenido_archivo = documento.contenido_archivo,
-                        tipo_mime = documento.tipo_mime,
-                        tamano_archivo = documento.tamano_archivo,
-                        hash_documento = documento.hash_documento
-                    }
-                );
-
-                // Notificar al chofer si tiene un usuario asignado
-                var chofer = await _databaseRepository.ExecuteScalarProcedureAsync<Choferes>(
-                    "sp_ObtenerChoferConUsuario",
-                    new { id_chofer = documento.id_chofer }
-                );
-
-                if (chofer != null && chofer.id_usuario.HasValue)
-                {
-                    string mensaje = $"Se ha registrado un nuevo documento '{documento.tipo_documento}' en su perfil.";
-                    await _notificationService.CreateNotificationAsync(
-                        chofer.id_usuario.Value,
-                        "Nuevo Documento",
-                        mensaje
-                    );
-                }
-
-                // Invalidar cachés relacionadas
-                _cache.Remove($"DocumentosChofer_{documento.id_chofer}");
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al asignar documento");
-                return false;
-            }
-        }
-
         public async Task<bool> EliminarChoferAsync(int id)
         {
             try
@@ -1056,13 +909,12 @@ namespace COMAVI_SA.Services
                     {
                         id_usuario = model.id_usuario,
                         nombre_usuario = model.nombre_usuario,
-                        correo_electronico = model.correo_electronico,
                         rol = model.rol
                     }
                 );
-
+                _logger.LogInformation("Resultado {result}", result);
                 // Interpretar resultado
-                if (result == 1) // Éxito
+                if (result == 1 || result == 0) // Éxito
                 {
                     // Notificar al usuario sobre los cambios en su cuenta
                     await _notificationService.CreateNotificationAsync(
@@ -1076,11 +928,6 @@ namespace COMAVI_SA.Services
                     await InvalidarCacheUsuariosAsync();
 
                     return true;
-                }
-                else if (result == -2) // Correo duplicado
-                {
-                    _logger.LogWarning($"Intento de actualizar usuario con correo duplicado: {model.correo_electronico}");
-                    return false;
                 }
                 else // Otros errores
                 {
@@ -1105,7 +952,7 @@ namespace COMAVI_SA.Services
                     new { id_usuario = id, estado }
                 );
 
-                if (result == 1) // Éxito
+                if (result == 1 || result == 0) // Éxito
                 {
                     // Notificar al usuario sobre el cambio de estado
                     string mensaje = estado == "verificado"
@@ -1308,22 +1155,196 @@ namespace COMAVI_SA.Services
             );
         }
 
-        public async Task<List<GraficoDataViewModel>> GetMantenimientosPorMesAsync(int anio)
+        public async Task<List<GraficoDataViewModel>> GetMantenimientosPorMesAsync(int? anio = null)
         {
-            string cacheKey = $"MantenimientosPorMes_{anio}";
+            // Si no se proporciona un año, usar el año actual
+            if (!anio.HasValue)
+            {
+                anio = DateTime.Now.Year;
+            }
 
+            string cacheKey = $"MantenimientosPorMes_{anio}";
             return await GetOrSetCacheAsync(
                 cacheKey,
                 async () =>
                 {
-                    var data = await _databaseRepository.ExecuteQueryProcedureAsync<GraficoDataViewModel>(
-                        "sp_ObtenerMantenimientosPorMes",
-                        new { anio }
-                    );
+                    try
+                    {
+                        var data = await _databaseRepository.ExecuteQueryProcedureAsync<dynamic>(
+                            "sp_ObtenerMantenimientosPorMes",
+                            new { anio }
+                        );
 
-                    return data.ToList();
+                        // Mapear los nombres de los meses
+                        string[] nombresMeses = new[] {
+                    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+                        };
+
+                        List<GraficoDataViewModel> formattedData = new List<GraficoDataViewModel>();
+                        int index = 0;
+
+                        foreach (var item in data)
+                        {
+                            try
+                            {
+                                // Usar reflection para acceder a las propiedades dinámicas
+                                int mes = 0;
+                                int cantidad = 0;
+                                decimal costo = 0;
+
+                                // Intentar obtener las propiedades por nombre (si el resultado es IExpandoObject)
+                                if (item is IDictionary<string, object> dict)
+                                {
+                                    if (dict.ContainsKey("mes")) mes = Convert.ToInt32(dict["mes"]);
+                                    if (dict.ContainsKey("cantidad")) cantidad = Convert.ToInt32(dict["cantidad"]);
+                                    if (dict.ContainsKey("costo_total")) costo = Convert.ToDecimal(dict["costo_total"]);
+                                }
+                                // Intentar obtener por posición (si el resultado es un tipo anónimo)
+                                else
+                                {
+                                    // Obtener todas las propiedades públicas
+                                    var props = item.GetType().GetProperties();
+                                    if (props.Length > 0) mes = Convert.ToInt32(props[0].GetValue(item));
+                                    if (props.Length > 1) cantidad = Convert.ToInt32(props[1].GetValue(item));
+                                    if (props.Length > 2) costo = Convert.ToDecimal(props[2].GetValue(item));
+                                }
+
+                                // Asegurarse de que el mes sea válido
+                                if (mes < 1 || mes > 12)
+                                {
+                                    mes = index + 1; // Usar el índice como respaldo
+                                }
+
+                                var graficoData = new GraficoDataViewModel
+                                {
+                                    Label = nombresMeses[mes - 1], // Ajuste para índice base 0
+                                    Value = cantidad,
+                                    Color = cantidad > 0 ? "#4e73df" : "#cccccc",
+                                    Extra = new Dictionary<string, object> {
+                                { "mes", mes },
+                                { "costo_total", costo }
+                                    }
+                                };
+
+                                formattedData.Add(graficoData);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, "Error procesando datos de mantenimientos para el índice {Index}", index);
+                                // Continuar con el siguiente elemento
+                            }
+
+                            index++;
+                        }
+
+                        // Si no se obtuvieron datos, crear una lista vacía con los 12 meses
+                        if (formattedData.Count == 0)
+                        {
+                            for (int i = 0; i < 12; i++)
+                            {
+                                formattedData.Add(new GraficoDataViewModel
+                                {
+                                    Label = nombresMeses[i],
+                                    Value = 0,
+                                    Color = "#cccccc",
+                                    Extra = new Dictionary<string, object> {
+                                { "mes", i + 1 },
+                                { "costo_total", 0m }
+                                    }
+                                });
+                            }
+                        }
+
+                        return formattedData;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error obteniendo mantenimientos por mes para el año {Year}", anio);
+                        return new List<GraficoDataViewModel>();
+                    }
                 },
                 TimeSpan.FromHours(6)
+            );
+        }
+
+        public async Task<List<GraficoDataViewModel>> GetEstadosDocumentosAsync()
+        {
+            string cacheKey = "EstadosDocumentos";
+            return await GetOrSetCacheAsync(
+                cacheKey,
+                async () =>
+                {
+                    try
+                    {
+                        var data = await _databaseRepository.ExecuteQueryProcedureAsync<dynamic>(
+                            "sp_ObtenerEstadosDocumentos"
+                        );
+
+                        List<GraficoDataViewModel> formattedData = new List<GraficoDataViewModel>();
+                        int index = 0;
+
+                        foreach (var item in data)
+                        {
+                            try
+                            {
+                                string estado = string.Empty;
+                                int valor = 0;
+
+                                // Intentar obtener las propiedades por nombre (si el resultado es IExpandoObject)
+                                if (item is IDictionary<string, object> dict)
+                                {
+                                    if (dict.ContainsKey("nombre")) estado = Convert.ToString(dict["nombre"]);
+                                    if (dict.ContainsKey("valor")) valor = Convert.ToInt32(dict["valor"]);
+                                }
+                                // Intentar obtener por posición (si el resultado es un tipo anónimo)
+                                else
+                                {
+                                    // Obtener todas las propiedades públicas
+                                    var props = item.GetType().GetProperties();
+                                    if (props.Length > 0) estado = Convert.ToString(props[0].GetValue(item));
+                                    if (props.Length > 1) valor = Convert.ToInt32(props[1].GetValue(item));
+                                }
+
+                                if (string.IsNullOrEmpty(estado))
+                                {
+                                    _logger.LogWarning("Estado vacío en el índice {Index}, omitiendo registro", index);
+                                    continue;
+                                }
+
+                                var graficoData = new GraficoDataViewModel
+                                {
+                                    Label = PrimeraLetraMayuscula(estado),
+                                    Value = valor,
+                                    Color = estado.ToLower() switch
+                                    {
+                                        "verificado" => "#1cc88a", // Verde
+                                        "pendiente" => "#f6c23e", // Amarillo
+                                        "rechazado" => "#e74a3b", // Rojo
+                                        _ => "#858796" // Gris por defecto
+                                    }
+                                };
+
+                                formattedData.Add(graficoData);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, "Error procesando datos de estados de documentos para el índice {Index}", index);
+                                // Continuar con el siguiente elemento
+                            }
+
+                            index++;
+                        }
+
+                        return formattedData;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error obteniendo estados de documentos");
+                        return new List<GraficoDataViewModel>();
+                    }
+                },
+                TimeSpan.FromHours(2)
             );
         }
 
@@ -1335,29 +1356,23 @@ namespace COMAVI_SA.Services
                 cacheKey,
                 async () =>
                 {
-                    var data = await _databaseRepository.ExecuteQueryProcedureAsync<GraficoDataViewModel>(
+                    var data = await _databaseRepository.ExecuteQueryProcedureAsync<dynamic>(
                         "sp_ObtenerEstadosCamiones"
                     );
 
-                    return data.ToList();
-                },
-                TimeSpan.FromHours(2)
-            );
-        }
-
-        public async Task<List<GraficoDataViewModel>> GetEstadosDocumentosAsync()
-        {
-            string cacheKey = "EstadosDocumentos";
-
-            return await GetOrSetCacheAsync(
-                cacheKey,
-                async () =>
-                {
-                    var data = await _databaseRepository.ExecuteQueryProcedureAsync<GraficoDataViewModel>(
-                        "sp_ObtenerEstadosDocumentos"
-                    );
-
-                    return data.ToList();
+                    var formattedData = data.Select(item => new GraficoDataViewModel
+                    {
+                        Label = item.nombre,
+                        Value = item.valor,
+                        Color = item.nombre.ToString().ToLower() switch
+                        {
+                            "activo" => "#4e73df",
+                            "mantenimiento" => "#f6c23e",
+                            "inactivo" => "#e74a3b",
+                            _ => "#858796"
+                        }
+                    }).ToList();
+                    return formattedData;
                 },
                 TimeSpan.FromHours(2)
             );
@@ -1403,6 +1418,7 @@ namespace COMAVI_SA.Services
                 TimeSpan.FromHours(12)
             );
         }
+        
         #endregion
 
         #region Otros
@@ -1519,6 +1535,14 @@ namespace COMAVI_SA.Services
                 }
             }
         }
+        private string PrimeraLetraMayuscula(string texto)
+        {
+            if (string.IsNullOrEmpty(texto))
+                return texto;
+
+            return char.ToUpper(texto[0]) + texto.Substring(1).ToLower();
+        }
+
 
         // Método auxiliar para calcular el tamaño de caché
         private int CalcularTamañoCache<T>(T data)

@@ -117,6 +117,7 @@ builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IExcelService, ExcelService>();
+builder.Services.AddScoped<IMantenimientoService, MantenimientoService>();
 
 builder.Services.AddTransient<SessionValidationMiddleware>();
 builder.Services.AddSingleton<IJwtBlacklistService, JwtBlacklistService>();
@@ -350,6 +351,17 @@ app.Lifetime.ApplicationStarted.Register(() => {
             "dashboard-cache-refresh",
             service => service.ActualizarCacheDashboard(),
             "*/15 * * * *");
+
+        RecurringJob.AddOrUpdate<IMantenimientoService>(
+            "actualizarEstadoCamiones",
+            x => x.ActualizarEstadosCamionesAsync(),
+            Cron.Daily(6, 0));
+
+        RecurringJob.AddOrUpdate<IMantenimientoService>(
+            "notificarMantenimientosHoy",
+            x => x.NotificarMantenimientosAsync(),
+            Cron.Daily(8, 0));
+
         var logger = app.Services.GetRequiredService<ILogger<Program>>();
         logger.LogInformation("Successfully registered Hangfire recurring jobs");
     }

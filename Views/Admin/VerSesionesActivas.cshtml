@@ -1,0 +1,180 @@
+@model List<SesionActivaViewModel>
+@{
+    ViewData["Title"] = "Sesiones Activas";
+}
+
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Sesiones Activas</h1>
+    <a href="@Url.Action("ListarUsuarios", "Admin")" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+        <i class="fas fa-arrow-left fa-sm text-white-50"></i> Volver a Usuarios
+    </a>
+</div>
+
+<!-- Mensajes de alerta -->
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <strong>¡Éxito!</strong> @TempData["Success"]
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">×</span>
+        </button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>¡Error!</strong> @TempData["Error"]
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">×</span>
+        </button>
+    </div>
+}
+
+<!-- Información del Usuario -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Información del Usuario</h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <p><strong>ID:</strong> @ViewBag.Usuario.id_usuario</p>
+            </div>
+            <div class="col-md-4">
+                <p><strong>Nombre:</strong> @ViewBag.Usuario.nombre_usuario</p>
+            </div>
+            <div class="col-md-4">
+                <p><strong>Correo:</strong> @ViewBag.Usuario.correo_electronico</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                <p>
+                    <strong>Rol:</strong>
+                    @if (ViewBag.Usuario.rol == "admin")
+                    {
+                        <span class="badge badge-primary">Administrador</span>
+                    }
+                    else
+                    {
+                        <span class="badge badge-secondary">Usuario</span>
+                    }
+                </p>
+            </div>
+            <div class="col-md-4">
+                <p>
+                    <strong>Estado:</strong>
+                    @if (ViewBag.Usuario.estado_verificacion == "verificado")
+                    {
+                        <span class="badge badge-success">Verificado</span>
+                    }
+                    else
+                    {
+                        <span class="badge badge-warning">No Verificado</span>
+                    }
+                </p>
+            </div>
+            <div class="col-md-4">
+                <p><strong>Sesiones Activas:</strong> <span class="badge badge-info">@Model.Count</span></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla de Sesiones Activas -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+        <h6 class="m-0 font-weight-bold text-primary">Sesiones Activas</h6>
+    </div>
+    <div class="card-body">
+        @if (Model.Count > 0)
+        {
+            <div class="table-responsive">
+                <table class="table table-bordered" id="sesionesTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>ID de Sesion</th>
+                            <th>Nombre de Usuario</th>
+                            <th>Dispositivo</th>
+                            <th>Fecha Inicio</th>
+                            <th>Última Actividad</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var sesion in Model)
+                        {
+                            <tr>
+                                <td>@sesion.id_sesion</td>
+                                <td>@sesion.nombre_usuario.</td>
+                                <td>@sesion.dispositivo</td>
+                                <td>@sesion.fecha_inicio.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>@sesion.fecha_ultima_actividad.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>
+                                    @{
+                                        var minutos = (DateTime.Now - sesion.fecha_ultima_actividad).TotalMinutes;
+                                        var estadoSesion = minutos < 5 ? "En línea" : 
+                                                        minutos < 30 ? "Inactivo" : "Expirada";
+                                        var estadoColor = minutos < 5 ? "success" : 
+                                                        minutos < 30 ? "warning" : "danger";
+                                    }
+                                    <span class="badge badge-@estadoColor">@estadoSesion</span>
+                                </td>
+                                <td>
+                                    <form method="post" action="@Url.Action("CerrarSesion", "Admin")" 
+                                          onsubmit="return confirm('¿Está seguro de cerrar esta sesión?')">
+                                        <input type="hidden" name="tokenSesion" value="@sesion.id_sesion" />
+                                        <input type="hidden" name="idUsuario" value="@ViewBag.Usuario.id_usuario" />
+                                        <button type="submit" class="btn btn-sm btn-danger">
+                                            <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> Este usuario no tiene sesiones activas actualmente.
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Información de Seguridad -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Información de Seguridad</h6>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle"></i> <strong>Precaución:</strong> Cerrar una sesión activa desconectará inmediatamente al usuario de esa sesión. Use esta función solo cuando sea necesario por razones de seguridad.
+        </div>
+        <p>Razones comunes para cerrar sesiones:</p>
+        <ul>
+            <li>Actividad sospechosa detectada en la cuenta</li>
+            <li>El usuario ha reportado un acceso no autorizado</li>
+            <li>Dispositivo perdido o robado</li>
+            <li>Mantenimiento del sistema que requiere reconexión de todos los usuarios</li>
+        </ul>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            $('#sesionesTable').DataTable({
+                "language": {
+                    "url": "//cdn.datatables.net/plug-ins/1.10.25/i18n/Spanish.json"
+                },
+                "order": [[5, "desc"]], // Ordenar por última actividad
+                "pageLength": 10
+            });
+        });
+    </script>
+}

@@ -1,0 +1,129 @@
+﻿@model Camiones
+@{
+    ViewData["Title"] = "Actualizar Camión";
+}
+
+<!-- Header -->
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Actualizar Camión</h1>
+    <a href="@Url.Action("ListarCamiones", "Admin")" class="d-none d-sm-inline-block btn btn-sm btn-secondary shadow-sm">
+        <i class="fas fa-arrow-left fa-sm text-white-50"></i> Volver a la lista
+    </a>
+</div>
+
+<!-- Mensajes de alerta -->
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <strong>¡Éxito!</strong> @TempData["Success"]
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">×</span>
+        </button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>¡Error!</strong> @TempData["Error"]
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">×</span>
+        </button>
+    </div>
+}
+
+<!-- Formulario -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Datos del Camión</h6>
+    </div>
+    <div class="card-body">
+        <form asp-controller="Admin" asp-action="ActualizarCamion" method="post">
+            <input type="hidden" asp-for="id_camion" />
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="numero_placa">Número de Placa *</label>
+                        <input asp-for="numero_placa" class="form-control" required maxlength="20" />
+                        <span asp-validation-for="numero_placa" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="anio">Año *</label>
+                        <input asp-for="anio" class="form-control" type="number" required min="1990" max="2025" />
+                        <span asp-validation-for="anio" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="marca">Marca *</label>
+                        <input asp-for="marca" class="form-control" required maxlength="50" />
+                        <span asp-validation-for="marca" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="modelo">Modelo *</label>
+                        <input asp-for="modelo" class="form-control" required maxlength="50" />
+                        <span asp-validation-for="modelo" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="estado">Estado *</label>
+                        <select asp-for="estado" class="form-control" required>
+                            <option value="activo">Activo</option>
+                            <option value="mantenimiento">En Mantenimiento</option>
+                            <option value="inactivo">Inactivo</option>
+                        </select>
+                        <span asp-validation-for="estado" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="chofer_asignado">Chofer Asignado</label>
+                        <select asp-for="chofer_asignado" class="form-control">
+                            <option value="">-- Sin chofer asignado --</option>
+                            @foreach (var chofer in ViewBag.Choferes)
+                            {
+                                <option value="@chofer.id_chofer">@chofer.nombreCompleto</option>
+                            }
+                        </select>
+                        <small class="form-text text-muted">Un chofer activo debe estar asignado para que el camión pueda operar.</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Guardar Cambios
+                </button>
+                <a href="@Url.Action("ListarCamiones", "Admin")" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Cancelar
+                </a>
+                <a href="@Url.Action("HistorialMantenimiento", "Admin", new { idCamion = Model.id_camion })" class="btn btn-warning">
+                    <i class="fas fa-wrench"></i> Ver Historial de Mantenimiento
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Inicializar selectores si necesario
+            $('#chofer_asignado').select2({
+                placeholder: "Seleccione un chofer",
+                allowClear: true
+            });
+        });
+    </script>
+}
