@@ -15,7 +15,9 @@
 <body id="page-top" class="@(User.IsInRole("admin") ? "admin-role" : "user-role")">
 
     <div id="wrapper">
-        <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
+        @if (User.Identity.IsAuthenticated)
+        {
+            <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
             <li>
                 <a class="sidebar-brand d-flex align-items-center justify-content-center" href="@Url.Action("Index", "Home")">
                     <div class="sidebar-brand-icon">
@@ -162,6 +164,7 @@
 
 
         </ul>
+        }
         <!-- Parte de arriba del navbar -->
         <div id="content-wrapper" class="d-flex flex-column">
             <div id="content">
@@ -405,6 +408,7 @@
         <script src="~/js/security-fixes.js"></script>
         <script src="~/js/datatables-global.js"></script>
     }
+    <script src="~/js/validaciones-forms-paginas.js"></script>
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>
