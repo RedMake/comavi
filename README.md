@@ -203,7 +203,7 @@ Maintenance and Support
 
 To report issues or request new features, please open an issue on the GitHub repository or contact the support team through:
 
--   Email: <info@comavicr.com>
+-   Emails: <info@comavicr.com> | <soporte@docktrack.lat>
 -   Phone: +506 2551-1117
 
 License
