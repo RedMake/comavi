@@ -1,181 +1,174 @@
 using COMAVI_SA.Data;
 using COMAVI_SA.Models;
 using Dapper;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
 using System.Diagnostics;
+using System.Security.Claims;
 
 namespace COMAVI_SA.Controllers
 {
+#nullable disable
     [AllowAnonymous]
 
     public class HomeController : Controller
     {
-        private readonly ILogger<HomeController> _logger;
         private readonly ComaviDbContext _context;
-        private readonly string _connectionString;
+        private readonly IAuthorizationService _authorizationService;
 
-        public HomeController(ILogger<HomeController> logger, ComaviDbContext context, IConfiguration configuration)
+        public HomeController( ComaviDbContext context, IAuthorizationService authorizationService)
         {
-            _logger = logger;
             _context = context;
-            _connectionString = configuration.GetConnectionString("DefaultConnection");
-        }
-
-        private IDbConnection CreateConnection()
-        {
-            var connection = new SqlConnection(_connectionString);
-            connection.Open();
-            return connection;
+            _authorizationService = authorizationService;
         }
 
         public async Task<IActionResult> Index()
         {
-            try
+            // Si el usuario no está autenticado, mostrar la página de bienvenida
+            if (!User.Identity.IsAuthenticated)
             {
-                var viewModel = new DashboardViewModel();
+                return View();
+            }
 
-                // Estadísticas básicas
-                viewModel.TotalCamiones = await _context.Camiones.CountAsync();
-                viewModel.CamionesActivos = await _context.Camiones.CountAsync(c => c.estado == "activo");
-                viewModel.TotalChoferes = await _context.Choferes.CountAsync();
-                viewModel.ChoferesActivos = await _context.Choferes.CountAsync(c => c.estado == "activo");
+            // Si el usuario es admin, solo pasamos a la vista
+            if (User.IsInRole("admin"))
+            {
+                return RedirectToAction("Index", "Admin");
+            }
 
-                // Verificar si el usuario actual es administrador
-                var esAdmin = User.IsInRole("admin");
-                viewModel.EsUsuarioAdmin = esAdmin;
+            // Para usuarios con rol "user", cargamos datos relevantes
+            if (User.IsInRole("user"))
+            {
+                // Obtener el ID del usuario
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-                if (esAdmin)
+                // Buscar el chofer relacionado con este usuario
+                var chofer = await _context.Choferes
+                    .FirstOrDefaultAsync(c => c.id_usuario == int.Parse(userId));
+
+
+                if (chofer != null)
                 {
-                    // Cargar datos para administradores
+                    // Información del camión asignado
+                    var camion = await _context.Camiones
+                        .FirstOrDefaultAsync(c => c.chofer_asignado == chofer.id_chofer);
 
-                    // Próximos vencimientos de documentos
-                    viewModel.ProximosVencimientos = await _context.Documentos
-                        .Include(d => d.Chofer)
-                        .Where(d => d.fecha_vencimiento.Date >= DateTime.Today.Date &&
-                                   d.fecha_vencimiento.Date <= DateTime.Today.AddDays(30).Date)
-                        .OrderBy(d => d.fecha_vencimiento)
-                        .Take(5)
-                        .ToListAsync();
-
-                    // Próximos mantenimientos
-                    viewModel.ProximosMantenimientos = await _context.Mantenimiento_Camiones
-                        .Include(m => m.Camion)
-                        .Where(m => m.fecha_mantenimiento.Date >= DateTime.Today.Date)
-                        .OrderBy(m => m.fecha_mantenimiento)
-                        .Take(5)
-                        .ToListAsync();
-
-                    // Datos para gráficos
-                    using (var connection = CreateConnection())
+                    if (camion != null)
                     {
-                        // Estado de camiones (activos vs inactivos)
-                        viewModel.EstadoCamiones = await connection.QueryAsync<EstadisticaDto>(
-                            "SELECT estado as Categoria, COUNT(*) as Cantidad FROM Camiones GROUP BY estado");
+                        ViewBag.InfoCamion = $"{camion.marca} {camion.modelo} - {camion.numero_placa}";
+                        ViewBag.TieneCamionAsignado = true;
 
-                        // Camiones por marca
-                        viewModel.CamionesPorMarca = await connection.QueryAsync<EstadisticaDto>(
-                            "SELECT marca as Categoria, COUNT(*) as Cantidad FROM Camiones GROUP BY marca");
+                        // Obtener el último mantenimiento y calcular el próximo
+                        var ultimoMantenimiento = await _context.Mantenimiento_Camiones
+                            .Where(m => m.id_camion == camion.id_camion)
+                            .OrderByDescending(m => m.fecha_mantenimiento)
+                            .FirstOrDefaultAsync();
 
-                        // Choferes por género
-                        viewModel.ChoferesPorGenero = await connection.QueryAsync<EstadisticaDto>(
-                            "SELECT genero as Categoria, COUNT(*) as Cantidad FROM Choferes GROUP BY genero");
-
-                        // Documentos por tipo
-                        viewModel.DocumentosPorTipo = await connection.QueryAsync<EstadisticaDto>(
-                            "SELECT tipo_documento as Categoria, COUNT(*) as Cantidad FROM Documentos GROUP BY tipo_documento");
-                    }
-
-                    // Camiones sin chofer asignado
-                    viewModel.CamionesSinChofer = await _context.Camiones
-                        .CountAsync(c => c.chofer_asignado == null && c.estado == "activo");
-
-                    // Usuarios activos
-                    viewModel.UsuariosActivos = await _context.SesionesActivas.CountAsync();
-                }
-                else
-                {
-                    // Cargar datos específicos para el rol del usuario
-                    var esChofer = User.IsInRole("user");
-                    if (esChofer)
-                    {
-                        // Si es chofer, cargar información sobre su camión asignado y documentos
-                        var userEmail = User.Identity.Name;
-                        var chofer = await _context.Choferes
-                            .FirstOrDefaultAsync(c => c.numero_cedula == userEmail);
-
-                        if (chofer != null)
+                        if (ultimoMantenimiento != null)
                         {
-                            viewModel.InformacionChofer = chofer;
-
-                            // Camión asignado
-                            viewModel.CamionAsignado = await _context.Camiones
-                                .FirstOrDefaultAsync(c => c.chofer_asignado == chofer.id_chofer);
-
-                            // Documentos del chofer
-                            viewModel.DocumentosChofer = await _context.Documentos
-                                .Where(d => d.id_chofer == chofer.id_chofer)
-                                .OrderBy(d => d.fecha_vencimiento)
-                                .ToListAsync();
+                            // Estimamos el próximo mantenimiento en 3 meses después del último
+                            ViewBag.ProximoMantenimiento = ultimoMantenimiento.fecha_mantenimiento.AddMonths(3);
                         }
                     }
-                }
+                    else
+                    {
+                        ViewBag.InfoCamion = "No asignado";
+                        ViewBag.TieneCamionAsignado = false;
+                    }
 
-                return View(viewModel);
+                    // Información de la licencia
+                    ViewBag.FechaVencLicencia = chofer.fecha_venc_licencia;
+                    ViewBag.DiasParaVencimiento = (chofer.fecha_venc_licencia - DateTime.Now).Days;
+
+                    // Documentos pendientes y próximos a vencer
+                    var documentos = await _context.Documentos
+                        .Where(d => d.id_chofer == chofer.id_chofer)
+                        .ToListAsync();
+
+                    ViewBag.DocumentosPendientes = documentos.Count(d => d.estado_validacion == "pendiente" || d.estado_validacion == "rechazado");
+
+                    // Documentos próximos a vencer (en los próximos 30 días)
+                    var hoy = DateTime.Now;
+                    var proximosVencimientos = documentos
+                        .Where(d => d.estado_validacion == "verificado" &&
+                                (d.fecha_vencimiento - hoy).TotalDays <= 30 &&
+                                d.fecha_vencimiento > hoy)
+                        .Select(d => new {
+                            d.tipo_documento,
+                            d.fecha_vencimiento,
+                            dias_restantes = (int)(d.fecha_vencimiento - hoy).TotalDays
+                        })
+                        .OrderBy(d => d.dias_restantes)
+                        .ToList();
+
+                    ViewBag.ProximosVencimientos = proximosVencimientos;
+
+                    // Próximos eventos de la agenda
+                    var eventosAgenda = await _context.EventosAgenda
+                        .Where(e => e.id_usuario == int.Parse(userId) &&
+                               e.fecha_inicio > hoy &&
+                               e.fecha_inicio <= hoy.AddDays(30))
+                        .OrderBy(e => e.fecha_inicio)
+                        .Take(5)
+                        .ToListAsync();
+
+                    ViewBag.EventosAgenda = eventosAgenda;
+                }
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al cargar dashboard");
-                TempData["Error"] = "Error al cargar los datos del dashboard";
-                return View(new DashboardViewModel());
-            }
+
+            return View();
         }
 
-        [AllowAnonymous]
+        public IActionResult ConsejosAdvertencias()
+        {
+            return View();
+        }
+
+        public IActionResult Privacy()
+        {
+            return View();
+        }
+
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
+
+        // Página de información sobre la empresa
+        public IActionResult About()
+        {
+            return View();
+        }
+
+
+        // Preguntas frecuentes
+        public IActionResult FAQ()
+        {
+            return View();
+        }
+
+        // Términos y condiciones
+        public IActionResult Terms()
+        {
+            return View();
+        }
+
+        public IActionResult SesionExpirada()
+        {
+            // Limpiar cookies de autenticación
+            HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+
+            // Limpiar cookies de sesión
+            Response.Cookies.Delete("COMAVI.Session");
+
+            return View();
+        }
     }
 
-    public class DashboardViewModel
-    {
-        // Estadísticas básicas
-        public int TotalCamiones { get; set; }
-        public int CamionesActivos { get; set; }
-        public int TotalChoferes { get; set; }
-        public int ChoferesActivos { get; set; }
-
-        // Indicador de rol
-        public bool EsUsuarioAdmin { get; set; }
-
-        // Datos para administradores
-        public IEnumerable<Documentos> ProximosVencimientos { get; set; } = Enumerable.Empty<Documentos>();
-        public IEnumerable<Mantenimiento_Camiones> ProximosMantenimientos { get; set; } = Enumerable.Empty<Mantenimiento_Camiones>();
-
-        // Datos para gráficos
-        public IEnumerable<EstadisticaDto> EstadoCamiones { get; set; } = Enumerable.Empty<EstadisticaDto>();
-        public IEnumerable<EstadisticaDto> CamionesPorMarca { get; set; } = Enumerable.Empty<EstadisticaDto>();
-        public IEnumerable<EstadisticaDto> ChoferesPorGenero { get; set; } = Enumerable.Empty<EstadisticaDto>();
-        public IEnumerable<EstadisticaDto> DocumentosPorTipo { get; set; } = Enumerable.Empty<EstadisticaDto>();
-
-        // Más datos para administradores
-        public int CamionesSinChofer { get; set; }
-        public int UsuariosActivos { get; set; }
-
-        // Datos para choferes
-        public Choferes InformacionChofer { get; set; }
-        public Camiones CamionAsignado { get; set; }
-        public IEnumerable<Documentos> DocumentosChofer { get; set; } = Enumerable.Empty<Documentos>();
-    }
-
-    public class EstadisticaDto
-    {
-        public string Categoria { get; set; }
-        public int Cantidad { get; set; }
-    }
 }

@@ -7,6 +7,9 @@
     <link href="~/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css" />
     <link href="~/css/sb-admin-2.min.css" rel="stylesheet" />
     <link href="~/vendor/datatables/dataTables.bootstrap4.min.css" rel="stylesheet">
+    <link href="~/css/custom-notifications.css" rel="stylesheet" />
+    <link href="~/css/custom-notifications-controller.css" rel="stylesheet" />
+
     @await RenderSectionAsync("Styles", required: false)
 </head>
 <body id="page-top" class="@(User.IsInRole("admin") ? "admin-role" : "user-role")">
@@ -21,56 +24,112 @@
                 </a>
             </li>
 
-            <li>
-                <hr class="sidebar-divider my-0" />
-            </li>
+            @if (User.Identity.IsAuthenticated)
+            {
+                <li>
+                    <hr class="sidebar-divider my-0" />
+                </li>
+                <li class="nav-item active">
+                    <a class="nav-link" href="@Url.Action(User.IsInRole("admin") ? "Dashboard" : "Index", User.IsInRole("admin") ? "Admin" : "Home")">
+                        <i class="fas fa-fw fa-tachometer-alt"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
 
-            <li class="nav-item active">
-                <a class="nav-link" href="@Url.Action("Index", "Home")">
-                    <i class="fas fa-fw fa-tachometer-alt"></i>
-                    <span>Dashboard</span>
-                </a>
-            </li>
+                <li>
+                    <hr class="sidebar-divider my-0" />
+                </li>
+            }
 
-            <li>
-                <hr class="sidebar-divider" />
-            </li>
 
             @if (User.IsInRole("admin"))
             {
                 <li class="nav-item">
-                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseSistema" aria-expanded="true" aria-controls="collapseSistema">
-                        <i class="fas fa-cogs"></i>
-                        <span>Sistema</span>
+                    <a class="nav-link" href="@Url.Action("Index", "Admin")">
+                        <i class="fas fa-fw fa-home"></i>
+                        <span>Panel Admin</span>
                     </a>
-                    <div id="collapseSistema" class="collapse" aria-labelledby="headingSistema" data-parent="#accordionSidebar">
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link collapsed" href="@Url.Action("ReportesGenerales", "Admin")">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Reportes</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link collapsed" href="@Url.Action("ListarUsuarios", "Admin")">
+                        <i class="fas fa-user-tie"></i>
+                        <span>Usuarios</span>
+                    </a>
+                </li>
+                <li>
+                    <hr class="sidebar-divider my-0" />
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseDocumentos" aria-expanded="true" aria-controls="collapseDocumentos">
+                        <i class="fas fa-file-pdf"></i>
+                        <span>Documentos</span>
+                    </a>
+                    <div id="collapseDocumentos" class="collapse" aria-labelledby="headingDocumentos" data-parent="#accordionSidebar">
                         <div class="bg-white py-2 collapse-inner rounded">
-                            <a class="collapse-item" href="@Url.Action("Notificaciones", "Sistema")">Notificaciones</a>
-                            <a class="collapse-item" href="@Url.Action("Usuarios", "Sistema")">Usuarios</a>
-                            <a class="collapse-item" href="@Url.Action("SesionesActivas", "Sistema")">Sesiones Activas</a>
-                            <a class="collapse-item" href="@Url.Action("IntentosLogin", "Sistema")">Intentos de Login</a>
+                            <a class="collapse-item" href="@Url.Action("PendientesValidacion", "Documentos")" style="overflow: auto;text-overflow: ellipsis;white-space: break-spaces;max-width: 100%;">Revisar Documentos Pendientes</a>
+                            <a class="collapse-item" href="@Url.Action("DocumentosPorVencer", "Documentos")">Documentos por Vencer</a>
+                            <a class="collapse-item" href="@Url.Action("GenerarReporteDocumentos", "Documentos")">Reporte de Documentos</a>
                         </div>
                     </div>
+                </li>
+                <li class="nav-item my-2">
+                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseChoferes" aria-expanded="true" aria-controls="collapseChoferes">
+                        <i class="fas fa-users"></i>
+                        <span>Choferes</span>
+                    </a>
+                    <div id="collapseChoferes" class="collapse" aria-labelledby="headingChoferes" data-parent="#accordionSidebar">
+                        <div class="bg-white py-2 collapse-inner rounded">
+                            <a class="collapse-item" href="@Url.Action("MonitorearVencimientos", "Admin")">Monitorear Vencimientos</a>
+                            <a class="collapse-item" href="@Url.Action("ListarChoferes", "Admin")">Gestión de Choferes</a>
+                        </div>
+                    </div>
+                </li>
+                <li>
+                    <hr class="sidebar-divider my-0" />
+                </li>
+
+                <li class="nav-item my-2">
+                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseCamiones" aria-expanded="true" aria-controls="collapseCamiones">
+                        <i class="fas fa-truck"></i>
+                        <span>Camiones</span>
+                    </a>
+                    <div id="collapseCamiones" class="collapse" aria-labelledby="headingCamiones" data-parent="#accordionSidebar">
+                        <div class="bg-white py-2 collapse-inner rounded">
+                            <a class="collapse-item" href="@Url.Action("ListarCamiones", "Admin")">Lista de Camiones</a>
+                            <a class="collapse-item" href="@Url.Action("SolicitudesMantenimiento", "Admin")" style="overflow: auto;text-overflow: ellipsis;white-space: break-spaces;max-width: 100%;">Solicitudes de usuario para Mantenimiento</a>
+                        </div>
+
+                    </div>
+                </li>
+
+                <li>
+                    <hr class="sidebar-divider my-0" />
+                </li>
+                <li class="nav-item my-2">
+                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseNotificaciones" aria-expanded="true" aria-controls="collapseNotificaciones">
+                        <i class="fas fa-bell"></i>
+                        <span>Notificaciones</span>
+                    </a>
+                    <div id="collapseNotificaciones" class="collapse" aria-labelledby="headingNotificaciones" data-parent="#accordionSidebar">
+                        <div class="bg-white py-2 collapse-inner rounded">
+                            <a class="collapse-item" href="@Url.Action("NotificacionesMantenimiento", "Admin")">Mantenimiento</a>
+                        </div>
+                    </div>
+                </li>
+                <li>
+                    <hr class="sidebar-divider my-0" />
                 </li>
             }
 
-            @if (!User.Identity.IsAuthenticated)
-            {
-                <li class="nav-item">
-                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseLogin" aria-expanded="true" aria-controls="collapseLogin">
-                        <i class="fas fa-solid fa-user"></i>
-                        <span>Acceso</span>
-                    </a>
-                    <div id="collapseLogin" class="collapse" aria-labelledby="headingLogin" data-parent="#accordionSidebar">
-                        <div class="bg-white py-2 collapse-inner rounded">
-                            <a class="collapse-item" href="@Url.Action("Index", "Login")">Iniciar Sesión</a>
-                            <a class="collapse-item" href="@Url.Action("Register", "Login")">Registrase</a>
-                            <a class="collapse-item" href="@Url.Action("ForgotPassword", "Login")">Restablecer Contraseña</a>
-                        </div>
-                    </div>
-                </li>
-            }
-            else
+
+            @if (User.IsInRole("user"))
             {
                 <li class="nav-item">
                     <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseAgenda" aria-expanded="true" aria-controls="collapseAgenda">
@@ -85,10 +144,7 @@
                         </div>
                     </div>
                 </li>
-            }
 
-            @if (User.IsInRole("user"))
-            {
                 <li class="nav-item">
                     <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapsePerfil" aria-expanded="true" aria-controls="collapsePerfil">
                         <i class="fas fa-id-card"></i>
@@ -104,53 +160,9 @@
                 </li>
             }
 
-            @if (User.IsInRole("admin"))
-            {
-                <li class="nav-item">
-                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseDocumentos" aria-expanded="true" aria-controls="collapseDocumentos">
-                        <i class="fas fa-file-pdf"></i>
-                        <span>Documentos</span>
-                    </a>
-                    <div id="collapseDocumentos" class="collapse" aria-labelledby="headingDocumentos" data-parent="#accordionSidebar">
-                        <div class="bg-white py-2 collapse-inner rounded">
-                            <a class="collapse-item" href="@Url.Action("PendientesValidacion", "Documentos")">Pendientes Validación</a>
-                            <a class="collapse-item" href="@Url.Action("DocumentosPorVencer", "Documentos")">Por Vencer</a>
-                            <a class="collapse-item" href="@Url.Action("GenerarReporteDocumentos", "Documentos")">Generar Reporte</a>
-                        </div>
-                    </div>
-                </li>
 
-                <li class="nav-item">
-                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseChoferes" aria-expanded="true" aria-controls="collapseChoferes">
-                        <i class="fas fa-users"></i>
-                        <span>Choferes</span>
-                    </a>
-                    <div id="collapseChoferes" class="collapse" aria-labelledby="headingChoferes" data-parent="#accordionSidebar">
-                        <div class="bg-white py-2 collapse-inner rounded">
-                            <a class="collapse-item" href="@Url.Action("RegistrarChofer", "Admin")">Registrar Chofer</a>
-                            <a class="collapse-item" href="@Url.Action("MonitorearVencimientos", "Admin")">Monitorear Vencimientos</a>
-                            <a class="collapse-item" href="@Url.Action("ObtenerChoferesPaginados", "Admin")">Listar Choferes</a>
-                        </div>
-                    </div>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseCamiones" aria-expanded="true" aria-controls="collapseCamiones">
-                        <i class="fas fa-truck"></i>
-                        <span>Camiones</span>
-                    </a>
-                    <div id="collapseCamiones" class="collapse" aria-labelledby="headingCamiones" data-parent="#accordionSidebar">
-                        <div class="bg-white py-2 collapse-inner rounded">
-                            <a class="collapse-item" href="@Url.Action("RegistrarCamion", "Admin")">Registrar Camión</a>
-                            <a class="collapse-item" href="@Url.Action("HistorialMantenimiento", "Admin")">Historial Mantenimiento</a>
-                            <a class="collapse-item" href="@Url.Action("NotificacionesMantenimiento", "Admin")">Notificaciones</a>
-                            <a class="collapse-item" href="@Url.Action("AsignarChofer", "Admin")">Asignar Chofer</a>
-                        </div>
-                    </div>
-                </li>
-            }
         </ul>
-
+        <!-- Parte de arriba del navbar -->
         <div id="content-wrapper" class="d-flex flex-column">
             <div id="content">
                 <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
@@ -162,7 +174,7 @@
                     {
                         <form class="d-none d-sm-inline-block form-inline mr-auto ml-md-3 my-2 my-md-0 mw-100 navbar-search">
                             <div class="input-group">
-                                <input type="text" class="form-control bg-light border-0 small" placeholder="Buscar por..." aria-label="Search" aria-describedby="basic-addon2" />
+                                <input id="buscarContainerNotUsable" type="text" class="form-control bg-light border-0 small" placeholder="Buscar por..." aria-label="Search" aria-describedby="basic-addon2" />
                                 <div class="input-group-append">
                                     <button class="btn btn-primary" type="submit">
                                         <i class="fas fa-search fa-sm"></i>
@@ -173,20 +185,26 @@
                     }
 
                     <ul class="navbar-nav ml-auto">
+
                         @if (User.Identity.IsAuthenticated)
                         {
+                            <li class="nav-item">
+                                <a class="nav-link" href="@Url.Action("ConsejosAdvertencias", "Home")">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                </a>
+                            </li>
                             <li class="nav-item dropdown no-arrow d-sm-none">
                                 <a class="nav-link dropdown-toggle" href="#" id="searchDropdown" role="button"
-                                   data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                     <i class="fas fa-search fa-fw"></i>
                                 </a>
                                 <div class="dropdown-menu dropdown-menu-right p-3 shadow animated--grow-in"
-                                     aria-labelledby="searchDropdown">
+                                aria-labelledby="searchDropdown">
                                     <form class="form-inline mr-auto w-100 navbar-search">
                                         <div class="input-group">
-                                            <input type="text" class="form-control bg-light border-0 small"
-                                                   placeholder="Buscar por..." aria-label="Search"
-                                                   aria-describedby="basic-addon2">
+                                            <input id="buscarContainerIndex" type="text" class="form-control bg-light border-0 small"
+                                            placeholder="Buscar por..." aria-label="Search"
+                                            aria-describedby="basic-addon2">
                                             <div class="input-group-append">
                                                 <button class="btn btn-primary" type="button">
                                                     <i class="fas fa-search fa-sm"></i>
@@ -199,12 +217,12 @@
 
                             <li class="nav-item dropdown no-arrow mx-1">
                                 <a class="nav-link dropdown-toggle" href="#" id="alertsDropdown" role="button"
-                                   data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                     <i class="fas fa-bell fa-fw"></i>
                                     <span class="badge badge-danger badge-counter" id="notificationsCount">0</span>
                                 </a>
                                 <div class="dropdown-list dropdown-menu dropdown-menu-right shadow animated--grow-in"
-                                     aria-labelledby="alertsDropdown" id="notificationsDropdown">
+                                aria-labelledby="alertsDropdown" id="notificationsDropdown">
                                     <h6 class="dropdown-header">
                                         Centro de Alertas
                                     </h6>
@@ -234,13 +252,13 @@
 
                             <li class="nav-item dropdown no-arrow">
                                 <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
-                                   data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                     <span class="mr-2 d-none d-lg-inline text-gray-600 small">@User.Identity.Name</span>
                                     <img class="img-profile rounded-circle"
-                                         src="~/img/undraw_profile.svg">
+                                    src="~/img/undraw_profile.svg">
                                 </a>
                                 <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in"
-                                     aria-labelledby="userDropdown">
+                                aria-labelledby="userDropdown">
                                     <a class="dropdown-item" href="@Url.Action("Profile", "Login")">
                                         <i class="fas fa-user fa-sm fa-fw mr-2 text-gray-400"></i>
                                         Mi Perfil
@@ -260,16 +278,19 @@
                                     </a>
                                 </div>
                             </li>
+
                         }
                         else
+                        
                         {
-                            <li class="nav-item">
-                                <a class="nav-link" href="@Url.Action("Index", "Login")">
-                                    <i class="fas fa-sign-in-alt fa-sm fa-fw mr-2 text-gray-400"></i>
-                                    Iniciar Sesión
+                            <li class="nav-item" style="position: absolute; left: 50%; right: 50%; transform: translate(-50%, -50%);">
+                                <a class="nav-link" href="@Url.Action("Index", "Home")">
+                                    <i class="fas fa-house-user"></i>
                                 </a>
                             </li>
+                            
                         }
+
                     </ul>
                 </nav>
 
@@ -277,18 +298,70 @@
                     @RenderBody()
                 </div>
 
-                <footer class="sticky-footer bg-white">
-                    <div class="container my-auto">
-                        <div class="copyright text-center my-auto">
-                            <span>Copyright &copy; COMAVI S.A 2025</span>
+
+            </div>
+            @if (User.Identity.IsAuthenticated || !User.Identity.IsAuthenticated)
+            {
+                <footer class="sticky-footer py-4 mt-auto" style="
+                    background: floralwhite;">
+                <div class="container">
+                    <div class="row">
+                        <!-- Columna de información de la empresa -->
+                        <div class="col-lg-4 mb-3 mb-lg-0">
+                            <h5 class="text-uppercase font-weight-bold mb-3">COMAVI S.A.</h5>
+                            <p class="mb-2 text-muted">Soluciones integrales para el transporte y logística.</p>
+                        </div>
+
+                        <!-- Columna de enlaces rápidos -->
+                        <div class="col-lg-4 mb-3 mb-lg-0">
+                            <h5 class="text-uppercase font-weight-bold mb-3">Enlaces rápidos</h5>
+                            <ul class="list-unstyled">
+                                <li class="mb-2"><a href="@Url.Action("About", "Home")" class="text-decoration-none text-muted"><i class="fas fa-chevron-right fa-xs mr-1"></i> Nosotros</a></li>
+                                <li class="mb-2"><a href="@Url.Action("Privacy", "Home")" class="text-decoration-none text-muted"><i class="fas fa-chevron-right fa-xs mr-1"></i> Política de Privacidad</a></li>
+                                <li class="mb-2"><a href="@Url.Action("Terms", "Home")" class="text-decoration-none text-muted"><i class="fas fa-chevron-right fa-xs mr-1"></i> Términos y Condiciones</a></li>
+                                <li><a href="@Url.Action("FAQ", "Home")" class="text-decoration-none text-muted"><i class="fas fa-chevron-right fa-xs mr-1"></i> Preguntas Frecuentes</a></li>
+                            </ul>
+                        </div>
+
+                        <!-- Columna de contacto -->
+                        <div class="col-lg-4">
+                            <h5 class="text-uppercase font-weight-bold mb-3">Contáctenos</h5>
+
+                            <p class="mb-2 text-muted">
+                                <i class="fas fa-map-marker-alt mr-2"></i> 
+                                Trans. 11, Provincia de Cartago, Cartago
+                                Costa Rica
+                            </p>
+                            <p class="mb-2 text-muted">
+                                <i class="fas fa-envelope mr-2"></i>
+                                soporte@docktrack.lat |  info@comavicr.com
+                            </p>
+
+                            <p class="mb-2 text-muted">
+                                <i class="fas fa-phone mr-2"></i> +506 2551-1117 (Atención al cliente)
+                            </p>
+                            <p class="mb-2 text-muted">
+                                <i class="fas fa-clock mr-2"></i>
+                                Lunes a Viernes: 8:00 AM - 5:00 PM<br>
+                                Sábados: 8:30 AM - 12:00 PM<br>
+                                Domingos: Cerrado
+                            </p>
                         </div>
                     </div>
-                </footer>
-            </div>
-        </div>
+                    <div class="row mt-4">
+                        <div class="col-12 text-center">
+                            <p class="mb-0 small text-muted">&copy; COMAVI S.A 2025. Todos los derechos reservados.</p>
+                        </div>
+                    </div>
+
+                </div>
+            </footer>
+                
+            }
+        </div> 
     </div>
 
-
+    
     <a class="scroll-to-top rounded" href="#page-top">
         <i class="fas fa-angle-up"></i>
     </a>
@@ -298,7 +371,7 @@
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="exampleModalLabel">Ready to Leave?</h5>
+                    <h5 class="modal-title" id="exampleModalLabel">Listo para irte?</h5>
                     <button class="close" type="button" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">×</span>
                     </button>
@@ -318,16 +391,20 @@
         @Html.AntiForgeryToken()
     </form>
 
+    
     <script src="~/vendor/jquery/jquery.min.js"></script>
     <script src="~/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="~/vendor/jquery-easing/jquery.easing.min.js"></script>
     <script src="~/js/sb-admin-2.min.js"></script>
     <script src="~/vendor/datatables/jquery.dataTables.min.js"></script>
     <script src="~/vendor/datatables/dataTables.bootstrap4.min.js"></script>
-    <script src="~/js/demo/datatables-demo.js"></script>
     <script src="~/vendor/chart.js/Chart.min.js"></script>
-
-    <script src="~/js/notificaciones.js"></script>
+    <script src="~/vendor/dompurify/purify.min.js"></script>
+    @if (User.Identity.IsAuthenticated){
+        <script src="~/js/notificaciones.js"></script>
+        <script src="~/js/security-fixes.js"></script>
+        <script src="~/js/datatables-global.js"></script>
+    }
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

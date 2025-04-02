@@ -4,6 +4,9 @@ using System.Data.Common;
 
 namespace COMAVI_SA.Services
 {
+#nullable disable
+#pragma warning disable CS0168
+
     public interface IUserCleanupService
     {
         Task<int> CleanupNonVerifiedUsersAsync(int diasLimite = 3);
@@ -12,16 +15,15 @@ namespace COMAVI_SA.Services
     public class UserCleanupService : IUserCleanupService
     {
         private readonly IConfiguration _configuration;
-        private readonly ILogger<UserCleanupService> _logger;
         private readonly string _connectionString;
 
         public UserCleanupService(
-            IConfiguration configuration,
-            ILogger<UserCleanupService> logger)
+            IConfiguration configuration)
         {
             _configuration = configuration;
-            _logger = logger;
+#pragma warning disable CS8601 // Possible null reference assignment.
             _connectionString = _configuration.GetConnectionString("DefaultConnection");
+#pragma warning restore CS8601 // Possible null reference assignment.
         }
 
         private IDbConnection CreateConnection()
@@ -55,14 +57,12 @@ namespace COMAVI_SA.Services
                     await ((DbCommand)command).ExecuteNonQueryAsync();
 
                     var result = Convert.ToInt32(resultParameter.Value);
-                    _logger.LogInformation($"Se eliminaron {result} usuarios no verificados");
 
                     return result;
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al ejecutar limpieza de usuarios no verificados");
                 return -1;
             }
         }

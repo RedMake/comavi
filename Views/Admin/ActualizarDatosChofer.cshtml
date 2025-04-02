@@ -1,0 +1,201 @@
+﻿@model Choferes
+@{
+    ViewData["Title"] = "Actualizar Datos del Chofer";
+}
+
+<!-- Header -->
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Actualizar Datos del Chofer</h1>
+    <a href="@Url.Action("ListarChoferes", "Admin")" class="d-none d-sm-inline-block btn btn-sm btn-secondary shadow-sm">
+        <i class="fas fa-arrow-left fa-sm text-white-50"></i> Volver a la lista
+    </a>
+</div>
+
+<!-- Mensajes de alerta -->
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <strong>¡Éxito!</strong> @TempData["Success"]
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">×</span>
+        </button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>¡Error!</strong> @TempData["Error"]
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">×</span>
+        </button>
+    </div>
+}
+
+<!-- Formulario -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Datos del Chofer</h6>
+    </div>
+    <div class="card-body">
+        <form asp-controller="Admin" asp-action="ActualizarDatosChofer" method="post">
+            <input type="hidden" asp-for="id_chofer" />
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="nombreCompleto">Nombre Completo *</label>
+                        <input asp-for="nombreCompleto" class="form-control" required maxlength="100" />
+                        <span asp-validation-for="nombreCompleto" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="edad">Edad *</label>
+                        <input asp-for="edad" class="form-control" type="number" required min="18" max="70" />
+                        <span asp-validation-for="edad" class="text-danger"></span>
+                        <small class="form-text text-muted">La edad mínima para conducir camiones es 18 años.</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="numero_cedula">Número de Cédula *</label>
+                        <input asp-for="numero_cedula" class="form-control" required maxlength="20"
+                               pattern="[0-9]{9}" title="El número de cédula debe tener 9 dígitos" />
+                        <span asp-validation-for="numero_cedula" class="text-danger"></span>
+                        <small class="form-text text-muted">Formato: 9 dígitos sin guiones ni espacios.</small>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="genero">Género *</label>
+                        <select asp-for="genero" class="form-control" required>
+                            <option value="m">Masculino</option>
+                            <option value="f">Femenino</option>
+                        </select>
+                        <span asp-validation-for="genero" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="licencia">Tipo de Licencia *</label>
+                        <select asp-for="licencia" class="form-control" required>
+                            <option value="">-- Seleccione un tipo de licencia --</option>
+                            <option value="A-IIIa">A-IIIa (Vehículos hasta 4000kg)</option>
+                            <option value="A-IIIb">A-IIIb (Vehículos de transporte público)</option>
+                            <option value="A-IIIc">A-IIIc (Vehículos pesados de más de 4000kg)</option>
+                            <option value="B-3">B-3 (Camiones articulados)</option>
+                            <option value="B-4">B-4 (Equipo especial)</option>
+                            <option value="E-1">E-1 (Tractores y maquinaria especial)</option>
+                            <option value="E-2">E-2 (Vehículos pesados de más de 10 ton.)</option>
+                        </select>
+                        <span asp-validation-for="licencia" class="text-danger"></span>
+                        <small class="form-text text-muted">Debe corresponder con el tipo de vehículo que conducirá.</small>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label asp-for="fecha_venc_licencia">Fecha de Vencimiento de Licencia *</label>
+                        <input asp-for="fecha_venc_licencia" class="form-control" type="date" required min="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                        <span asp-validation-for="fecha_venc_licencia" class="text-danger"></span>
+                        <small class="form-text text-muted">La licencia debe estar vigente para poder operar vehículos.</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="id_usuario">Usuario Asociado</label>
+                <select asp-for="id_usuario" class="form-control">
+                    <option value="">-- Sin usuario asociado --</option>
+                    @foreach (var usuario in ViewBag.Usuarios)
+                    {
+                        <option value="@usuario.id_usuario">@usuario.nombre_usuario (@usuario.correo_electronico)</option>
+                    }
+                </select>
+                <small class="form-text text-muted">El usuario podrá acceder a funcionalidades específicas para choferes.</small>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="estado">Estado *</label>
+                <select asp-for="estado" class="form-control" required>
+                    <option value="activo">Activo</option>
+                    <option value="inactivo">Inactivo</option>
+                </select>
+                <span asp-validation-for="estado" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mt-4">
+                <label>Información sobre Trámites de Licencia</label>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <h5><i class="fas fa-info-circle"></i> Renovación de Licencia en Costa Rica</h5>
+                            <p>Para renovar la licencia del chofer, se requiere:</p>
+                            <ul>
+                                <li>Cédula vigente</li>
+                                <li>Licencia por renovar</li>
+                                <li>Dictamen médico vigente</li>
+                                <li>Comprobante de pago del derecho de licencia</li>
+                            </ul>
+                            <p>Acuda al COSEVI o a las sedes habilitadas del MOPT con todos los documentos.</p>
+                            <p>Como empresa, puede tramitar múltiples renovaciones mediante un representante autorizado con carta de autorización.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Guardar Cambios
+                </button>
+                <a href="@Url.Action("ListarChoferes", "Admin")" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Formatear fecha para el input date
+            const fechaVencimiento = document.querySelector('input[name="fecha_venc_licencia"]');
+            if (fechaVencimiento && fechaVencimiento.value) {
+                const fecha = new Date(fechaVencimiento.value);
+                if (!isNaN(fecha.getTime())) {
+                    fechaVencimiento.value = fecha.toISOString().split('T')[0];
+                }
+            }
+
+            // Validación adicional para cédula
+            const cedulaInput = document.querySelector('input[name="numero_cedula"]');
+            cedulaInput.addEventListener('blur', function() {
+                const cedula = this.value.trim();
+                if (cedula.length !== 9 || isNaN(Number(cedula))) {
+                    this.setCustomValidity('El número de cédula debe tener 9 dígitos numéricos');
+                } else {
+                    this.setCustomValidity('');
+                }
+            });
+
+            // Validar que la licencia esté vigente
+            const licenciaFecha = document.querySelector('input[name="fecha_venc_licencia"]');
+            licenciaFecha.addEventListener('change', function() {
+                const fechaActual = new Date();
+                const fechaVenc = new Date(this.value);
+
+                if (fechaVenc <= fechaActual) {
+                    this.setCustomValidity('La fecha de vencimiento debe ser posterior a la fecha actual');
+                } else {
+                    this.setCustomValidity('');
+                }
+            });
+        });
+    </script>
+}

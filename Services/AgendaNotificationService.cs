@@ -5,20 +5,20 @@ using Microsoft.EntityFrameworkCore;
 
 namespace COMAVI_SA.Services
 {
+#pragma warning disable CS0168
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
     public class AgendaNotificationService
     {
         private readonly ComaviDbContext _context;
         private readonly IEmailService _emailService;
-        private readonly ILogger<AgendaNotificationService> _logger;
 
         public AgendaNotificationService(
             ComaviDbContext context,
-            IEmailService emailService,
-            ILogger<AgendaNotificationService> logger)
+            IEmailService emailService)
         {
             _context = context;
             _emailService = emailService;
-            _logger = logger;
         }
 
         public async Task EnviarNotificacionesAgendaAsync()
@@ -63,7 +63,7 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al enviar notificaciones de agenda");
+                throw;
             }
         }
 
@@ -92,7 +92,7 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al enviar correo de notificación de agenda");
+                throw;
             }
         }
 
@@ -116,7 +116,7 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al crear notificación de sistema para agenda");
+                throw;
             }
         }
     }

@@ -2,6 +2,9 @@
 
 namespace COMAVI_SA.Utils
 {
+#nullable disable
+#pragma warning disable CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
+
     /// <summary>
     /// Clase utilitaria que garantiza que ningún valor sea nulo.
     /// </summary>

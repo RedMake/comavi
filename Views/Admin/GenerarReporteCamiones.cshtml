@@ -1,0 +1,193 @@
+﻿@model IEnumerable<dynamic>
+@{
+    ViewData["Title"] = "Reporte de Camiones";
+}
+
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Reporte de Camiones</h1>
+    <div>
+        <a href="@Url.Action("ExportarReporteCamionesPDF", "Admin", new { estado = ViewBag.Estado })" class="d-none d-sm-inline-block btn btn-sm btn-danger shadow-sm mr-2">
+            <i class="fas fa-file-pdf fa-sm text-white-50"></i> Exportar a PDF
+        </a>
+        <a href="@Url.Action("ReportesGenerales", "Admin")" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+            <i class="fas fa-arrow-left fa-sm text-white-50"></i> Volver a Reportes
+        </a>
+    </div>
+</div>
+
+<!-- Información del Reporte -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-success">Información del Reporte</h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>Fecha de Generación:</strong> @ViewBag.FechaGeneracion.ToString("dd/MM/yyyy HH:mm")</p>
+            </div>
+            <div class="col-md-6">
+                <p>
+                    <strong>Filtro por Estado:</strong>
+                    @if (string.IsNullOrEmpty(ViewBag.Estado))
+                    {
+                        <span>Todos los estados</span>
+                    }
+                    else
+                    {
+                        <span>@ViewBag.Estado.ToUpper()</span>
+                    }
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Resumen Estadístico -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Total Camiones</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.Count()</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-truck fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Activos</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.Count(c => c.estado == "activo")</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">En Mantenimiento</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.Count(c => c.estado == "mantenimiento")</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-tools fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-danger shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Inactivos</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.Count(c => c.estado == "inactivo")</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-times-circle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla de Camiones -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-success">Listado de Camiones</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Placa</th>
+                        <th>Marca</th>
+                        <th>Modelo</th>
+                        <th>Año</th>
+                        <th>Estado</th>
+                        <th>Estado Operativo</th>
+                        <th>Chofer Asignado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var camion in Model)
+                    {
+                        <tr>
+                            <td>@camion.id_camion</td>
+                            <td>@camion.numero_placa</td>
+                            <td>@camion.marca</td>
+                            <td>@camion.modelo</td>
+                            <td>@camion.anio</td>
+                            <td>
+                                @if (camion.estado == "activo")
+                                {
+                                    <span class="badge badge-success">Activo</span>
+                                }
+                                else if (camion.estado == "mantenimiento")
+                                {
+                                    <span class="badge badge-warning">En Mantenimiento</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-danger">Inactivo</span>
+                                }
+                            </td>
+                            <td>
+                                @if (camion.estado_operativo == "Operativo")
+                                {
+                                    <span class="badge badge-success">Operativo</span>
+                                }
+                                else if (camion.estado_operativo == "mantenimiento")
+                                {
+                                    <span class="badge badge-warning">En Mantenimiento</span>
+                                }
+                                else if (camion.estado_operativo == "inactivo")
+                                {
+                                    <span class="badge badge-danger">Inactivo</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-info">Fuera de Servicio</span>
+                                }
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(camion.NombreChofer))
+                                {
+                                    @camion.NombreChofer
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Sin asignar</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+   
+}

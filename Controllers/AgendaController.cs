@@ -8,18 +8,18 @@ using System.Security.Claims;
 
 namespace COMAVI_SA.Controllers
 {
+#nullable disable
+#pragma warning disable CS0168
+
     [Authorize(Roles = "admin,user")]
     public class AgendaController : Controller
     {
         private readonly ComaviDbContext _context;
-        private readonly ILogger<AgendaController> _logger;
 
         public AgendaController(
-            ComaviDbContext context,
-            ILogger<AgendaController> logger)
+            ComaviDbContext context)
         {
             _context = context;
-            _logger = logger;
         }
 
         // Reemplaza los métodos existentes con estas versiones actualizadas
@@ -31,7 +31,6 @@ namespace COMAVI_SA.Controllers
                 // Verificar si el usuario está autenticado
                 if (!User.Identity.IsAuthenticated)
                 {
-                    _logger.LogWarning("Acceso no autenticado a Agenda/Index");
                     return RedirectToAction("Index", "Login");
                 }
 
@@ -39,12 +38,10 @@ namespace COMAVI_SA.Controllers
                 var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 if (string.IsNullOrEmpty(userIdClaim))
                 {
-                    _logger.LogWarning("Claim NameIdentifier no encontrado");
                     return RedirectToAction("Index", "Login", new { returnUrl = "/Agenda/Index" });
                 }
 
                 int userId = int.Parse(userIdClaim);
-                _logger.LogInformation($"Cargando eventos para el usuario {userId}");
 
                 var eventos = await _context.EventosAgenda
                     .Include(e => e.Chofer)
@@ -56,7 +53,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al cargar los eventos de la agenda");
                 TempData["ErrorMessage"] = "Ocurrió un error al cargar los eventos. Por favor, inténtelo de nuevo.";
                 return RedirectToAction("Index", "Home");
             }
@@ -69,7 +65,6 @@ namespace COMAVI_SA.Controllers
                 // Verificar si el usuario está autenticado
                 if (!User.Identity.IsAuthenticated)
                 {
-                    _logger.LogWarning("Acceso no autenticado a Agenda/Calendar");
                     return RedirectToAction("Index", "Login");
                 }
 
@@ -77,13 +72,12 @@ namespace COMAVI_SA.Controllers
                 var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 if (string.IsNullOrEmpty(userIdClaim))
                 {
-                    _logger.LogWarning("Claim NameIdentifier no encontrado");
                     return RedirectToAction("Index", "Login", new { returnUrl = "/Agenda/Calendar" });
                 }
 
                 int userId = int.Parse(userIdClaim);
-                _logger.LogInformation($"Cargando calendario para el usuario {userId}");
 
+#pragma warning disable CS8601 // Possible null reference assignment.
                 var eventos = await _context.EventosAgenda
                     .Where(e => e.id_usuario == userId)
                     .Select(e => new CalendarEvent
@@ -96,13 +90,13 @@ namespace COMAVI_SA.Controllers
                         description = e.descripcion
                     })
                     .ToListAsync();
+#pragma warning restore CS8601 // Possible null reference assignment.
 
                 ViewBag.Events = System.Text.Json.JsonSerializer.Serialize(eventos);
                 return View();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al cargar el calendario");
                 TempData["ErrorMessage"] = "Ocurrió un error al cargar el calendario. Por favor, inténtelo de nuevo.";
                 return RedirectToAction("Index", "Home");
             }
@@ -116,7 +110,6 @@ namespace COMAVI_SA.Controllers
                 // Verificar si el usuario está autenticado
                 if (!User.Identity.IsAuthenticated)
                 {
-                    _logger.LogWarning("Acceso no autenticado a Agenda/Create");
                     return RedirectToAction("Index", "Login");
                 }
 
@@ -124,7 +117,6 @@ namespace COMAVI_SA.Controllers
                 var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 if (string.IsNullOrEmpty(userIdClaim))
                 {
-                    _logger.LogWarning("Claim NameIdentifier no encontrado");
                     return RedirectToAction("Index", "Login", new { returnUrl = "/Agenda/Create" });
                 }
 
@@ -157,7 +149,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al mostrar el formulario de creación de eventos");
                 TempData["ErrorMessage"] = "Ocurrió un error al cargar el formulario. Por favor, inténtelo de nuevo.";
                 return RedirectToAction("Index");
             }
@@ -177,7 +168,6 @@ namespace COMAVI_SA.Controllers
                 // Verificar si el usuario está autenticado
                 if (!User.Identity.IsAuthenticated)
                 {
-                    _logger.LogWarning("Intento de crear evento sin autenticación");
                     return RedirectToAction("Index", "Login");
                 }
 
@@ -185,7 +175,6 @@ namespace COMAVI_SA.Controllers
                 var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 if (string.IsNullOrEmpty(userIdClaim))
                 {
-                    _logger.LogWarning("Claim NameIdentifier no encontrado al crear evento");
                     ModelState.AddModelError(string.Empty, "Error de autenticación. Por favor, inicie sesión nuevamente.");
                     ViewBag.Choferes = new SelectList(_context.Choferes, "id_chofer", "nombreCompleto");
                     return View(eventoAgenda);
@@ -205,16 +194,6 @@ namespace COMAVI_SA.Controllers
                 // Verificar si el modelo es válido
                 if (!ModelState.IsValid)
                 {
-                    // Log de errores de validación para depuración
-                    _logger.LogWarning("Modelo inválido al crear evento - Errores:");
-                    foreach (var modelState in ModelState.Values)
-                    {
-                        foreach (var error in modelState.Errors)
-                        {
-                            _logger.LogWarning($"Error de validación: {error.ErrorMessage}");
-                        }
-                    }
-
                     // Volver a cargar las listas desplegables
                     ViewBag.Choferes = new SelectList(_context.Choferes, "id_chofer", "nombreCompleto", eventoAgenda.id_chofer);
                     return View(eventoAgenda);
@@ -236,8 +215,6 @@ namespace COMAVI_SA.Controllers
                     }
                 }
 
-                // Log para depuración
-                _logger.LogInformation($"Intentando crear evento: Título={eventoAgenda.titulo}, Tipo={eventoAgenda.tipo_evento}, Usuario={eventoAgenda.id_usuario}");
 
                 // Configurar valores predeterminados si es necesario
                 if (eventoAgenda.requiere_notificacion && !eventoAgenda.dias_anticipacion_notificacion.HasValue)
@@ -250,14 +227,11 @@ namespace COMAVI_SA.Controllers
 
                 // Guardar cambios y registrar resultado
                 int result = await _context.SaveChangesAsync();
-                _logger.LogInformation($"Evento creado con ID {eventoAgenda.id_evento}. Filas afectadas: {result}");
 
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
             {
-                // Log de excepciones
-                _logger.LogError(ex, "Error al crear evento");
 
                 // Añadir error al ModelState para mostrarlo al usuario
                 ModelState.AddModelError(string.Empty, "Ocurrió un error al guardar el evento. Por favor, inténtelo de nuevo.");
@@ -279,7 +253,6 @@ namespace COMAVI_SA.Controllers
             // Verificar si el usuario está autenticado
             if (!User.Identity.IsAuthenticated)
             {
-                _logger.LogWarning("Acceso no autenticado a Agenda/Edit");
                 return RedirectToAction("Index", "Login");
             }
 
@@ -287,7 +260,6 @@ namespace COMAVI_SA.Controllers
             var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userIdClaim))
             {
-                _logger.LogWarning("Claim NameIdentifier no encontrado");
                 return RedirectToAction("Index", "Login", new { returnUrl = $"/Agenda/Edit/{id}" });
             }
 
@@ -364,18 +336,15 @@ namespace COMAVI_SA.Controllers
                         if (eventoAgenda.estado == "Pendiente")
                         {
                             eventoAgenda.notificacion_enviada = false;
-                            _logger.LogInformation($"Reseteando estado de notificación para evento {id} debido a cambios en fecha o tipo");
                         }
                     }
 
                     _context.Update(eventoAgenda);
                     await _context.SaveChangesAsync();
-                    _logger.LogInformation($"Evento {id} actualizado por usuario {userId}");
                     return RedirectToAction(nameof(Index));
                 }
                 catch (DbUpdateConcurrencyException ex)
                 {
-                    _logger.LogError(ex, $"Error al actualizar evento {id}");
                     if (!EventoAgendaExists(eventoAgenda.id_evento))
                     {
                         return NotFound();
@@ -386,17 +355,7 @@ namespace COMAVI_SA.Controllers
                     }
                 }
             }
-            else
-            {
-                // Log de errores de validación para depuración
-                foreach (var modelState in ModelState.Values)
-                {
-                    foreach (var error in modelState.Errors)
-                    {
-                        _logger.LogWarning($"Error de validación: {error.ErrorMessage}");
-                    }
-                }
-            }
+
 
             ViewBag.Choferes = new SelectList(_context.Choferes, "id_chofer", "nombreCompleto", eventoAgenda.id_chofer);
             return View(eventoAgenda);
@@ -467,7 +426,6 @@ namespace COMAVI_SA.Controllers
 
             _context.EventosAgenda.Remove(eventoAgenda);
             await _context.SaveChangesAsync();
-            _logger.LogInformation($"Evento {id} eliminado por usuario {userId}");
             return RedirectToAction(nameof(Index));
         }
 

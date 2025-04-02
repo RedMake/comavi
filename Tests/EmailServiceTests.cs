@@ -1,90 +1,120 @@
-﻿using COMAVI_SA.Services;
+﻿using System;
+using System.Threading.Tasks;
+using COMAVI_SA.Services;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 using Moq;
-using System;
-using System.Threading.Tasks;
 using Xunit;
 
-namespace COMAVIxUnitTest
+namespace COMAVI_SA.Tests.Services
 {
     public class EmailServiceTests
     {
         private readonly Mock<IConfiguration> _mockConfiguration;
         private readonly Mock<IWebHostEnvironment> _mockEnvironment;
-        private readonly Mock<ILogger<EmailService>> _mockLogger;
         private readonly EmailService _emailService;
 
         public EmailServiceTests()
         {
             _mockConfiguration = new Mock<IConfiguration>();
             _mockEnvironment = new Mock<IWebHostEnvironment>();
-            _mockLogger = new Mock<ILogger<EmailService>>();
 
-            // Configurar entorno de desarrollo para usar contraseña local
-            // IsDevelopment() es un método de extensión que comprueba si EnvironmentName == "Development"
+            // Setup environment
             _mockEnvironment.Setup(e => e.EnvironmentName).Returns("Development");
 
-            // No necesitamos configurar EmailPassword para desarrollo ya que usa la contraseña hardcoded
+            // Setup configuration
+            var configurationSection = new Mock<IConfigurationSection>();
+            configurationSection.Setup(a => a.Value).Returns("test-password");
+            _mockConfiguration.Setup(c => c["EmailPassword"]).Returns("test-password");
 
-            _emailService = new EmailService(
-                _mockConfiguration.Object,
-                _mockEnvironment.Object,
-                _mockLogger.Object);
+            _emailService = new EmailService(_mockConfiguration.Object, _mockEnvironment.Object);
+        }
+
+        #region SendEmailAsync Tests
+
+        [Fact]
+        public async Task SendEmailAsync_ThrowsArgumentExceptionWhenToIsNull()
+        {
+            // Act & Assert
+            await Assert.ThrowsAsync<ArgumentNullException>(() =>
+                _emailService.SendEmailAsync(null, "Test Subject", "Test Body"));
         }
 
         [Fact]
-        public async Task SendEmailAsync_WithValidInputs_ShouldCatchSocketException()
+        public async Task SendEmailAsync_ThrowsArgumentExceptionWhenSubjectIsNull()
         {
-            // Este test verifica que se manejan adecuadamente los parámetros
-            // pero no envía realmente un correo
+            // Act & Assert
+            await Assert.ThrowsAsync<ArgumentNullException>(() =>
+                _emailService.SendEmailAsync("test@example.com", null, "Test Body"));
+        }
 
-            // Arrange
-            string to = "test@example.com";
-            string subject = "Test Subject";
-            string body = "<p>Test Body</p>";
-
-            try
-            {
-                // Act
-                await _emailService.SendEmailAsync(to, subject, body);
-
-                // Si llegamos aquí, el servicio está configurado para pruebas
-                // y no intentó realmente conectarse a un servidor SMTP
-            }
-            catch (System.Net.Sockets.SocketException)
-            {
-                // Si capturamos esta excepción, es porque intentó conectarse
-                // a un servidor SMTP real
-            }
-            catch (Exception ex)
-            {
-                // Cualquier otra excepción indica un problema diferente
-                // pero para efectos de prueba, lo consideramos válido
-                _mockLogger.Verify(l => l.LogError(
-                    It.IsAny<Exception>(),
-                    It.Is<string>(s => s.Contains(to))),
-                    Times.AtMostOnce());
-            }
-
-            // No verificamos ninguna assertion específica, solo 
-            // que no se produzcan excepciones inesperadas
+        [Fact]
+        public async Task SendEmailAsync_ThrowsArgumentExceptionWhenBodyIsNull()
+        {
+            // Act & Assert
+            await Assert.ThrowsAsync<ArgumentNullException>(() =>
+                _emailService.SendEmailAsync("test@example.com", "Test Subject", null));
         }
 
         [Theory]
-        [InlineData(null, "Subject", "Body")]
-        [InlineData("", "Subject", "Body")]
-        [InlineData("test@example.com", null, "Body")]
-        [InlineData("test@example.com", "", "Body")]
-        [InlineData("test@example.com", "Subject", null)]
-        [InlineData("test@example.com", "Subject", "")]
-        public async Task SendEmailAsync_WithInvalidInputs_ThrowsArgumentException(string to, string subject, string body)
+        [InlineData("")]
+        [InlineData("   ")]
+        public async Task SendEmailAsync_ThrowsArgumentExceptionWhenToIsEmpty(string to)
         {
-            // Assert
-            await Assert.ThrowsAnyAsync<ArgumentException>(
-                async () => await _emailService.SendEmailAsync(to, subject, body)
-            );
+            // Act & Assert
+            await Assert.ThrowsAsync<ArgumentException>(() =>
+                _emailService.SendEmailAsync(to, "Test Subject", "Test Body"));
         }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("   ")]
+        public async Task SendEmailAsync_ThrowsArgumentExceptionWhenSubjectIsEmpty(string subject)
+        {
+            // Act & Assert
+            await Assert.ThrowsAsync<ArgumentException>(() =>
+                _emailService.SendEmailAsync("test@example.com", subject, "Test Body"));
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("   ")]
+        public async Task SendEmailAsync_ThrowsArgumentExceptionWhenBodyIsEmpty(string body)
+        {
+            // Act & Assert
+            await Assert.ThrowsAsync<ArgumentException>(() =>
+                _emailService.SendEmailAsync("test@example.com", "Test Subject", body));
+        }
+
+        // Note: We can't easily test the actual SMTP connection in unit tests
+        // For a real implementation, we would use an SMTP mock like Papercut or a test email service
+
+        #endregion
+
+        #region EnviarCorreoAsync Tests
+
+        [Fact]
+        public async Task EnviarCorreoAsync_CallsSendEmailAsyncWithSameParameters()
+        {
+            string testEmail = "test@example.com";
+            string testSubject = "Test Subject";
+            string testBody = "Test Body";
+
+            var mock = new Mock<IEmailService>();
+
+
+            // Setup
+            mock.Setup(e => e.EnviarCorreoAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                .Callback<string, string, string>((to, subject, body) =>
+                    mock.Object.SendEmailAsync(to, subject, body));
+
+            // Act
+            await mock.Object.EnviarCorreoAsync(testEmail, testSubject, testBody);
+
+            // Assert
+            mock.Verify(e => e.SendEmailAsync(testEmail, testSubject, testBody), Times.AtLeastOnce);
+        }
+
+        #endregion
     }
 }

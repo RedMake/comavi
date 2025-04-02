@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>@ViewData["Title"] - COMAVI S.A</title>
-    <link href="~/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css" />
+    <link href="~/vendor/fontawesome-free/css/all.min.css">
     <link href="~/css/sb-admin-2.min.css" rel="stylesheet" />
 </head>
 
@@ -13,12 +13,22 @@
 
     @RenderBody()
 
+    <footer class="sticky-footer">
+        <div class="container my-auto">
+            <div class="copyright text-center my-auto text-white">
+                <span>Copyright &copy; COMAVI S.A 2025 - <a href=@Url.Action("Index", "Home") style="color: white;"> Volver al Inicio</a></span>
+            </div>
+        </div>
+    </footer>
     <script src="~/vendor/jquery/jquery.min.js"></script>
     <script src="~/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="~/vendor/jquery-easing/jquery.easing.min.js"></script>
     <script src="~/js/sb-admin-2.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/iconify-icon@1.0.8/dist/iconify-icon.min.js"></script>
-    @await RenderSectionAsync("Scripts", required: true)
+    <script src="~/vendor/dompurify/purify.min.js"></script>
+    <script src="~/js/security-fixes.js"></script>
+    <script src="~/js/datatables-global.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
 
 </body>
 

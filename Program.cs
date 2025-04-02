@@ -13,6 +13,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Text;
+using COMAVI_SA.Controllers;
+using COMAVI_SA.Repository;
+using Microsoft.AspNetCore.DataProtection;
+using System.Security.Cryptography;
+using COMAVI_SA.Filters;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,22 +27,42 @@ builder.Services.AddDistributedMemoryCache();
 
 if (!builder.Environment.IsDevelopment())
 {
-    var keyVaultEndpoint = new Uri(builder.Configuration["KeyVault:Endpoint"]);
-    builder.Configuration.AddAzureKeyVault(keyVaultEndpoint, new DefaultAzureCredential());
+#pragma warning disable CS8604 // Possible null reference argument.
+    var keyVaultUri = new Uri(builder.Configuration["KeyVault:Endpoint"]);
+#pragma warning restore CS8604 // Possible null reference argument.
+    var keyName = builder.Configuration["KeyVault:KeyName"];
+    var keyUri = new Uri($"{keyVaultUri}keys/{keyName}");
+    builder.Configuration.AddAzureKeyVault(keyVaultUri, new DefaultAzureCredential());
+
+    builder.Services.AddDataProtection()
+        .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "keys")))
+        .ProtectKeysWithAzureKeyVault(keyUri, new DefaultAzureCredential())
+        .SetApplicationName("COMAVI_SA"); 
+
+}
+else
+{
+    // Configuración para desarrollo - almacena localmente
+    builder.Services.AddDataProtection()
+        .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "keys")))
+        .SetApplicationName("COMAVI_SA");
 }
 
 // Obtener la cadena de conexión
 var connectionString = builder.Environment.IsDevelopment()
     ? builder.Configuration.GetConnectionString("DefaultConnection")
-    : builder.Configuration.GetConnectionString("AZURE_SQL_CONNECTIONSTRING")
+    : builder.Configuration["ConnectionStrings:AZURE_SQL_CONNECTIONSTRING"]
         ?? builder.Configuration.GetConnectionString("DefaultConnection");
 
 // Usar la misma variable al registrar el DbContext
 builder.Services.AddDbContext<ComaviDbContext>(options =>
-    options.UseSqlServer(
-        connectionString, 
-        sqlServerOptions => sqlServerOptions.CommandTimeout(60)
-    ));
+    options.UseSqlServer(connectionString, sqlServerOptions => {
+        sqlServerOptions.CommandTimeout(30);
+        sqlServerOptions.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(30),
+            errorNumbersToAdd: null);
+    }));
 
 
 if (builder.Environment.IsDevelopment())
@@ -72,7 +98,12 @@ else
 }
 
 
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options =>
+{
+    options.Filters.Add<VerificarAutenticacionAttribute>();
+});
+
+
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IPasswordService, PasswordService>();
 builder.Services.AddScoped<IOtpService, OtpService>();
@@ -83,9 +114,21 @@ builder.Services.AddScoped<IUserCleanupService, UserCleanupService>();
 builder.Services.AddScoped<ISessionCleanupService, SessionCleanupService>();
 builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<AgendaNotificationService>();
+builder.Services.AddScoped<IDatabaseRepository, DatabaseRepository>();
+builder.Services.AddScoped<IAdminService, AdminService>();
+builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IExcelService, ExcelService>();
+builder.Services.AddScoped<IMantenimientoService, MantenimientoService>();
 
 builder.Services.AddTransient<SessionValidationMiddleware>();
 builder.Services.AddSingleton<IJwtBlacklistService, JwtBlacklistService>();
+builder.Services.AddSingleton<IDistributedLockProvider, MemoryCacheDistributedLockProvider>();
+builder.Services.AddSingleton<ICacheKeyTracker, CacheKeyTracker>();
+
+builder.Services.AddHostedService<CacheCleanupService>();
+
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddAuthentication(options =>
 {
@@ -115,6 +158,8 @@ builder.Services.AddAuthentication(options =>
     options.Cookie.IsEssential = true;
 
     // Eventos avanzados para manejo de autenticación
+
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
     options.Events = new CookieAuthenticationEvents
     {
         // Al cerrar sesión, invalidar completamente la cookie
@@ -126,31 +171,41 @@ builder.Services.AddAuthentication(options =>
         // Validación de seguridad cada vez que se valida la cookie
         OnValidatePrincipal = async context =>
         {
-            // Aquí podrías añadir lógica adicional para verificar 
-            // continuamente la validez de la sesión
-
-            // Ejemplo: verificar si el usuario ha cambiado su contraseña recientemente
-            var userPrincipal = context.Principal;
-            var userId = userPrincipal.FindFirstValue(ClaimTypes.NameIdentifier);
-
-            if (!string.IsNullOrEmpty(userId))
+            try
             {
-                using var scope = context.HttpContext.RequestServices.CreateScope();
-                var dbContext = scope.ServiceProvider.GetRequiredService<ComaviDbContext>();
+                //verificar si el usuario ha cambiado su contraseña recientemente
+                var userPrincipal = context.Principal;
+#pragma warning disable CS8604 // Possible null reference argument.
+                var userId = userPrincipal.FindFirstValue(ClaimTypes.NameIdentifier);
+#pragma warning restore CS8604 // Possible null reference argument.
 
-                // Verificar si el usuario existe en la tabla de sesiones activas
-                var sesionActiva = await dbContext.SesionesActivas
-                    .AnyAsync(s => s.id_usuario == int.Parse(userId));
-
-                if (!sesionActiva)
+                if (!string.IsNullOrEmpty(userId))
                 {
-                    // Si no existe sesión activa, rechazar la autenticación
-                    context.RejectPrincipal();
-                    await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                    using var scope = context.HttpContext.RequestServices.CreateScope();
+                    var dbContext = scope.ServiceProvider.GetRequiredService<ComaviDbContext>();
+
+                    // Verificar si el usuario existe en la tabla de sesiones activas
+                    var sesionActiva = await dbContext.SesionesActivas
+                        .AnyAsync(s => s.id_usuario == int.Parse(userId));
+
+                    if (!sesionActiva)
+                    {
+                        // Si no existe sesión activa, rechazar la autenticación
+                        context.RejectPrincipal();
+                        await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                    }
                 }
             }
+            catch (CryptographicException ex) when (ex.Message.Contains("was not found in the key ring"))
+            {
+                // La clave no se encuentra, invalidamos la cookie
+                context.RejectPrincipal();
+                await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            }
+            
         }
     };
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
 })
 .AddJwtBearer(options =>
 {
@@ -192,7 +247,7 @@ builder.Services.AddAuthorization(options =>
 });
 
 
-builder.Services.AddSession(async options =>
+builder.Services.AddSession(options =>
 {
     // Tiempo de inactividad corto
     options.IdleTimeout = TimeSpan.FromMinutes(15); // Solo 15 minutos de inactividad
@@ -209,6 +264,11 @@ builder.Services.AddSession(async options =>
     options.Cookie.MaxAge = null;
 });
 
+builder.Services.AddMemoryCache(options =>
+{
+    options.SizeLimit = 1024; 
+    options.CompactionPercentage = 0.2; 
+});
 
 builder.Services.AddCors(options =>
 {
@@ -221,6 +281,16 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddHangfireServer();
 
+builder.Services.AddAntiforgery(options =>
+{
+    options.HeaderName = "X-CSRF-TOKEN";
+    options.Cookie.Name = "CSRF-TOKEN";
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.Cookie.SameSite = SameSiteMode.Strict;
+    options.Cookie.HttpOnly = true;
+    options.SuppressXFrameOptionsHeader = true;
+
+});
 var app = builder.Build();
 
 if (builder.Environment.IsProduction())
@@ -243,6 +313,9 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+app.UseMiddleware<SessionValidationMiddleware>();
+app.UseMiddleware<RateLimitingMiddleware>();
+app.UseDatabaseResilience();
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
@@ -275,12 +348,26 @@ app.Lifetime.ApplicationStarted.Register(() => {
         RecurringJob.AddOrUpdate<IUserCleanupService>(
             "cleanup-non-verified-users",
             service => service.CleanupNonVerifiedUsersAsync(3),
-            Cron.Daily(2, 0)); // Run daily at 2:00 AM
+            Cron.Daily(2, 0)); 
 
         RecurringJob.AddOrUpdate<ISessionCleanupService>(
             "cleanup-expired-sessions",
             service => service.CleanupExpiredSessionsAsync(),
-            "*/10 * * * *"); // Ejecutar cada 10 minutos
+            "*/10 * * * *");
+        RecurringJob.AddOrUpdate<AdminController>(
+            "dashboard-cache-refresh",
+            service => service.ActualizarCacheDashboard(),
+            "*/15 * * * *");
+
+        RecurringJob.AddOrUpdate<IMantenimientoService>(
+            "actualizarEstadoCamiones",
+            x => x.ActualizarEstadosCamionesAsync(),
+            Cron.Daily(6, 0));
+
+        RecurringJob.AddOrUpdate<IMantenimientoService>(
+            "notificarMantenimientosHoy",
+            x => x.NotificarMantenimientosAsync(),
+            Cron.Daily(8, 0));
 
         var logger = app.Services.GetRequiredService<ILogger<Program>>();
         logger.LogInformation("Successfully registered Hangfire recurring jobs");
@@ -297,6 +384,13 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .AllowAnonymous();
+
+app.MapControllerRoute(
+    name: "maintenance",
+    pattern: "Maintenance/{action=Index}/{id?}")
+    .AllowAnonymous();
+
+
 app.Run();
 
 public class HangfireAuthorizationFilter : IDashboardAuthorizationFilter
@@ -304,6 +398,8 @@ public class HangfireAuthorizationFilter : IDashboardAuthorizationFilter
     public bool Authorize(DashboardContext context)
     {
         var httpContext = context.GetHttpContext();
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
         return httpContext.User.Identity.IsAuthenticated && httpContext.User.IsInRole("admin");
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
     }
 }

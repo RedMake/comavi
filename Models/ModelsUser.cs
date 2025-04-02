@@ -1,8 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Newtonsoft.Json.Linq;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace COMAVI_SA.Models
 {
+#nullable disable
+#pragma warning disable CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
+
     public class Usuario
     {
         [Key]
@@ -48,7 +52,6 @@ namespace COMAVI_SA.Models
 
     }
 
-    
     public class IntentosLogin
     {
         [Key]
@@ -144,7 +147,6 @@ namespace COMAVI_SA.Models
         public DateTime fecha_expiracion { get; set; }
     }
 
-
     public class MFA
     {
         [Key]
@@ -232,6 +234,28 @@ namespace COMAVI_SA.Models
         public bool notificar_vencimiento_documentos { get; set; } = true;
     }
 
+    public class Solicitudes_Mantenimiento
+    {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int id_solicitud { get; set; }
+        public int id_camion { get; set; }
+        public int id_chofer { get; set; }
+        public DateTime fecha_solicitud { get; set; }
+        public string observaciones { get; set; }
+        public string estado { get; set; } // "pendiente", "aprobado", "rechazado", "completado"
+        public string comentario_admin { get; set; }
+        public DateTime? fecha_programada { get; set; }
+        public DateTime? fecha_completado { get; set; }
+        public DateTime? fecha_revision { get; set; }
+        public int? id_admin_revisor { get; set; }
+
+        // Propiedades de navegación
+        public virtual Camiones Camion { get; set; }
+        public virtual Choferes Chofer { get; set; }
+        public virtual Usuario AdminRevisor { get; set; }
+
+    }
     public class Choferes
     {
         [Key]
@@ -295,14 +319,15 @@ namespace COMAVI_SA.Models
         public string numero_placa { get; set; }
 
         [Required]
-        [StringLength(10)]
+        [StringLength(15)]
         public string estado { get; set; } // mantenimiento, activo, inactivo
 
         public int? chofer_asignado { get; set; }
 
         [ForeignKey("chofer_asignado")]
-        public Choferes Chofer { get; set; }
+        public Choferes? Chofer { get; set; }
     }
+
     public class Mantenimiento_Camiones
     {
         [Key]
@@ -322,8 +347,14 @@ namespace COMAVI_SA.Models
         public DateTime fecha_mantenimiento { get; set; }
 
         [Required]
+        [Column(TypeName = "decimal(18,2)")]
         public decimal costo { get; set; }
+
+        public string? moneda { get; set; }
+        public string? detalles_costo { get; set; }
+
     }
+
     public class Documentos
     {
         [Key]
@@ -408,7 +439,6 @@ namespace COMAVI_SA.Models
         public bool notificacion_enviada { get; set; } = false;
     }
 
-
     public class CalendarEvent
     {
         public string id { get; set; }
@@ -419,7 +449,86 @@ namespace COMAVI_SA.Models
         public string description { get; set; }
         public bool allDay { get; set; } = false;
     }
+    
+    public class DashboardStats
+    {
+        public int TotalCamiones { get; set; }
+        public int CamionesActivos { get; set; }
+        public int TotalChoferes { get; set; }
+        public int ChoferesActivos { get; set; }
+        public int TotalUsuarios { get; set; }
+        public int UsuariosActivos { get; set; }
+    }
 
+
+    //ViewModel
+
+    public class SolicitudMantenimientoViewModel
+    {
+        // Propiedades existentes
+        public int IdSolicitud { get; set; }
+        public int IdChofer { get; set; }
+        public string NombreChofer { get; set; }
+        public int IdCamion { get; set; }
+        public string InfoCamion { get; set; }
+        public DateTime FechaSolicitud { get; set; }
+        public string Observaciones { get; set; }
+        public string Estado { get; set; }
+        public string NombreAdmin { get; set; }
+        public DateTime? FechaRevision { get; set; }
+        public string DescripcionMantenimiento { get; set; }
+        public decimal? Costo { get; set; }
+        public string Moneda { get; set; }
+        public string DetallesCosto { get; set; }
+
+        // Métodos de ayuda para extraer datos JSON de forma segura
+        public decimal GetCostoBase()
+        {
+            if (string.IsNullOrEmpty(DetallesCosto)) return Costo ?? 0;
+
+            try
+            {
+                var json = Newtonsoft.Json.Linq.JObject.Parse(DetallesCosto);
+                return json["costo_base"]?.Value<decimal>() ?? Costo ?? 0;
+            }
+            catch
+            {
+                return Costo ?? 0;
+            }
+        }
+
+        public decimal GetImpuestoIva()
+        {
+            if (string.IsNullOrEmpty(DetallesCosto)) return 0;
+
+            try
+            {
+                var json = Newtonsoft.Json.Linq.JObject.Parse(DetallesCosto);
+                return json["impuesto_iva"]?.Value<decimal>() ?? 0;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+    }
+
+    public class DocumentoVencimientoIndexViewModel
+    {
+        public int id_documento { get; set; }
+        public int id_chofer { get; set; }
+        public string nombreCompleto { get; set; }
+        public string tipo_documento { get; set; }
+        public DateTime fecha_emision { get; set; }
+        public DateTime fecha_vencimiento { get; set; }
+        public int dias_para_vencimiento { get; set; }
+        public string estado_validacion { get; set; }
+
+        // Propiedades calculadas (puedes mantenerlas)
+        public string EstadoAlerta => dias_para_vencimiento <= 0 ? "Vencido" :
+                                     dias_para_vencimiento <= 7 ? "Crítico" :
+                                     dias_para_vencimiento <= 15 ? "Advertencia" : "Normal";
+    }
 
     public class AdminDashboardViewModel
     {
@@ -430,8 +539,9 @@ namespace COMAVI_SA.Models
         public int TotalUsuarios { get; set; }
         public int UsuariosActivos { get; set; }
         public int DocumentosProximosVencer { get; set; }
-        public List<Camiones> Camiones { get; set; }
-        public List<Choferes> Choferes { get; set; }
+        public List<Camiones> Camiones { get; set; } = new List<Camiones>();
+        public List<Choferes> Choferes { get; set; } = new List<Choferes>();
+        public List<DocumentoVencimientoViewModel> DocumentosProximosVencimiento { get; set; } = new List<DocumentoVencimientoViewModel>();
     }
 
     public class CamionViewModel
@@ -444,18 +554,25 @@ namespace COMAVI_SA.Models
         public string estado { get; set; }
         public int? chofer_asignado { get; set; }
         public string NombreChofer { get; set; }
+        public string estado_operativo { get; set; }
+        public string? ultima_fecha_mantenimiento { get; set; }
     }
 
     public class DocumentoVencimientoViewModel
     {
         public int id_documento { get; set; }
         public int id_chofer { get; set; }
-        public string nombreChofer { get; set; }
+        public string nombreCompleto { get; set; } // En el SP se llama "nombreChofer"
         public string tipo_documento { get; set; }
         public DateTime fecha_emision { get; set; }
         public DateTime fecha_vencimiento { get; set; }
-        public int diasParaVencimiento { get; set; }
-        public string estadoDocumento { get; set; } // Vencido, Por vencer, Vigente
+        public int dias_para_vencimiento { get; set; }
+        public string estado_validacion { get; set; }
+
+        // Propiedad calculada que no está en el SP
+        [NotMapped]
+        public string estadoDocumento => dias_para_vencimiento <= 0 ? "Vencido" :
+                                       dias_para_vencimiento <= 30 ? "Por vencer" : "Vigente";
     }
 
     public class UsuarioAdminViewModel
@@ -484,40 +601,57 @@ namespace COMAVI_SA.Models
         public int id_usuario { get; set; }
         public string nombre_usuario { get; set; }
         public string dispositivo { get; set; }
-        public string ubicacion { get; set; }
         public DateTime fecha_inicio { get; set; }
         public DateTime fecha_ultima_actividad { get; set; }
-        public string token_sesion { get; set; }
     }
 
     public class GraficoDataViewModel
     {
-        public string label { get; set; }
-        public int value { get; set; }
-        public string color { get; set; }
+        public string Label { get; set; }
+        public int Value { get; set; }
+        public string Color { get; set; }
+        public Dictionary<string, object> Extra { get; set; } = new Dictionary<string, object>();
+
+        public string Nombre
+        {
+            get => Label;
+            set => Label = value;
+        }
+
+        public int Valor
+        {
+            get => Value;
+            set => Value = value;
+        }
     }
 
     public class ActividadRecienteViewModel
     {
-        public int id_actividad { get; set; }
         public string tipo_actividad { get; set; }
         public string descripcion { get; set; }
-        public DateTime fecha_hora { get; set; }
-        public int? id_usuario { get; set; }
-        public string usuario { get; set; }
+        public DateTime fecha { get; set; }
+        public string detalles { get; set; }
+
     }
 
     public class DashboardViewModel
     {
+        // Propiedades que coinciden con el SP
         public int TotalCamiones { get; set; }
         public int CamionesActivos { get; set; }
+        public int CamionesEnMantenimiento { get; set; }
+        public int CamionesInactivos { get; set; } 
         public int TotalChoferes { get; set; }
         public int ChoferesActivos { get; set; }
-        public int TotalUsuarios { get; set; }
-        public int UsuariosActivos { get; set; }
+        public int ChoferesLicenciaPorVencer { get; set; } 
+        public int ChoferesLicenciaVencida { get; set; } 
+        public int TotalDocumentos { get; set; } 
+        public int DocumentosVerificados { get; set; } 
+        public int DocumentosPendientes { get; set; } 
+        public int DocumentosRechazados { get; set; } 
         public int DocumentosProximosVencer { get; set; }
-        public int MantenimientosDelMes { get; set; }
-        public decimal CostoMantenimientoMes { get; set; }
+        public int MantenimientosUltimoMes { get; set; } 
+        public decimal CostoMantenimientoUltimoMes { get; set; } 
     }
 
     public class MantenimientoReporteViewModel
@@ -529,18 +663,75 @@ namespace COMAVI_SA.Models
         public string numero_placa { get; set; }
         public string descripcion { get; set; }
         public DateTime fecha_mantenimiento { get; set; }
-        public decimal costo { get; set; }
-    }
-    
+        public decimal costo { get; set; } // Aseguramos que es decimal
+        public string moneda { get; set; } = "CRC";
+        public string detalles_costo { get; set; }
 
+        // Propiedades para mostrar detalles de costo - todas como decimal
+        public decimal costo_base { get; set; }
+        public decimal impuesto_iva { get; set; }
+        public decimal otros_costos { get; set; }
+        public decimal tipo_cambio { get; set; } = 625m; // Añadimos sufijo 'm' para decimal literal
+
+        // Métodos para obtener símbolos monetarios
+        public string SimboloMoneda => moneda == "USD" ? "$" : "₡";
+
+        // Valor total formateado con símbolo
+        public string CostoFormateado => $"{SimboloMoneda}{costo:N2}";
+
+        // Método para obtener detalles costo como diccionario
+        public Dictionary<string, decimal> ObtenerDetallesCosto()
+        {
+            if (string.IsNullOrEmpty(detalles_costo))
+            {
+                return new Dictionary<string, decimal>
+            {
+                { "costo_base", costo },
+                { "impuesto_iva", 0m },
+                { "otros_costos", 0m },
+                { "tipo_cambio", 625m }
+            };
+            }
+
+            try
+            {
+                return Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, decimal>>(detalles_costo);
+            }
+            catch
+            {
+                return new Dictionary<string, decimal>
+            {
+                { "costo_base", costo },
+                { "impuesto_iva", 0m },
+                { "otros_costos", 0m },
+                { "tipo_cambio", 625m }
+            };
+            }
+        }
+
+        // Método auxiliar para convertir cualquier valor a decimal de manera segura
+        public static decimal ToDecimal(object value)
+        {
+            try
+            {
+                if (value == null) return 0m;
+                return Convert.ToDecimal(value);
+            }
+            catch
+            {
+                return 0m;
+            }
+        }
+    }
 
     public class NotificacionesViewModel
     {
         public List<Notificaciones_Usuario> Notificaciones { get; set; }
         public PreferenciasNotificacion Preferencias { get; set; }
+        public int PaginaActual { get; set; } = 1;
+        public int TotalPaginas { get; set; } = 1;
+
     }
-
-
 
     public class ResetPasswordViewModel
     {
@@ -561,6 +752,7 @@ namespace COMAVI_SA.Models
         [EmailAddress]
         public string Email { get; set; }
     }
+
     public class CambiarContrasenaViewModel
     {
         [Required(ErrorMessage = "El correo electrónico es requerido")]
@@ -584,25 +776,11 @@ namespace COMAVI_SA.Models
         public string ConfirmarPassword { get; set; }
     }
 
-    public class PreferenciasAutenticacionViewModel
-    {
-        public bool HabilitarMFA { get; set; }
-
-        [Display(Name = "Método de autenticación preferido")]
-        public string MetodoAutenticacionPreferido { get; set; }
-
-        public List<string> CodigosRespaldo { get; set; }
-
-        public string MFASecret { get; set; }
-
-        [Required(ErrorMessage = "El código OTP es requerido para verificar la configuración")]
-        [StringLength(6, MinimumLength = 6, ErrorMessage = "El código OTP debe tener 6 dígitos")]
-        public string OtpCode { get; set; }
-    }
     public class CodigosRespaldoViewModel
     {
         public List<string> Codigos { get; set; }
     }
+
     public class ConfigurarMFAViewModel
     {
         public string Secret { get; set; }
@@ -612,7 +790,6 @@ namespace COMAVI_SA.Models
         [StringLength(6, MinimumLength = 6, ErrorMessage = "El código OTP debe tener 6 dígitos")]
         public string OtpCode { get; set; }
     }
-
 
     public class LoginViewModel
     {
@@ -719,21 +896,14 @@ namespace COMAVI_SA.Models
         public DateTime fecha_venc_licencia { get; set; }
         public string estado { get; set; }
         public string genero { get; set; }
+        public int dias_para_vencimiento { get; set; }
         public string estado_licencia { get; set; }
         public int? id_camion { get; set; }
         public string camion_asignado { get; set; }
         public int total_documentos { get; set; }
-        public int numero_registro { get; set; }
+        public int? numero_registro { get; set; } // Puede ser nulo en algunos casos
     }
 
-    public class PaginacionViewModel
-    {
-        public int total_registros { get; set; }
-        public int registro_inicio { get; set; }
-        public int registro_fin { get; set; }
-        public int total_paginas { get; set; }
-        public int pagina_actual { get; set; }
-    }
     public class VerificacionViewModel
     {
         [Required(ErrorMessage = "El token es requerido")]
@@ -776,5 +946,41 @@ namespace COMAVI_SA.Models
         public string PasosVerificacion { get; set; }
         public string TokenVerificacion { get; set; }
         public DateTime FechaExpiracion { get; set; }
+    }
+
+    public class MantenimientoNotificacionViewModel
+    {
+        // ID del mantenimiento
+        public int id_mantenimiento { get; set; }
+
+        // ID del camión
+        public int id_camion { get; set; }
+
+        // Datos del camión
+        public string numero_placa { get; set; }
+        public string marca { get; set; }
+        public string modelo { get; set; }
+
+        // Datos del mantenimiento
+        public string descripcion { get; set; }
+        public string? fecha_mantenimiento { get; set; }
+
+        // Campos calculados desde la BD
+        public int dias_restantes { get; set; }
+        public string estado_camion { get; set; }
+        public bool es_hoy { get; set; }
+
+        // Propiedades calculadas adicionales para la UI
+        [NotMapped]
+        public string EstadoAlerta =>
+            es_hoy ? "danger" :
+            dias_restantes <= 7 ? "danger" :
+            dias_restantes <= 15 ? "warning" : "info";
+
+
+        [NotMapped]
+        public string EstadoTexto =>
+            es_hoy ? "HOY" :
+            $"{dias_restantes} días";
     }
 }

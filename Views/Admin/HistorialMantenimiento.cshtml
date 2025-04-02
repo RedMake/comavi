@@ -1,0 +1,412 @@
+﻿@model List<Mantenimiento_Camiones>
+@{
+#nullable enable
+#pragma warning disable CS8602, CS8600 // Suprimir varios warnings de null reference
+    ViewData["Title"] = "Gestion de Mantenimiento";
+    var camion = ViewBag.Camion;
+}
+
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Gestion y Historial de Mantenimiento</h1>
+    <div>
+        <button class="btn btn-success btn-sm" data-toggle="modal" data-target="#registrarMantenimientoModal">
+            <i class="fas fa-plus fa-sm"></i> Nuevo Mantenimiento
+        </button>
+        <a href="@Url.Action("ListarCamiones", "Admin")" class="btn btn-primary btn-sm ml-2">
+            <i class="fas fa-arrow-left fa-sm"></i> Volver a Camiones
+        </a>
+    </div>
+</div>
+
+<!-- Alertas -->
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <strong>¡Éxito!</strong> @TempData["Success"]
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">×</span>
+        </button>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>¡Error!</strong> @TempData["Error"]
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">×</span>
+        </button>
+    </div>
+}
+
+<!-- Información del Camión -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Información del Camión</h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <p><strong>Marca:</strong> @camion.marca</p>
+            </div>
+            <div class="col-md-3">
+                <p><strong>Modelo:</strong> @camion.modelo</p>
+            </div>
+            <div class="col-md-3">
+                <p><strong>Año:</strong> @camion.anio</p>
+            </div>
+            <div class="col-md-3">
+                <p><strong>Placa:</strong> @camion.numero_placa</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-3">
+                <p>
+                    <strong>Estado:</strong>
+                    <span class="badge badge-@(camion.estado == "activo" ? "success" : camion.estado == "mantenimiento" ? "warning" : "danger")">
+                        @(camion.estado.Substring(0, 1).ToUpper() + camion.estado.Substring(1, camion.estado.Length - 1))
+                    </span>
+                </p>
+            </div>
+            <div class="col-md-9">
+                <p>
+                    <strong>Chofer asignado:</strong>
+                    @if (camion.Chofer != null)
+                    {
+                        @camion.Chofer.nombreCompleto
+                    }
+                    else
+                    {
+                        <span class="text-muted">Sin asignar</span>
+                    }
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Historial de Mantenimientos -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+        <h6 class="m-0 font-weight-bold text-primary">Historial de Mantenimientos</h6>
+    </div>
+    <div class="card-body">
+        @if (Model.Count > 0)
+        {
+            <div class="table-responsive">
+                <table class="table table-bordered" id="mantenimientosTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Fecha</th>
+                            <th>Descripción</th>
+                            <th>Costo Base</th>
+                            <th>Impuestos</th>
+                            <th>Otros Costos</th>
+                            <th>Total</th>
+                            <th>Moneda</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var mantenimiento in Model.OrderByDescending(m => m.fecha_mantenimiento))
+                        {
+                            dynamic detallesCosto = null;
+                            try
+                            {
+                                if (!string.IsNullOrEmpty(mantenimiento.detalles_costo))
+                                {
+                                    detallesCosto = Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(mantenimiento.detalles_costo);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                // Si hay error al deserializar, dejamos detallesCosto como null
+                                Console.WriteLine($"Error al deserializar detalles_costo: {ex.Message}");
+                            }
+
+                            var simbolo = mantenimiento.moneda == "USD" ? "$" : "₡";
+
+                            <tr>
+                                <td>@mantenimiento.id_mantenimiento</td>
+                                <td>@mantenimiento.fecha_mantenimiento.ToString("yyyy-MM-dd HH:mm")</td>
+                                <td>
+                                    @{
+                                        int maxWords = 1; // Número máximo de palabras antes de truncar
+                                        var words = mantenimiento.descripcion.Split(' ');
+                                        var truncatedDescription = words.Length > maxWords ?
+                                        string.Join(" ", words.Take(maxWords)) + "..." :
+                                        mantenimiento.descripcion;
+                                    }
+                                    @truncatedDescription
+                                    @if (words.Length > maxWords)
+                                    {
+                                        <span class="text-primary" data-toggle="modal" data-target="#detalleMantenimientoModal"
+                                              data-id="@mantenimiento.id_mantenimiento"
+                                              data-descripcion="@mantenimiento.descripcion"
+                                              data-fecha="@mantenimiento.fecha_mantenimiento.ToString("yyyy-MM-dd HH:mm")"
+                                              data-costo="@mantenimiento.costo"
+                                              data-moneda="@(mantenimiento.moneda ?? "CRC")"
+                                              data-detalles='@Html.Raw(mantenimiento.detalles_costo)'>
+                                            (Ver más)
+                                        </span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (detallesCosto != null && detallesCosto.costo_base != null)
+                                    {
+                                        @($"{simbolo}{detallesCosto.costo_base:0.00}")
+                                    }
+                                    else
+                                    {
+                                        @($"{simbolo}{mantenimiento.costo:0.00}")
+                                    }
+                                </td>
+                                <td>
+                                    @if (detallesCosto != null && detallesCosto.impuesto_iva != null)
+                                    {
+                                        @($"{simbolo}{detallesCosto.impuesto_iva:0.00}")
+                                    }
+                                    else
+                                    {
+                                        <span>N/A</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (detallesCosto != null && detallesCosto.otros_costos != null)
+                                    {
+                                        @($"{simbolo}{detallesCosto.otros_costos:0.00}")
+                                    }
+                                    else
+                                    {
+                                        <span>N/A</span>
+                                    }
+                                </td>
+                                <td>@($"{simbolo}{mantenimiento.costo:0.00}")</td>
+                                <td>@(mantenimiento.moneda ?? "CRC")</td>
+                                <td>
+                                    <button class="btn btn-sm btn-info" data-toggle="modal" data-target="#detalleMantenimientoModal"
+                                            data-id="@mantenimiento.id_mantenimiento"
+                                            data-descripcion="@mantenimiento.descripcion"
+                                            data-fecha="@mantenimiento.fecha_mantenimiento.ToString("yyyy-MM-dd HH:mm")"
+                                            data-costo="@mantenimiento.costo"
+                                            data-moneda="@(mantenimiento.moneda ?? "CRC")"
+                                            data-detalles='@Html.Raw(mantenimiento.detalles_costo)'>
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th colspan="6" class="text-right">Total:</th>
+                            <th id="totalCRC">₡@Model.Where(m => m.moneda == "CRC" || m.moneda == null).Sum(m => m.costo).ToString("0.00")</th>
+                            <th id="totalUSD">$@Model.Where(m => m.moneda == "USD").Sum(m => m.costo).ToString("0.00")</th>
+                            <th></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> No hay registros de mantenimiento para este camión.
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Modal Registrar Mantenimiento -->
+<div class="modal fade" id="registrarMantenimientoModal" tabindex="-1" role="dialog" aria-labelledby="registrarMantenimientoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="registrarMantenimientoModalLabel">Registrar Nuevo Mantenimiento</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form asp-controller="Admin" asp-action="RegistrarMantenimiento" method="post" id="formRegistrarMantenimiento">
+                @Html.AntiForgeryToken()
+                <div class="modal-body">
+                    <input type="hidden" name="id_camion" value="@ViewBag.Camion.id_camion" />
+
+                    <!-- Fila para fecha y moneda -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="fecha_mantenimiento">Fecha de Mantenimiento *</label>
+                                <input type="datetime-local" class="form-control" id="fecha_mantenimiento" name="fecha_mantenimiento" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="moneda">Moneda *</label>
+                                <select class="form-control" id="moneda" name="moneda">
+                                    <option value="CRC" selected>Colones (₡)</option>
+                                    <option value="USD">Dólares ($)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="descripcion">Descripción *</label>
+                        <textarea class="form-control" id="descripcion" name="descripcion" rows="3" required maxlength="500"></textarea>
+                    </div>
+
+                    <!-- Costos -->
+                    <div class="card mb-3">
+                        <div class="card-header py-2">
+                            <div class="custom-control custom-switch">
+                                <input type="checkbox" class="custom-control-input" id="calcularDesglose" checked>
+                                <label class="custom-control-label" for="calcularDesglose">Calcular desglose de costos</label>
+                            </div>
+                        </div>
+                        <div class="card-body py-2" id="desgloseContainer">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="costo_base">Costo Base *</label>
+                                        <div class="input-group">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text moneda-simbolo">₡</span>
+                                            </div>
+                                            <input type="number" class="form-control" id="costo_base" name="costo_base" required min="0" step="0.01" value="0.00">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="impuesto_iva">Impuesto IVA (13%)</label>
+                                        <div class="input-group">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text moneda-simbolo">₡</span>
+                                            </div>
+                                            <input type="number" class="form-control" id="impuesto_iva" name="impuesto_iva" readonly value="0.00">
+                                            <div class="input-group-append">
+                                                <button class="btn btn-outline-secondary" type="button" id="btnEditarImpuesto" title="Editar impuesto">
+                                                    <i class="fas fa-pencil-alt"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="tipo_cambio">Tipo de Cambio (₡/$ actual: <span id="tipoCambioActual">625.00</span>)</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="tipo_cambio" name="tipo_cambio" value="625.00" readonly>
+                                            <div class="input-group-append">
+                                                <button class="btn btn-outline-secondary" type="button" id="btnActualizarTC" title="Actualizar tipo de cambio">
+                                                    <i class="fas fa-sync-alt"></i>
+                                                </button>
+                                                <button class="btn btn-outline-secondary" type="button" id="btnEditarTC" title="Editar tipo de cambio">
+                                                    <i class="fas fa-pencil-alt"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="otros_costos">Otros Costos</label>
+                                        <div class="input-group">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text moneda-simbolo">₡</span>
+                                            </div>
+                                            <input type="number" class="form-control" id="otros_costos" name="otros_costos" value="0.00" min="0" step="0.01">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer py-2 bg-light">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p class="mb-0"><strong>Total en CRC: </strong><span id="formularioTotalCRC">₡0.00</span></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-0"><strong>Total en USD: </strong><span id="formularioTotalUSD">$0.00</span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Campo costo total (oculto pero usado para el submit) -->
+                    <input type="hidden" id="costo" name="costo" value="0">
+                    <input type="hidden" id="moneda_final" name="moneda_final" value="CRC">
+                    <input type="hidden" id="detalles_costo" name="detalles_costo" value="">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Detalle Mantenimiento -->
+<div class="modal fade" id="detalleMantenimientoModal" tabindex="-1" role="dialog" aria-labelledby="detalleMantenimientoModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="detalleMantenimientoModalLabel">Detalle de Mantenimiento</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>ID:</label>
+                    <p id="detalle-id" class="font-weight-bold"></p>
+                </div>
+                <div class="form-group">
+                    <label>Fecha:</label>
+                    <p id="detalle-fecha" class="font-weight-bold"></p>
+                </div>
+                <div class="form-group">
+                    <label>Descripción:</label>
+                    <p id="detalle-descripcion"></p>
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-header py-2">
+                        <h6 class="mb-0">Desglose de Costos</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row" id="detalleDesgloseContainer">
+                            <div class="col-md-6">
+                                <p><strong>Costo Base:</strong> <span id="detalle-costo-base"></span></p>
+                                <p><strong>Impuesto IVA:</strong> <span id="detalle-impuesto"></span></p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Otros Costos:</strong> <span id="detalle-otros-costos"></span></p>
+                                <p><strong>Tipo de Cambio:</strong> <span id="detalle-tipo-cambio"></span></p>
+                            </div>
+                        </div>
+                        <div id="detalleNoDesgloseContainer" style="display:none;">
+                            <div class="alert alert-info mb-0">
+                                No se registró desglose detallado para este mantenimiento.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <p class="mb-0 font-weight-bold">Total: <span id="detalle-costo" class="text-primary"></span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/historial-mantenimiento.js"></script>
+}

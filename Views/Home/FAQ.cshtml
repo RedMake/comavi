@@ -1,0 +1,391 @@
+﻿@{
+    ViewData["Title"] = "Preguntas Frecuentes";
+}
+@section Styles {
+    <link href="~/css/custom-home-stylesheet.css" rel="stylesheet" />
+}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Preguntas Frecuentes</h1>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Preguntas sobre el Sistema</h6>
+        </div>
+        <div class="card-body">
+            <div class="accordion" id="accordionFaq">
+                <!-- Pregunta 1 -->
+                <div class="card">
+                    <div class="card-header" id="headingOne">
+                        <h2 class="mb-0">
+                            <button class="btn btn-link btn-block text-left" type="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                                ¿Cómo puedo registrarme en el sistema?
+                            </button>
+                        </h2>
+                    </div>
+
+                    <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#accordionFaq">
+                        <div class="card-body">
+                            <p>Para registrarse en el sistema, siga estos pasos:</p>
+                            <ol>
+                                <li>Haga clic en el botón "Registrarme" en la página de inicio de sesión.</li>
+                                <li>Complete el formulario con su nombre de usuario, correo electrónico (corporativo) y contraseña.</li>
+                                <li>Revise su correo electrónico y siga el enlace de verificación recibido.</li>
+                                <li>Inicie sesión con sus credenciales.</li>
+                                <li>Complete su perfil con información adicional como número de cédula, licencia y datos personales.</li>
+                                <li>Suba los documentos requeridos para la verificación.</li>
+                            </ol>
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle mr-2"></i> El proceso de verificación puede tomar hasta 24 horas hábiles. Un administrador revisará su información antes de activar completamente su cuenta.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pregunta 2 -->
+                <div class="card">
+                    <div class="card-header" id="headingTwo">
+                        <h2 class="mb-0">
+                            <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                ¿Qué documentos debo subir y qué requisitos deben cumplir?
+                            </button>
+                        </h2>
+                    </div>
+                    <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionFaq">
+                        <div class="card-body">
+                            <p>Los documentos requeridos son:</p>
+                            <table class="table table-bordered">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th>Documento</th>
+                                        <th>Requisitos</th>
+                                        <th>Formato</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Licencia de conducir</strong></td>
+                                        <td>
+                                            <ul>
+                                                <li>Vigente (mínimo 30 días)</li>
+                                                <li>Legible por ambos lados</li>
+                                                <li>Categoría adecuada para camiones</li>
+                                            </ul>
+                                        </td>
+                                        <td>PDF (máx. 10MB)</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Cédula de identidad</strong></td>
+                                        <td>
+                                            <ul>
+                                                <li>Vigente</li>
+                                                <li>Legible por ambos lados</li>
+                                                <li>Sin alteraciones</li>
+                                            </ul>
+                                        </td>
+                                        <td>PDF (máx. 10MB)</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Inscripción de vehículo</strong></td>
+                                        <td>
+                                            <ul>
+                                                <li>Documentación al día</li>
+                                                <li>Debe incluir número de placa y características del vehículo</li>
+                                                <li>Sellos y firmas visibles</li>
+                                            </ul>
+                                        </td>
+                                        <td>PDF (máx. 10MB)</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle mr-2"></i> Los documentos que no cumplan con estos requisitos serán rechazados y deberá volver a subirlos.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pregunta 3 -->
+                <div class="card">
+                    <div class="card-header" id="headingThree">
+                        <h2 class="mb-0">
+                            <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                                ¿Cómo funciona la autenticación de dos factores (2FA) y por qué debo activarla?
+                            </button>
+                        </h2>
+                    </div>
+                    <div id="collapseThree" class="collapse" aria-labelledby="headingThree" data-parent="#accordionFaq">
+                        <div class="card-body">
+                            <p>La autenticación de dos factores (2FA) añade una capa adicional de seguridad a su cuenta. Funciona de la siguiente manera:</p>
+                            <ol>
+                                <li>Al iniciar sesión con su contraseña, el sistema le pedirá un código adicional.</li>
+                                <li>Este código se genera en una aplicación de autenticación instalada en su teléfono móvil.</li>
+                                <li>El código cambia cada 30 segundos, lo que hace prácticamente imposible que alguien pueda acceder a su cuenta sin tener acceso físico a su dispositivo.</li>
+                            </ol>
+
+                            <p><strong>Beneficios de activar 2FA:</strong></p>
+                            <ul>
+                                <li>Protege su cuenta contra accesos no autorizados, incluso si su contraseña es comprometida.</li>
+                                <li>Cumple con las políticas de seguridad de la empresa.</li>
+                                <li>Previene el robo de identidad y el acceso a información sensible.</li>
+                            </ul>
+
+                            <p><strong>Configuración:</strong></p>
+                            <ol>
+                                <li>Vaya a su perfil y seleccione "Configurar autenticación de dos factores".</li>
+                                <li>Escanee el código QR con una aplicación como Google Authenticator, Microsoft Authenticator o Authy.</li>
+                                <li>Ingrese el código de verificación generado por la aplicación.</li>
+                                <li>Guarde los códigos de respaldo en un lugar seguro para casos de emergencia.</li>
+                            </ol>
+
+                            <div class="alert alert-success">
+                                <i class="fas fa-shield-alt mr-2"></i> A partir del 1 de mayo de 2025, la autenticación de dos factores será obligatoria para todos los usuarios del sistema, según las nuevas políticas de seguridad de COMAVI S.A.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pregunta 4 -->
+                <div class="card">
+                    <div class="card-header" id="headingFour">
+                        <h2 class="mb-0">
+                            <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+                                ¿Qué debo hacer si mi licencia o documentos están por vencer?
+                            </button>
+                        </h2>
+                    </div>
+                    <div id="collapseFour" class="collapse" aria-labelledby="headingFour" data-parent="#accordionFaq">
+                        <div class="card-body">
+                            <p><strong>Para renovación de licencia de conducir:</strong></p>
+                            <ol>
+                                <li>El sistema le notificará automáticamente 30 días antes del vencimiento.</li>
+                                <li>
+                                    Acuda al COSEVI o a las sedes habilitadas del MOPT con los siguientes requisitos:
+                                    <ul>
+                                        <li>Cédula de identidad vigente</li>
+                                        <li>Licencia por renovar</li>
+                                        <li>Dictamen médico vigente (no mayor a 90 días)</li>
+                                        <li>Comprobante de pago del derecho de licencia (₡5,000 aproximadamente)</li>
+                                    </ul>
+                                </li>
+                                <li>Una vez renovada la licencia, suba el nuevo documento a través de la sección "Subir Documentos" en su perfil.</li>
+                                <li>Un administrador verificará la nueva licencia, generalmente en un plazo de 24 horas hábiles.</li>
+                            </ol>
+
+                            <div class="alert alert-info mb-4">
+                                <i class="fas fa-info-circle mr-2"></i> <strong>Ubicaciones recomendadas para renovación:</strong><br>
+                                Sede central COSEVI en La Uruca, Oficinas del BCR con convenio COSEVI, Sedes regionales del MOPT.
+                            </div>
+
+                            <p><strong>Para otros documentos:</strong></p>
+                            <ul>
+                                <li>Revise los requisitos específicos para cada tipo de documento en la sección "Documentos" de su perfil.</li>
+                                <li>Realice los trámites con suficiente anticipación (al menos 15 días antes del vencimiento).</li>
+                                <li>Suba los nuevos documentos inmediatamente después de obtenerlos.</li>
+                            </ul>
+
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle mr-2"></i> <strong>Importante:</strong> Conducir con licencia vencida puede resultar en multas de categoría A (₡23,000 aproximadamente) y la suspensión temporal de sus funciones como chofer en COMAVI S.A.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pregunta 5 -->
+                <div class="card">
+                    <div class="card-header" id="headingFive">
+                        <h2 class="mb-0">
+                            <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseFive" aria-expanded="false" aria-controls="collapseFive">
+                                ¿Cómo solicito y doy seguimiento al mantenimiento de mi camión?
+                            </button>
+                        </h2>
+                    </div>
+                    <div id="collapseFive" class="collapse" aria-labelledby="headingFive" data-parent="#accordionFaq">
+                        <div class="card-body">
+                            <p><strong>Para solicitar mantenimiento:</strong></p>
+                            <ol>
+                                <li>Acceda a la sección "Mi Perfil" en el menú lateral.</li>
+                                <li>Haga clic en el botón "Datos Personales".</li>
+                                <li>Escoga el boton amarillo que dice "Mantenimiento".</li>
+                                <li>
+                                    Complete el formulario detallando:
+                                    <ul>
+                                        <li>Tipo de problema (mecánico, eléctrico, carrocería, etc.)</li>
+                                        <li>Descripción detallada del inconveniente</li>
+                                        <li>Nivel de urgencia (rutinario, importante, crítico)</li>
+                                    </ul>
+                                </li>
+                                <li>Envíe la solicitud y espere en breve el administrador estara revisando la solicitud.</li>
+                            </ol>
+
+                            <p><strong>Seguimiento de la solicitud:</strong></p>
+                            <ul>
+                                <li>Recibirá notificaciones automáticas sobre cambios en el estado de su solicitud.</li>
+                                <li>Puede consultar el estado actual en la sección "Historial de Mantenimiento".</li>
+                                <li>Los estados posibles son: Pendiente, Aprobado, Programado, En Proceso, Completado, Rechazado.</li>
+                                <li>Si la solicitud es aprobada, se le informará la fecha y hora programada para el mantenimiento.</li>
+                            </ul>
+
+                            <div class="card bg-light mb-3">
+                                <div class="card-body">
+                                    <h5 class="card-title">Tiempos de respuesta esperados:</h5>
+                                    <ul class="mb-0">
+                                        <li><strong>Mantenimiento rutinario:</strong> 24-48 horas hábiles</li>
+                                        <li><strong>Mantenimiento importante:</strong> 12-24 horas hábiles</li>
+                                        <li><strong>Mantenimiento crítico:</strong> 1-4 horas</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="alert alert-info mt-3">
+                                <i class="fas fa-tools mr-2"></i> <strong>Recomendación:</strong> Realice inspecciones visuales diarias de su vehículo para detectar problemas potenciales antes de que se conviertan en fallas graves. Esto incluye: revisar niveles de fluidos, presión de neumáticos, luces y frenos.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pregunta 6 -->
+                <div class="card">
+                    <div class="card-header" id="headingSix">
+                        <h2 class="mb-0">
+                            <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseSix" aria-expanded="false" aria-controls="collapseSix">
+                                ¿Qué debo hacer en caso de emergencia o accidente con el vehículo?
+                            </button>
+                        </h2>
+                    </div>
+                    <div id="collapseSix" class="collapse" aria-labelledby="headingSix" data-parent="#accordionFaq">
+                        <div class="card-body">
+                            <div class="alert alert-danger mb-4">
+                                <h5 class="alert-heading"><i class="fas fa-ambulance mr-2"></i> Protocolo de Emergencia</h5>
+                                <p>En caso de accidente o emergencia con el vehículo, siga estos pasos en orden:</p>
+                                <ol class="mb-0">
+                                    <li>Verifique si hay personas heridas y llame al 9-1-1 si es necesario.</li>
+                                    <li>Si es seguro, mueva el vehículo fuera de la vía o coloque triángulos reflectivos.</li>
+                                    <li>Tome fotografías del accidente y los vehículos involucrados.</li>
+                                    <li>Recopile datos de terceros involucrados y testigos (nombre, teléfono, placas).</li>
+                                    <li>No admita responsabilidad en el momento, espere al ajustador del INS.</li>
+                                </ol>
+                            </div>
+
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle mr-2"></i> <strong>Recuerde:</strong> No abandonar el lugar del accidente hasta que lleguen las autoridades correspondientes o el personal de COMAVI S.A., a menos que requiera atención médica inmediata.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pregunta 7 -->
+                <div class="card">
+                    <div class="card-header" id="headingSeven">
+                        <h2 class="mb-0">
+                            <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseSeven" aria-expanded="false" aria-controls="collapseSeven">
+                                ¿Cómo utilizo el calendario de vencimientos y la función de agenda?
+                            </button>
+                        </h2>
+                    </div>
+                    <div id="collapseSeven" class="collapse" aria-labelledby="headingSeven" data-parent="#accordionFaq">
+                        <div class="card-body">
+                            <p><strong>Calendario de Vencimientos:</strong></p>
+                            <p>Esta herramienta le permite visualizar de manera gráfica las fechas de vencimiento de sus documentos y otros eventos importantes:</p>
+                            <ul>
+                                <li><span class="badge badge-success">Verde:</span> Documentos vigentes (más de 30 días para vencimiento)</li>
+                                <li><span class="badge badge-warning">Amarillo:</span> Documentos próximos a vencer (30 días o menos)</li>
+                                <li><span class="badge badge-danger">Rojo:</span> Documentos vencidos</li>
+                                <li><span class="badge badge-primary">Azul:</span> Mantenimientos programados</li>
+                            </ul>
+                            <p>Para acceder, vaya a "Ver Calendario de Vencimientos" en el menú o en su perfil.</p>
+
+                            <p class="mt-4"><strong>Función de Agenda:</strong></p>
+                            <p>La agenda personal le permite:</p>
+                            <ul>
+                                <li>Crear eventos y recordatorios personalizados</li>
+                                <li>Recibir notificaciones sobre eventos programados</li>
+                                <li>Gestionar su cronograma laboral</li>
+                            </ul>
+
+                            <p><strong>Para crear un nuevo evento:</strong></p>
+                            <ol>
+                                <li>Vaya a la sección "Agenda" en el menú lateral.</li>
+                                <li>Haga clic en "Crear Evento".</li>
+                                <li>Complete los campos requeridos: título, fecha/hora, tipo de evento.</li>
+                                <li>Configure las notificaciones si desea recibirlas.</li>
+                                <li>Guarde el evento.</li>
+                            </ol>
+
+                            <div class="alert alert-info">
+                                <i class="fas fa-lightbulb mr-2"></i> <strong>Consejo:</strong> Utilice la vista de calendario para una mejor planificación mensual y la vista de lista para gestionar eventos próximos.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pregunta 8 -->
+                <div class="card">
+                    <div class="card-header" id="headingEight">
+                        <h2 class="mb-0">
+                            <button class="btn btn-link btn-block text-left collapsed" type="button" data-toggle="collapse" data-target="#collapseEight" aria-expanded="false" aria-controls="collapseEight">
+                                ¿Qué debo hacer si olvido mi contraseña o pierdo acceso a mi autenticador 2FA?
+                            </button>
+                        </h2>
+                    </div>
+                    <div id="collapseEight" class="collapse" aria-labelledby="headingEight" data-parent="#accordionFaq">
+                        <div class="card-body">
+                            <p><strong>Si olvida su contraseña:</strong></p>
+                            <ol>
+                                <li>En la página de inicio de sesión, haga clic en "¿Olvidó su contraseña?"</li>
+                                <li>Ingrese el correo electrónico asociado a su cuenta.</li>
+                                <li>Recibirá un correo con instrucciones para restablecer su contraseña.</li>
+                                <li>Siga el enlace proporcionado y cree una nueva contraseña segura.</li>
+                            </ol>
+
+                            <div class="alert alert-warning mb-4">
+                                <i class="fas fa-exclamation-triangle mr-2"></i> <strong>Importante:</strong> El enlace para restablecer la contraseña es válido por 24 horas. Después de este tiempo, deberá solicitar un nuevo enlace.
+                            </div>
+
+                            <p><strong>Si pierde acceso a su aplicación de autenticación 2FA:</strong></p>
+                            <ol>
+                                <li>Utilice uno de los códigos de respaldo que guardó al configurar la autenticación de dos factores.</li>
+                                <li>Ingrese el código de respaldo en la pantalla de verificación 2FA.</li>
+                                <li>Una vez dentro del sistema, vaya inmediatamente a la sección "Configurar autenticación de dos factores" para configurar un nuevo dispositivo.</li>
+                            </ol>
+
+                            <div class="card bg-light mb-3">
+                                <div class="card-body">
+                                    <h5 class="card-title">¿No tiene códigos de respaldo?</h5>
+                                    <p class="mb-0">Si no tiene acceso a sus códigos de respaldo, deberá contactar al administrador del sistema:</p>
+                                    <ul class="mb-0">
+                                        <li>Envíe un correo a <strong>soporte@docktrack.lat</strong> desde su correo registrado.</li>
+                                        <li>Incluya su nombre completo, número de cédula y usuario.</li>
+                                        <li>El equipo de soporte verificará su identidad y restablecerá su acceso.</li>
+                                        <li>Este proceso puede tomar hasta 24 horas hábiles.</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="alert alert-info mt-3">
+                                <i class="fas fa-shield-alt mr-2"></i> <strong>Recomendación de seguridad:</strong> Para evitar estos problemas, guarde sus códigos de respaldo en un lugar seguro y considere utilizar un gestor de contraseñas para mayor seguridad.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Soporte Técnico</h6>
+        </div>
+        <div class="card-body">
+            <p>Si no encuentra respuesta a su pregunta, puede contactar a nuestro equipo de soporte técnico:</p>
+            <ul>
+                <li>Correo electrónico: <strong>soporte@docktrack.lat</strong></li>
+                <li>Teléfono: <strong>+506 2551-1117</strong></li>
+                <li>
+                    Horario de atención: <strong>Lunes a Viernes de 8:00 AM a 5:00 PM </strong>|<strong> Sábados: 8:30 AM - 12:00 PM</strong> | <strong>Domingos: Cerrado</strong>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>

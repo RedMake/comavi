@@ -1,0 +1,286 @@
+﻿@{
+    ViewData["Title"] = "Consejos y Advertencias";
+}
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+        <h6 class="m-0 font-weight-bold text-primary">Consejos y Advertencias Importantes</h6>
+        <div class="dropdown no-arrow">
+            <a class="dropdown-toggle" href="#" role="button" id="consejos_dropdownMenuLink"
+               data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
+            </a>
+            <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in"
+                 aria-labelledby="consejos_dropdownMenuLink">
+                <div class="dropdown-header">Opciones:</div>
+                <a class="dropdown-item" href="#" id="consejos_printGuideBtn"><i class="fas fa-print fa-sm fa-fw mr-2 text-gray-400"></i>Imprimir Guía</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="accordion" id="consejos_accordionGuias">
+            <!-- Licencias y Documentación -->
+            <div class="card">
+                <div class="card-header bg-light" id="consejos_headingOne">
+                    <h2 class="mb-0">
+                        <button class="btn btn-link btn-block text-left text-primary" type="button" data-toggle="collapse"
+                                data-target="#consejos_collapseOne" aria-expanded="true" aria-controls="consejos_collapseOne">
+                            <i class="fas fa-id-card mr-2"></i> Licencias y Documentación
+                        </button>
+                    </h2>
+                </div>
+                <div id="consejos_collapseOne" class="collapse show" aria-labelledby="consejos_headingOne" data-parent="#consejos_accordionGuias">
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item">
+                                <i class="fas fa-exclamation-triangle text-warning mr-2"></i>
+                                <strong>Vencimiento de licencias:</strong> Según la Ley de Tránsito (Ley 9078), conducir con licencia vencida es sancionado con multa categoría A (¢23,000 aproximadamente) y 4 puntos de la licencia.
+                            </li>
+                            <li class="list-group-item">
+                                <i class="fas fa-info-circle text-info mr-2"></i>
+                                <strong>Renovación anticipada:</strong> Se recomienda iniciar el trámite de renovación de licencia al menos 30 días antes de su vencimiento para evitar contratiempos.
+                            </li>
+                            <li class="list-group-item">
+                                <i class="fas fa-check-circle text-success mr-2"></i>
+                                <strong>Documentos obligatorios:</strong> Todo conductor debe portar licencia vigente, tarjeta de circulación (marchamo), revisión técnica (RTV) al día y seguro obligatorio.
+                            </li>
+                            <li class="list-group-item">
+                                <i class="fas fa-exclamation-circle text-danger mr-2"></i>
+                                <strong>Política COMAVI:</strong> La empresa requiere verificación de documentos vigentes antes de cualquier asignación de viaje.
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mantenimiento de Vehículos -->
+            <div class="card">
+                <div class="card-header bg-light" id="consejos_headingTwo">
+                    <h2 class="mb-0">
+                        <button class="btn btn-link btn-block text-left collapsed text-primary" type="button" data-toggle="collapse"
+                                data-target="#consejos_collapseTwo" aria-expanded="false" aria-controls="consejos_collapseTwo">
+                            <i class="fas fa-tools mr-2"></i> Mantenimiento de Vehículos
+                        </button>
+                    </h2>
+                </div>
+                <div id="consejos_collapseTwo" class="collapse" aria-labelledby="consejos_headingTwo" data-parent="#consejos_accordionGuias">
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item">
+                                <i class="fas fa-calendar-check text-primary mr-2"></i>
+                                <strong>Revisión Técnica:</strong> La RTV debe realizarse anualmente para vehículos con más de 5 años de antigüedad y cada 2 años para vehículos más nuevos.
+                            </li>
+                            <li class="list-group-item">
+                                <i class="fas fa-truck text-secondary mr-2"></i>
+                                <strong>Mantenimiento preventivo:</strong> Los camiones de carga COMAVI deben seguir el calendario de mantenimiento preventivo cada 10,000 km o 3 meses, lo que ocurra primero.
+                            </li>
+                            <li class="list-group-item">
+                                <i class="fas fa-exclamation-triangle text-warning mr-2"></i>
+                                <strong>Inspección pre-viaje:</strong> Es obligatorio completar el formulario de inspección antes de cada jornada laboral, verificando luces, frenos, llantas y niveles de fluidos.
+                            </li>
+                            <li class="list-group-item">
+                                <i class="fas fa-ban text-danger mr-2"></i>
+                                <strong>Prohibición:</strong> Se prohíbe operar vehículos con defectos mecánicos que comprometan la seguridad o que no hayan recibido el mantenimiento programado.
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Jornadas y Descansos -->
+            <div class="card">
+                <div class="card-header bg-light" id="consejos_headingThree">
+                    <h2 class="mb-0">
+                        <button class="btn btn-link btn-block text-left collapsed text-primary" type="button" data-toggle="collapse"
+                                data-target="#consejos_collapseThree" aria-expanded="false" aria-controls="consejos_collapseThree">
+                            <i class="fas fa-clock mr-2"></i> Jornadas y Descansos
+                        </button>
+                    </h2>
+                </div>
+                <div id="consejos_collapseThree" class="collapse" aria-labelledby="consejos_headingThree" data-parent="#consejos_accordionGuias">
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item">
+                                <i class="fas fa-business-time text-primary mr-2"></i>
+                                <strong>Jornada laboral:</strong> Según el Código de Trabajo de Costa Rica, la jornada ordinaria no puede exceder de 8 horas diarias y 48 horas semanales.
+                            </li>
+                            <li class="list-group-item">
+                                <i class="fas fa-bed text-info mr-2"></i>
+                                <strong>Periodos de descanso:</strong> Por política de COMAVI, se debe tomar un descanso de 30 minutos después de 4 horas continuas de conducción.
+                            </li>
+                            <li class="list-group-item">
+                                <i class="fas fa-stopwatch text-danger mr-2"></i>
+                                <strong>Tiempo máximo de conducción:</strong> No se permite conducir más de 10 horas en un período de 24 horas, incluyendo horas extraordinarias.
+                            </li>
+                            <li class="list-group-item">
+                                <i class="fas fa-clipboard-list text-success mr-2"></i>
+                                <strong>Registro de horas:</strong> Es obligatorio mantener actualizado el registro de horas de conducción en la bitácora del sistema COMAVI.
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seguridad Vial -->
+            <div class="card">
+                <div class="card-header bg-light" id="consejos_headingFour">
+                    <h2 class="mb-0">
+                        <button class="btn btn-link btn-block text-left collapsed text-primary" type="button" data-toggle="collapse"
+                                data-target="#consejos_collapseFour" aria-expanded="false" aria-controls="consejos_collapseFour">
+                            <i class="fas fa-shield-alt mr-2"></i> Seguridad Vial
+                        </button>
+                    </h2>
+                </div>
+                <div id="consejos_collapseFour" class="collapse" aria-labelledby="consejos_headingFour" data-parent="#consejos_accordionGuias">
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item">
+                                <i class="fas fa-tachometer-alt text-danger mr-2"></i>
+                                <strong>Límites de velocidad:</strong> Respetar los límites establecidos: 60 km/h en zona urbana, 80 km/h en carreteras nacionales y 100 km/h en autopistas para vehículos de carga.
+                            </li>
+                            <li class="list-group-item">
+                                <i class="fas fa-mobile-alt text-warning mr-2"></i>
+                                <strong>Uso de celular:</strong> Prohibido el uso de dispositivos móviles mientras se conduce. Utilizar únicamente con manos libres y para funciones esenciales.
+                            </li>
+                            <li class="list-group-item">
+                                <i class="fas fa-wine-bottle text-danger mr-2"></i>
+                                <strong>Alcohol y drogas:</strong> Tolerancia cero. Sanción inmediata y suspensión laboral por conducir bajo efectos de alcohol o sustancias.
+                            </li>
+                            <li class="list-group-item">
+                                <i class="fas fa-first-aid text-success mr-2"></i>
+                                <strong>Equipo de seguridad:</strong> Obligatorio portar extintor, triángulos reflectivos, botiquín de primeros auxilios y chalecos reflectivos.
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Carga y Peso -->
+            <div class="card">
+                <div class="card-header bg-light" id="consejos_headingFive">
+                    <h2 class="mb-0">
+                        <button class="btn btn-link btn-block text-left collapsed text-primary" type="button" data-toggle="collapse"
+                                data-target="#consejos_collapseFive" aria-expanded="false" aria-controls="consejos_collapseFive">
+                            <i class="fas fa-balance-scale mr-2"></i> Carga y Peso
+                        </button>
+                    </h2>
+                </div>
+                <div id="consejos_collapseFive" class="collapse" aria-labelledby="consejos_headingFive" data-parent="#consejos_accordionGuias">
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item">
+                                <i class="fas fa-weight text-warning mr-2"></i>
+                                <strong>Peso máximo:</strong> Los límites de peso por eje según el Reglamento de Circulación deben respetarse estrictamente. Consultar tabla por tipo de vehículo.
+                            </li>
+                            <li class="list-group-item">
+                                <i class="fas fa-boxes text-primary mr-2"></i>
+                                <strong>Distribución de carga:</strong> La carga debe distribuirse uniformemente para evitar desbalance y asegurar adecuadamente para prevenir desplazamientos.
+                            </li>
+                            <li class="list-group-item">
+                                <i class="fas fa-ruler-horizontal text-info mr-2"></i>
+                                <strong>Dimensiones:</strong> La carga no puede sobresalir más de 15 cm a cada lado del vehículo y debe señalizarse adecuadamente si sobresale por la parte trasera.
+                            </li>
+                            <li class="list-group-item">
+                                <i class="fas fa-file-invoice text-success mr-2"></i>
+                                <strong>Documentación de carga:</strong> Obligatorio portar guía de transporte, manifiesto de carga y permisos especiales cuando aplique.
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Responsabilidad Ambiental -->
+            <div class="card">
+                <div class="card-header bg-light" id="consejos_headingSix">
+                    <h2 class="mb-0">
+                        <button class="btn btn-link btn-block text-left collapsed text-primary" type="button" data-toggle="collapse"
+                                data-target="#consejos_collapseSix" aria-expanded="false" aria-controls="consejos_collapseSix">
+                            <i class="fas fa-leaf mr-2"></i> Responsabilidad Ambiental
+                        </button>
+                    </h2>
+                </div>
+                <div id="consejos_collapseSix" class="collapse" aria-labelledby="consejos_headingSix" data-parent="#consejos_accordionGuias">
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item">
+                                <i class="fas fa-cloud text-primary mr-2"></i>
+                                <strong>Emisiones:</strong> Todos los vehículos deben cumplir con los estándares de emisiones establecidos en la revisión técnica vehicular (RTV).
+                            </li>
+                            <li class="list-group-item">
+                                <i class="fas fa-gas-pump text-success mr-2"></i>
+                                <strong>Eficiencia de combustible:</strong> Aplicar técnicas de conducción eficiente para reducir el consumo y las emisiones (velocidad constante, evitar aceleraciones bruscas).
+                            </li>
+                            <li class="list-group-item">
+                                <i class="fas fa-oil-can text-danger mr-2"></i>
+                                <strong>Manejo de residuos:</strong> Los aceites, filtros y otros residuos de mantenimiento deben entregarse a gestores autorizados para su tratamiento.
+                            </li>
+                            <li class="list-group-item">
+                                <i class="fas fa-seedling text-info mr-2"></i>
+                                <strong>Compromiso COMAVI:</strong> Nuestra empresa se compromete con la reducción de la huella de carbono mediante la modernización de la flota y prácticas logísticas eficientes.
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="alert alert-warning mt-4" role="alert">
+            <h5 class="alert-heading"><i class="fas fa-exclamation-triangle mr-2"></i>Importante</h5>
+            <p>Este documento es únicamente informativo y no sustituye el conocimiento completo de la legislación vigente. La normativa puede cambiar, por lo que se recomienda mantenerse actualizado a través de los canales oficiales.</p>
+            <hr>
+            <p class="mb-0">Para consultas específicas sobre regulaciones o políticas internas, comuníquese con el Departamento de Operaciones de COMAVI S.A. al correo <strong>info@comavicr.com</strong> o al telefono <strong>+506 2551-1117</strong>.</p>
+        </div>
+    </div>
+    <div class="card-footer text-muted">
+        <small>Actualizado: Abril 2025 - Departamento de Seguridad y Cumplimiento - COMAVI S.A.</small>
+    </div>
+</div>
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Botón para imprimir
+            $("#consejos_printGuideBtn").click(function(e) {
+                e.preventDefault();
+                window.print();
+            });
+
+            // Agregar botones para expandir/colapsar todos
+            var controlButtons = `
+                <div class="btn-group mb-3">
+                    <button id="consejos_expandAllBtn" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-plus-circle mr-1"></i> Abrir Todos
+                    </button>
+                    <button id="consejos_collapseAllBtn" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-minus-circle mr-1"></i> Cerrar Todos
+                    </button>
+                </div>
+            `;
+
+            // Insertar los botones antes del acordeón
+            $('#consejos_accordionGuias').before(controlButtons);
+
+            // Funcionalidad para abrir todos los paneles
+            $('#consejos_expandAllBtn').click(function() {
+                // Quitar la propiedad "parent" para evitar que se cierren entre sí
+                $('#consejos_accordionGuias .collapse').each(function() {
+                    $(this).removeAttr('data-parent');
+                });
+
+                // Abrir todos los paneles
+                $('#consejos_accordionGuias .collapse').collapse('show');
+            });
+
+            // Funcionalidad para cerrar todos los paneles
+            $('#consejos_collapseAllBtn').click(function() {
+                $('#consejos_accordionGuias .collapse').collapse('hide');
+
+                // Restaurar el comportamiento de acordeón después de cerrar
+                setTimeout(function() {
+                    $('#consejos_accordionGuias .collapse').each(function() {
+                        $(this).attr('data-parent', '#consejos_accordionGuias');
+                    });
+                }, 300); // Pequeño retraso para evitar conflictos
+            });
+        });
+    </script>
+}

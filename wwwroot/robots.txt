@@ -1,6 +1,11 @@
 ﻿User-agent: *
 Allow: /
 Allow: /Home
-Disallow: /Sistema
+Disallow: /Camion
+Disallow: /Documentos
+Disallow: /Calendar
+Disallow: /Agenda
 Disallow: /Admin
 Disallow: /Login
+Disallow: /Notifications
+Disallow: /Maintenance

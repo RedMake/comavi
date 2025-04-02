@@ -102,7 +102,6 @@
                         @{
                             var historialMantenimiento = ViewBag.HistorialMantenimiento as List<COMAVI_SA.Models.Mantenimiento_Camiones>;
                         }
-
                         @if (historialMantenimiento == null || !historialMantenimiento.Any())
                         {
                             <div class="text-center py-4">
@@ -124,16 +123,16 @@
                                     <tbody>
                                         @foreach (var mantenimiento in historialMantenimiento.Take(5))
                                         {
+                                            var simbolo = mantenimiento.moneda == "USD" ? "$" : "₡";
                                             <tr>
                                                 <td>@mantenimiento.fecha_mantenimiento.ToString("dd/MM/yyyy")</td>
                                                 <td>@mantenimiento.descripcion</td>
-                                                <td>$@mantenimiento.costo.ToString("N2")</td>
+                                                <td>@(simbolo)@mantenimiento.costo.ToString("N2")</td>
                                             </tr>
                                         }
                                     </tbody>
                                 </table>
                             </div>
-
                             @if (historialMantenimiento.Count > 5)
                             {
                                 <div class="text-center mt-3">
@@ -141,7 +140,6 @@
                                         Ver historial completo
                                     </button>
                                 </div>
-
                                 <div class="collapse" id="collapseHistorialCompleto">
                                     <div class="table-responsive mt-3">
                                         <table class="table table-bordered" width="100%" cellspacing="0">
@@ -155,10 +153,11 @@
                                             <tbody>
                                                 @foreach (var mantenimiento in historialMantenimiento.Skip(5))
                                                 {
+                                                    var simbolo = mantenimiento.moneda == "USD" ? "$" : "₡";
                                                     <tr>
                                                         <td>@mantenimiento.fecha_mantenimiento.ToString("dd/MM/yyyy")</td>
                                                         <td>@mantenimiento.descripcion</td>
-                                                        <td>$@mantenimiento.costo.ToString("N2")</td>
+                                                        <td>@(simbolo)@mantenimiento.costo.ToString("N2")</td>
                                                     </tr>
                                                 }
                                             </tbody>
@@ -254,18 +253,21 @@
                 var historial = ViewBag.HistorialMantenimiento as List<COMAVI_SA.Models.Mantenimiento_Camiones>;
                 var labels = "[]";
                 var costos = "[]";
+                var simbolos = "[]";
 
                 if (historial != null && historial.Any())
                 {
                     var ultimosSeis = historial.OrderBy(m => m.fecha_mantenimiento)
                                              .TakeLast(6)
                                              .ToList();
+
                     labels = $"[{string.Join(",", ultimosSeis.Select(m => $"'{m.fecha_mantenimiento:MMM yyyy}'"))}]";
                     costos = $"[{string.Join(",", ultimosSeis.Select(m => m.costo))}]";
+                    simbolos = $"[{string.Join(",", ultimosSeis.Select(m => $"'{(m.moneda == "USD" ? "$" : "₡")}'"))}]";
                 }
             }
                 // Llamar a la función del archivo externo
-                initializeMaintenanceChart(@Html.Raw(labels), @Html.Raw(costos));
+                initializeMaintenanceChart(@Html.Raw(labels), @Html.Raw(costos), @Html.Raw(simbolos));
             });
         </script>
     }

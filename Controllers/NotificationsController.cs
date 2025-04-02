@@ -7,20 +7,23 @@ using System.Security.Claims;
 
 namespace COMAVI_SA.Controllers
 {
+#nullable disable
+#pragma warning disable CS0168
+
     [Authorize(Roles = "admin,user")]
     public class NotificationsController : Controller
     {
         private readonly ComaviDbContext _context;
-        private readonly ILogger<NotificationsController> _logger;
+        private const int DefaultPageSize = 5; // Número de notificaciones por página
 
         public NotificationsController(
             ComaviDbContext context,
             ILogger<NotificationsController> logger)
         {
             _context = context;
-            _logger = logger;
         }
 
+        // Método existente
         [HttpGet]
         public async Task<IActionResult> Index()
         {
@@ -64,9 +67,68 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al cargar la página de notificaciones");
                 TempData["Error"] = "Error al cargar las notificaciones.";
                 return RedirectToAction("Profile", "Login");
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ObtenerPagina(int pagina = 1, int elementosPorPagina = 5)
+        {
+            try
+            {
+                // Validar que el usuario esté autenticado
+                if (!User.Identity.IsAuthenticated)
+                {
+                    return Json(new { success = false, message = "Usuario no autenticado." });
+                }
+
+                int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+
+                // Asegurar que pagina y elementosPorPagina son valores válidos
+                if (pagina < 1) pagina = 1;
+                if (elementosPorPagina < 1) elementosPorPagina = 5;
+
+                // Calcular salto para paginación
+                int salto = (pagina - 1) * elementosPorPagina;
+
+                // Obtener total de notificaciones para calcular páginas
+                int totalNotificaciones = await _context.NotificacionesUsuario
+                    .Where(n => n.id_usuario == userId)
+                    .CountAsync();
+
+                // Calcular total de páginas
+                int totalPaginas = (int)Math.Ceiling(totalNotificaciones / (double)elementosPorPagina);
+
+
+
+                // Obtener notificaciones para la página solicitada
+                var notificaciones = await _context.NotificacionesUsuario
+                    .Where(n => n.id_usuario == userId)
+                    .OrderByDescending(n => n.fecha_hora)
+                    .Skip(salto)
+                    .Take(elementosPorPagina)
+                    .Select(n => new {
+                        id = n.id_notificacion,
+                        tipo = n.tipo_notificacion,
+                        mensaje = n.mensaje,
+                        fecha = n.fecha_hora.ToString("dd/MM/yyyy HH:mm"),
+                        leida = n.leida ?? false
+                    })
+                    .ToListAsync();
+
+                return Json(new
+                {
+                    success = true,
+                    notifications = notificaciones,
+                    currentPage = pagina,
+                    totalPages = totalPaginas,
+                    totalItems = totalNotificaciones
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = "Error al cargar notificaciones." });
             }
         }
 
@@ -112,7 +174,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al guardar preferencias de notificación");
                 TempData["Error"] = "Error al guardar las preferencias de notificación.";
                 return RedirectToAction(nameof(Index));
             }
@@ -143,7 +204,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al marcar notificación como leída");
                 return Json(new { success = false, message = "Error al marcar la notificación como leída." });
             }
         }
@@ -173,7 +233,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al eliminar notificación");
                 return Json(new { success = false, message = "Error al eliminar la notificación." });
             }
         }
@@ -183,9 +242,22 @@ namespace COMAVI_SA.Controllers
         {
             try
             {
-                int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+                // Verificar si el usuario está autenticado
+                if (!User.Identity.IsAuthenticated)
+                {
+                    return Json(new { success = false, message = "Usuario no autenticado." });
+                }
 
-                // Obtener notificaciones no leídas, teniendo en cuenta posibles valores nulos
+                // Obtener el ID del usuario de forma segura
+                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userIdClaim))
+                {
+                    return Json(new { success = false, message = "ID de usuario no encontrado." });
+                }
+
+                int userId = int.Parse(userIdClaim);
+
+                // Obtener notificaciones no leídas
                 var notificacionesNoLeidas = await _context.NotificacionesUsuario
                     .Where(n => n.id_usuario == userId && (n.leida == null || n.leida == false))
                     .OrderByDescending(n => n.fecha_hora)
@@ -206,9 +278,10 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener notificaciones no leídas");
                 return Json(new { success = false, message = "Error al obtener notificaciones no leídas." });
             }
         }
     }
+#nullable enable
+
 }

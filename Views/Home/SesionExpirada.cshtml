@@ -1,0 +1,40 @@
+﻿@{
+    ViewData["Title"] = "Sesion Expirada";
+    Layout = "~/Views/Shared/_SesionLayout.cshtml";
+}
+
+<div class="container text-center mt-5">
+    <div class="row">
+        <div class="col-md-6 offset-md-3">
+            <div class="card session-card">
+                <div class="card-header-custom">
+                    <h3 class="mb-0"><i class="fas fa-exclamation-circle me-2"></i>Sesión Expirada</h3>
+                </div>
+                <div class="card-body card-body-custom">
+                    <p class="card-text pulse-message">
+                        Su sesión ha expirado o no ha iniciado sesión correctamente.
+                        Será redirigido al inicio de sesión en <span id="countdown">10</span> segundos...
+                    </p>
+
+                    <!-- Spinner -->
+                    <div class="custom-spinner my-4">
+                        <div class="spinner-circle"></div>
+                    </div>
+
+                    <div class="mt-4">
+                        <a href="@Url.Action("Index", "Login")" id="loginBtn" class="btn btn-primary">
+                            <i class="fas fa-sign-in-alt me-2"></i>Iniciar sesión ahora
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        var loginUrl = "/Login/Index";
+    </script>
+    <script src="~/js/expiredSession.js"></script>
+}

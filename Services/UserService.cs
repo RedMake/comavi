@@ -1,10 +1,15 @@
 ﻿using COMAVI_SA.Data;
 using COMAVI_SA.Models;
+using COMAVI_SA.Repository;
+using DocumentFormat.OpenXml.InkML;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
 
 namespace COMAVI_SA.Services
 {
+#nullable disable
+#pragma warning disable CS0168
+
     public interface IUserService
     {
         Task<Usuario> AuthenticateAsync(string email, string password);
@@ -29,6 +34,7 @@ namespace COMAVI_SA.Services
         Task RecordMfaAttemptAsync(int userId, bool success);
         Task ResetMfaFailedAttemptsAsync(int userId);
         string HashPassword(string password);
+        Task<List<Usuario>> GetAllUsersAsync();
 
     }
 
@@ -37,28 +43,50 @@ namespace COMAVI_SA.Services
         private readonly ComaviDbContext _context;
         private readonly IPasswordService _passwordService;
         private readonly IOtpService _otpService;
-        private readonly ILogger<UserService> _logger;
         private readonly IConfiguration _configuration;
+        private readonly IDatabaseRepository _databaseRepository;
 
         public UserService(
             ComaviDbContext context,
             IPasswordService passwordService,
             IOtpService otpService,
-            ILogger<UserService> logger,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IDatabaseRepository databaseRepository)
+
         {
             _context = context;
             _passwordService = passwordService;
             _otpService = otpService;
-            _logger = logger;
             _configuration = configuration;
+            _databaseRepository = databaseRepository;
+
         }
 
         public async Task<Usuario> AuthenticateAsync(string email, string password)
         {
             try
             {
-                var user = await _context.Usuarios.FirstOrDefaultAsync(u => u.correo_electronico == email);
+                var user = await _context.Usuarios
+                            .AsNoTracking()
+                            .Where(u => u.correo_electronico == email)
+                            .Select(u => new Usuario
+                            {
+                                id_usuario = u.id_usuario,
+                                nombre_usuario = u.nombre_usuario,
+                                correo_electronico = u.correo_electronico,
+                                contrasena = u.contrasena,
+                                rol = u.rol,
+                                ultimo_ingreso = u.ultimo_ingreso,
+                                estado_verificacion = u.estado_verificacion,
+                                fecha_verificacion = u.fecha_verificacion,
+                                token_verificacion = u.token_verificacion,
+                                fecha_expiracion_token = u.fecha_expiracion_token,
+                                fecha_registro = u.fecha_registro,
+                                mfa_habilitado = u.mfa_habilitado,
+                                fecha_actualizacion_password = u.fecha_actualizacion_password
+                            })
+                            .FirstOrDefaultAsync();
+
                 if (user == null)
                     return null;
 
@@ -73,7 +101,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al autenticar usuario");
                 return null;
             }
         }
@@ -104,7 +131,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al registrar usuario");
                 return false;
             }
         }
@@ -120,22 +146,19 @@ namespace COMAVI_SA.Services
             {
                 var maxFailedAttempts = _configuration.GetValue<int>("SecuritySettings:Lockout:MaxFailedAttempts", 5);
                 var lockoutTime = _configuration.GetValue<int>("SecuritySettings:Lockout:LockoutTimeInMinutes", 15);
+                var cutoffTime = DateTime.Now.AddMinutes(-lockoutTime);
 
-                var user = await _context.Usuarios.FirstOrDefaultAsync(u => u.correo_electronico == email);
-                if (user == null)
-                    return false;
-
-                var recentFailedAttempts = await _context.IntentosLogin
-                    .Where(i => i.id_usuario == user.id_usuario &&
-                            !i.exitoso &&
-                            i.fecha_hora >= DateTime.Now.AddMinutes(-lockoutTime))
-                    .CountAsync();
-
-                return recentFailedAttempts >= maxFailedAttempts;
+                return await _context.Usuarios
+                    .Where(u => u.correo_electronico == email)
+                    .Join(_context.IntentosLogin,
+                          u => u.id_usuario,
+                          i => i.id_usuario,
+                          (u, i) => new { User = u, Attempt = i })
+                    .Where(x => !x.Attempt.exitoso && x.Attempt.fecha_hora >= cutoffTime)
+                    .CountAsync() >= maxFailedAttempts;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al verificar si la cuenta está bloqueada");
                 return false;
             }
         }
@@ -157,7 +180,7 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al registrar intento de login");
+                throw;
             }
         }
 
@@ -174,7 +197,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener secreto MFA");
                 return null;
             }
         }
@@ -198,7 +220,7 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al configurar MFA");
+                throw;
             }
         }
 
@@ -226,7 +248,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al restablecer contraseña");
                 return false;
             }
         }
@@ -269,20 +290,13 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al generar token de restablecimiento de contraseña");
                 return null;
             }
         }
 
-        public async Task<Usuario> GetUserByIdAsync(int userId)
-        {
-            return await _context.Usuarios.FindAsync(userId);
-        }
+        public async Task<Usuario> GetUserByIdAsync(int userId) => await _context.Usuarios.FindAsync(userId);
 
-        public async Task<Usuario> GetUserByEmailAsync(string email)
-        {
-            return await _context.Usuarios.FirstOrDefaultAsync(u => u.correo_electronico == email);
-        }
+        public async Task<Usuario> GetUserByEmailAsync(string email) => await _context.Usuarios.FirstOrDefaultAsync(u => u.correo_electronico == email);
 
         public async Task<bool> VerifyUserAsync(string email, string token)
         {
@@ -309,7 +323,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al verificar usuario");
                 return false;
             }
         }
@@ -357,7 +370,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al habilitar MFA");
                 return false;
             }
         }
@@ -403,7 +415,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al deshabilitar MFA");
                 return false;
             }
         }
@@ -417,7 +428,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al verificar estado de MFA");
                 return false;
             }
         }
@@ -439,18 +449,13 @@ namespace COMAVI_SA.Services
 
                 // Generar nuevos códigos
                 var backupCodes = _otpService.GenerateBackupCodes();
-                var codesEntities = new List<CodigosRespaldoMFA>();
-
-                foreach (var code in backupCodes)
+                var codesEntities = backupCodes.Select(code => new CodigosRespaldoMFA
                 {
-                    codesEntities.Add(new CodigosRespaldoMFA
-                    {
-                        id_usuario = userId,
-                        codigo = code,
-                        fecha_generacion = DateTime.Now,
-                        usado = false
-                    });
-                }
+                    id_usuario = userId,
+                    codigo = code,
+                    fecha_generacion = DateTime.Now,
+                    usado = false
+                }).ToList();
 
                 _context.CodigosRespaldoMFA.AddRange(codesEntities);
                 await _context.SaveChangesAsync();
@@ -459,7 +464,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al generar códigos de respaldo");
                 return new List<string>();
             }
         }
@@ -474,49 +478,40 @@ namespace COMAVI_SA.Services
                 // Normalizar el código (eliminar espacios, guiones, etc.)
                 backupCode = backupCode.Replace("-", "").Replace(" ", "").ToUpper();
 
-                // Si el código proporcionado está en formato XXXXX, buscar cualquier código que comience así
-                string searchCode = backupCode;
+                CodigosRespaldoMFA backupCodeRecord = null;
+
                 if (backupCode.Length == 5)
                 {
-                    // Buscar códigos que comiencen con estos 5 caracteres
-                    var matchingCodes = await _context.CodigosRespaldoMFA
+                    var matchingCode = await _context.CodigosRespaldoMFA
                         .Where(c => c.id_usuario == userId &&
-                               !c.usado &&
-                               c.codigo.Replace("-", "").StartsWith(backupCode))
-                        .ToListAsync();
+                                    c.usado == false &&
+                                    EF.Functions.Like(c.codigo.Replace("-", ""), backupCode + "%"))
+                        .FirstOrDefaultAsync();
 
-                    if (matchingCodes.Any())
-                    {
-                        // Usar el primer código coincidente
-                        var codeToUse = matchingCodes.First();
-                        codeToUse.usado = true;
-                        await _context.SaveChangesAsync();
-                        return true;
-                    }
-                    return false;
+                    backupCodeRecord = matchingCode;
                 }
 
                 // Buscar el código completo (10 caracteres)
-                if (backupCode.Length == 10)
+                else if (backupCode.Length == 10)
                 {
-                    var backupCodeRecord = await _context.CodigosRespaldoMFA
-                        .FirstOrDefaultAsync(c => c.id_usuario == userId &&
-                                           !c.usado &&
-                                           c.codigo.Replace("-", "") == backupCode);
-
-                    if (backupCodeRecord != null)
-                    {
-                        backupCodeRecord.usado = true;
-                        await _context.SaveChangesAsync();
-                        return true;
-                    }
+                    backupCodeRecord = await _context.CodigosRespaldoMFA
+                        .Where(c => c.id_usuario == userId && !c.usado)
+                        .FirstOrDefaultAsync(c => EF.Functions.Like(
+                            c.codigo.Replace("-", ""), backupCode));
                 }
+
+                if (backupCodeRecord != null)
+                {
+                    backupCodeRecord.usado = true;
+                    await _context.SaveChangesAsync();
+                    return true;
+                }
+
 
                 return false;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al verificar código de respaldo");
                 return false;
             }
         }
@@ -526,16 +521,15 @@ namespace COMAVI_SA.Services
             try
             {
                 // Obtener intentos fallidos de MFA en los últimos 15 minutos
-                var failedAttempts = await _context.IntentosLogin
-                    .CountAsync(i => i.id_usuario == userId &&
-                               !i.exitoso &&
-                               i.fecha_hora >= DateTime.Now.AddMinutes(-15));
-
-                return failedAttempts;
+                return await _context.IntentosLogin
+                    .Where(i => i.id_usuario == userId &&
+                           !i.exitoso &&
+                           i.fecha_hora >= DateTime.Now.AddMinutes(-15) &&
+                           i.direccion_ip == "OTP_Verification")
+                    .CountAsync();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener intentos fallidos de MFA");
                 return 0;
             }
         }
@@ -557,7 +551,7 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al registrar intento de MFA");
+                throw;
             }
         }
 
@@ -578,7 +572,7 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al reiniciar intentos fallidos de MFA");
+                throw;
             }
         }
 
@@ -630,8 +624,25 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al verificar código MFA");
                 return false;
+            }
+        }
+
+        public async Task<List<Usuario>> GetAllUsersAsync()
+        {
+            try
+            {
+                // Obtener todos los usuarios activos
+                var usuarios = await _databaseRepository.ExecuteQueryProcedureAsync<Usuario>(
+                    "sp_ObtenerTodosUsuarios",
+                    new { estado_verificacion = "verificado" }
+                );
+
+                return usuarios.ToList();
+            }
+            catch (Exception ex)
+            {
+                return new List<Usuario>();
             }
         }
 
@@ -640,5 +651,6 @@ namespace COMAVI_SA.Services
             return _passwordService.HashPassword(password);
         }
     }
+#nullable enable
 
 }

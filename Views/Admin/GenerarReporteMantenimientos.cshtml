@@ -1,0 +1,234 @@
+﻿@model IEnumerable<dynamic>
+@{
+#nullable enable
+#pragma warning disable CS8602, CS0168, CS8600 // Suprimir varios warnings de null reference
+    ViewData["Title"] = "Reporte de Mantenimientos";
+}
+
+<div class="d-sm-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0 text-gray-800">Reporte de Mantenimientos</h1>
+    <div>
+        <a href="@Url.Action("ExportarReporteMantenimientosPDF", "Admin", new { fechaInicio = ViewBag.FechaInicio.ToString("yyyy-MM-dd"), fechaFin = ViewBag.FechaFin.ToString("yyyy-MM-dd") })" class="d-none d-sm-inline-block btn btn-sm btn-danger shadow-sm mr-2">
+            <i class="fas fa-file-pdf fa-sm text-white-50"></i> Exportar a PDF
+        </a>
+        <a href="@Url.Action("ReportesGenerales", "Admin")" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+            <i class="fas fa-arrow-left fa-sm text-white-50"></i> Volver a Reportes
+        </a>
+    </div>
+</div>
+
+<!-- Información del Reporte -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Información del Reporte</h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <p><strong>Fecha de Generación:</strong> @ViewBag.FechaGeneracion.ToString("dd/MM/yyyy HH:mm")</p>
+            </div>
+            <div class="col-md-3">
+                <p><strong>Período:</strong> @ViewBag.FechaInicio.ToString("dd/MM/yyyy") - @ViewBag.FechaFin.ToString("dd/MM/yyyy")</p>
+            </div>
+            <div class="col-md-3">
+                <p><strong>Total Mantenimientos:</strong> @Model.Count()</p>
+            </div>
+            <div class="col-md-3">
+                @{
+                    decimal totalCRC = 0;
+                    decimal totalUSD = 0;
+
+                    foreach (var item in Model)
+                    {
+                        try
+                        {
+                            decimal costo = Convert.ToDecimal(item.costo);
+                            if (item.moneda == "USD")
+                            {
+                                totalUSD += costo;
+                            }
+                            else
+                            {
+                                totalCRC += costo;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            // Ignorar errores de conversión
+                        }
+                    }
+                }
+                <p><strong>Costo Total (CRC):</strong> ₡@totalCRC.ToString("N2")</p>
+                <p><strong>Costo Total (USD):</strong> $@totalUSD.ToString("N2")</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Resumen Estadístico -->
+<div class="row mb-4">
+    <!-- Gráfico de Costos -->
+    <div class="col-xl-6 col-lg-6 mx-auto">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Costos por Camión</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="position: relative; height: 300px; margin: 0 auto;">
+                    <canvas id="costoPorCamion"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla de Mantenimientos -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Historial de Mantenimientos</h6>
+    </div>
+    <div class="card-body">
+        @if (Model.Count() > 0)
+        {
+            <div class="table-responsive">
+                <table class="table table-bordered" id="dataTableRecentAdminMaintenanceReport" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Camión</th>
+                            <th>Placa</th>
+                            <th>Marca/Modelo</th>
+                            <th>Fecha</th>
+                            <th>Descripción</th>
+                            <th>Costo Base</th>
+                            <th>Impuestos</th>
+                            <th>Otros Costos</th>
+                            <th>Total</th>
+                            <th>Moneda</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var mantenimiento in Model)
+                        {
+                            try
+                            {
+                                dynamic detallesCosto = null;
+                                try
+                                {
+                                    if (!string.IsNullOrEmpty(mantenimiento.detalles_costo))
+                                    {
+                                        detallesCosto = Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(mantenimiento.detalles_costo);
+                                    }
+                                }
+                                catch
+                                {
+                                    // Si hay error al deserializar, dejamos detallesCosto como null
+                                }
+
+                                var simbolo = mantenimiento.moneda == "USD" ? "$" : "₡";
+                                var costo = Convert.ToDecimal(mantenimiento.costo);
+
+                                <tr>
+                                    <td>@mantenimiento.id_mantenimiento</td>
+                                    <td>@mantenimiento.id_camion</td>
+                                    <td>@mantenimiento.numero_placa</td>
+                                    <td>@mantenimiento.marca @mantenimiento.modelo</td>
+                                    <td>@mantenimiento.fecha_mantenimiento.ToString("dd/MM/yyyy")</td>
+                                    <td>@mantenimiento.descripcion</td>
+                                    <td>
+                                        @if (detallesCosto != null && detallesCosto.costo_base != null)
+                                        {
+                                            @($"{simbolo}{Convert.ToDecimal(detallesCosto.costo_base):0.00}")
+                                        }
+                                        else
+                                        {
+                                            @($"{simbolo}{costo:0.00}")
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (detallesCosto != null && detallesCosto.impuesto_iva != null)
+                                        {
+                                            @($"{simbolo}{Convert.ToDecimal(detallesCosto.impuesto_iva):0.00}")
+                                        }
+                                        else
+                                        {
+                                            <span>N/A</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (detallesCosto != null && detallesCosto.otros_costos != null)
+                                        {
+                                            @($"{simbolo}{Convert.ToDecimal(detallesCosto.otros_costos):0.00}")
+                                        }
+                                        else
+                                        {
+                                            <span>N/A</span>
+                                        }
+                                    </td>
+                                    <td class="text-right">@($"{simbolo}{costo:0.00}")</td>
+                                    <td>@(mantenimiento.moneda ?? "CRC")</td>
+                                </tr>
+                            }
+                            catch (Exception ex)
+                            {
+                                // Ignorar registros con errores
+                                continue;
+                            }
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th colspan="9" class="text-right">Total:</th>
+                            <th id="totalCRC">₡@totalCRC.ToString("N2")</th>
+                            <th id="totalUSD">$@totalUSD.ToString("N2")</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-info">
+                No hay mantenimientos registrados en el período seleccionado.
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Sección de Observaciones -->
+@if (Model.Count() > 0)
+{
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Detalles de Mantenimientos</h6>
+        </div>
+        <div class="card-body">
+            @foreach (var mantenimiento in Model.OrderBy(m => m.numero_placa).ThenByDescending(m => m.fecha_mantenimiento))
+            {
+                try
+                {
+                    <div class="mb-4 p-3 border-left-primary">
+                        <p class="mb-1"><strong>Camión con placa @mantenimiento.numero_placa:</strong> tiene las siguientes observaciones: @mantenimiento.descripcion</p>
+                        <p class="text-muted mb-0 small">
+                            <i class="fas fa-calendar mr-1"></i> @mantenimiento.fecha_mantenimiento.ToString("dd/MM/yyyy") |
+                            <i class="fas fa-tag mr-1"></i> @mantenimiento.marca @mantenimiento.modelo |
+                            <i class="fas fa-money-bill mr-1"></i> @(mantenimiento.moneda == "USD" ? "$" : "₡")@(Convert.ToDecimal(mantenimiento.costo).ToString("N2"))
+                        </p>
+                    </div>
+                }
+                catch (Exception ex)
+                {
+                    // Ignorar registros con errores
+                    continue;
+                }
+            }
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script src="~/js/graficos-mantenimiento.js"></script>
+    <script id="datos-mantenimiento" type="application/json">
+        @Html.Raw(Json.Serialize(Model))
+    </script>
+}

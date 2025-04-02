@@ -1,5 +1,7 @@
 ﻿using COMAVI_SA.Data;
+using COMAVI_SA.Middleware;
 using COMAVI_SA.Models;
+using COMAVI_SA.Repository;
 using COMAVI_SA.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -8,18 +10,22 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using System.Data;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using static COMAVI_SA.Middleware.SessionValidationMiddleware;
 
 namespace COMAVI_SA.Controllers
 {
+#nullable disable
+#pragma warning disable CS0168
+
     [Authorize]
     public class LoginController : Controller
     {
+        private readonly IDatabaseRepository _databaseRepository;
         private readonly IUserService _userService;
         private readonly IPasswordService _passwordService;
         private readonly IOtpService _otpService;
@@ -27,26 +33,32 @@ namespace COMAVI_SA.Controllers
         private readonly IEmailService _emailService;
         private readonly IPdfService _pdfService;
         private readonly ComaviDbContext _context;
-        private readonly ILogger<LoginController> _logger;
+        private readonly IMemoryCache _cache;
+        private readonly IAuthorizationService _authorizationService;
 
         public LoginController(
+            IDatabaseRepository databaseRepository,
             IUserService userService,
             IPasswordService passwordService,
+            IMemoryCache cache,
             IOtpService otpService,
             IJwtService jwtService,
             IEmailService emailService,
             IPdfService pdfService,
             ComaviDbContext context,
-            ILogger<LoginController> logger)
+            IAuthorizationService authorizationService)
         {
+            _databaseRepository = databaseRepository;
             _userService = userService;
             _passwordService = passwordService;
+            _cache = cache;
             _otpService = otpService;
             _jwtService = jwtService;
             _emailService = emailService;
             _pdfService = pdfService;
             _context = context;
-            _logger = logger;
+            _authorizationService = authorizationService;
+
         }
 
         [AllowAnonymous]
@@ -59,18 +71,16 @@ namespace COMAVI_SA.Controllers
             return View();
         }
 
+        [RateLimit(5, 300)]
         [AllowAnonymous]
         [HttpPost]
         public async Task<IActionResult> Index(LoginViewModel model)
         {
             try
             {
-                _logger.LogInformation("Intento de login para: {Email}", model.Email);
 
                 if (!ModelState.IsValid)
                 {
-                    _logger.LogWarning("Modelo inválido en login. Errores: {Errors}",
-                        string.Join("; ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage)));
 
                     foreach (var error in ModelState.Values.SelectMany(v => v.Errors))
                     {
@@ -82,19 +92,16 @@ namespace COMAVI_SA.Controllers
 
                 if (await _userService.IsAccountLockedAsync(model.Email))
                 {
-                    _logger.LogWarning("Intento de login en cuenta bloqueada: {Email}", model.Email);
                     ModelState.AddModelError("", "Su cuenta ha sido bloqueada por múltiples intentos fallidos. Intente más tarde.");
                     return View(model);
                 }
 
                 var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
-                _logger.LogInformation("IP de intento de login: {IP}", ipAddress);
 
                 var user = await _userService.AuthenticateAsync(model.Email, model.Password);
 
                 if (user == null)
                 {
-                    _logger.LogWarning("Fallo de autenticación para: {Email}", model.Email);
                     await _userService.RecordLoginAttemptAsync(null, ipAddress, false);
                     ModelState.AddModelError("", "Correo electrónico o contraseña incorrectos.");
                     return View(model);
@@ -102,33 +109,27 @@ namespace COMAVI_SA.Controllers
 
                 if (user.estado_verificacion != "verificado")
                 {
-                    _logger.LogWarning("Intento de login en cuenta no verificada: {Email}", model.Email);
                     ModelState.AddModelError("", "Su cuenta no ha sido verificada. Por favor, revise su correo electrónico para completar el proceso de verificación.");
                     return View(model);
                 }
 
                 await _userService.RecordLoginAttemptAsync(user.id_usuario, ipAddress, true);
-                _logger.LogInformation("Login exitoso para: {Email}", model.Email);
 
                 TempData["UserEmail"] = user.correo_electronico;
                 TempData["UserId"] = user.id_usuario;
                 TempData["RememberMe"] = model.RememberMe;
 
                 var token = _jwtService.GenerateJwtToken(user);
-                _logger.LogInformation("Token JWT generado correctamente para: {Email}", model.Email);
                 HttpContext.Session.SetString("JwtToken", token);
 
                 return RedirectToAction("VerifyOtp");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error no controlado durante el proceso de login: {Email}", model.Email);
                 ModelState.AddModelError("", "Error en el servidor. Por favor, intente más tarde.");
                 return View(model);
             }
         }
-
-        
 
         [Authorize]
         [HttpGet]
@@ -174,7 +175,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al configurar MFA");
                 TempData["Error"] = "Error al configurar la autenticación de dos factores";
                 return RedirectToAction("Profile");
             }
@@ -225,7 +225,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al configurar MFA");
                 TempData["Error"] = "Error al configurar la autenticación de dos factores";
                 return RedirectToAction("Profile");
             }
@@ -258,7 +257,6 @@ namespace COMAVI_SA.Controllers
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error al regenerar códigos de respaldo");
                     TempData["Error"] = "No hay códigos de respaldo disponibles";
                     return RedirectToAction("Profile");
                 }
@@ -283,15 +281,18 @@ namespace COMAVI_SA.Controllers
                 {
                     // Verificar si el usuario tiene el claim MfaCompleted
                     bool mfaCompleted = User.HasClaim(c => c.Type == "MfaCompleted" && c.Value == "true");
+                    var authResult = await _authorizationService.AuthorizeAsync(User, "RequireAdminRole");
 
-                    if (mfaCompleted)
+                    if (mfaCompleted && authResult.Succeeded)
                     {
-                        _logger.LogInformation("Usuario ya autenticado con MFA completo, redirigiendo a Home");
+                        return RedirectToAction("Index", "Admin");
+                    }
+                    else if (mfaCompleted)
+                    {
                         return RedirectToAction("Index", "Home");
                     }
 
                     // Si está autenticado pero no ha completado MFA, limpiar su autenticación
-                    _logger.LogWarning("Usuario autenticado sin MFA completado. Limpiando autenticación.");
                     await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
                     HttpContext.Session.Clear();
                     foreach (var cookie in Request.Cookies.Keys)
@@ -305,11 +306,9 @@ namespace COMAVI_SA.Controllers
                 var userId = TempData.Peek("UserId") as int?;
                 var email = TempData.Peek("UserEmail") as string;
 
-                _logger.LogInformation("VerifyOtp: UserId={UserId}, Email={Email}", userId, email);
 
                 if (!userId.HasValue || string.IsNullOrEmpty(email))
                 {
-                    _logger.LogWarning("VerifyOtp: No hay datos de usuario en TempData");
                     TempData["Error"] = "Su sesión ha expirado. Por favor, inicie sesión nuevamente.";
                     return RedirectToAction("Index");
                 }
@@ -318,7 +317,6 @@ namespace COMAVI_SA.Controllers
                 var user = await _userService.GetUserByIdAsync(userId.Value);
                 if (user == null)
                 {
-                    _logger.LogWarning("VerifyOtp: Usuario no encontrado");
                     TempData["Error"] = "Usuario no encontrado. Por favor, inicie sesión nuevamente.";
                     return RedirectToAction("Index");
                 }
@@ -326,7 +324,6 @@ namespace COMAVI_SA.Controllers
                 // Si el usuario no tiene MFA habilitado, pasar directamente al login
                 if (!user.mfa_habilitado)
                 {
-                    _logger.LogInformation("VerifyOtp: Usuario no tiene MFA habilitado, pasando directamente");
 
                     // Crear un modelo OtpViewModel con un código ficticio "bypass"
                     var bypassModel = new OtpViewModel { Email = email, OtpCode = "bypass" };
@@ -336,7 +333,6 @@ namespace COMAVI_SA.Controllers
                 }
 
                 var mfaSecret = await _userService.GetMfaSecretAsync(userId.Value);
-                _logger.LogInformation("VerifyOtp: MFA Secret obtenido={HasSecret}", !string.IsNullOrEmpty(mfaSecret));
 
                 // Verificar límite máximo de intentos global (no solo de la sesión actual)
                 int intentosFallidos = await _userService.GetFailedMfaAttemptsAsync(userId.Value);
@@ -344,7 +340,6 @@ namespace COMAVI_SA.Controllers
                 // Si excede el límite máximo (por ejemplo, 10 intentos), bloquear temporalmente la cuenta
                 if (intentosFallidos >= 10)
                 {
-                    _logger.LogWarning("Usuario {Email} ha excedido el límite máximo de intentos de MFA", email);
                     TempData["Error"] = "Ha excedido el número máximo de intentos. Su cuenta ha sido bloqueada temporalmente. Contacte al administrador.";
                     return RedirectToAction("Index");
                 }
@@ -371,13 +366,12 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error durante la preparación de la verificación OTP");
                 TempData["Error"] = "Error en el servidor. Por favor, intente más tarde.";
                 return RedirectToAction("Index");
             }
         }
 
-        // Eliminar el método VerifyOtp duplicado y mantener solo esta versión completa
+        [RateLimit(5, 300)] // 5 intentos en 5 minutos
         [AllowAnonymous]
         [HttpPost]
         public async Task<IActionResult> VerifyOtp(OtpViewModel model)
@@ -393,7 +387,6 @@ namespace COMAVI_SA.Controllers
 
                 if (!userId.HasValue || string.IsNullOrEmpty(email))
                 {
-                    _logger.LogWarning("VerifyOtp POST: Faltan datos de usuario en TempData");
                     TempData["Error"] = "Su sesión ha expirado. Por favor, inicie sesión nuevamente.";
                     return RedirectToAction("Index");
                 }
@@ -405,9 +398,23 @@ namespace COMAVI_SA.Controllers
 
                     if (elapsed.TotalMinutes > 5)
                     {
-                        _logger.LogWarning("OTP expirado para usuario {Email}", email);
-                        TempData["Error"] = "El código OTP ha expirado. Por favor, inicie sesión nuevamente.";
-                        return RedirectToAction("Index");
+
+                        // Verificar si el usuario es administrador
+                        var user_obtain = await _userService.GetUserByIdAsync(userId.Value);
+
+                        if (user_obtain != null && user_obtain.rol == "admin")
+                        {
+                            // Para administradores, permitir regenerar el OTP
+                            TempData["RegenerateOtp"] = true;
+                            TempData["Error"] = "El código OTP ha expirado. Como administrador, puede regenerarlo.";
+                            return View(model);
+                        }
+                        else
+                        {
+                            // Para usuarios normales, comportamiento normal
+                            TempData["Error"] = "El código OTP ha expirado. Por favor, inicie sesión nuevamente.";
+                            return RedirectToAction("Index");
+                        }
                     }
                 }
 
@@ -428,7 +435,6 @@ namespace COMAVI_SA.Controllers
                         // Verificar si excedió el límite máximo
                         if (model.IntentosFallidos >= 10)
                         {
-                            _logger.LogWarning("Usuario {Email} ha excedido el límite máximo de intentos de MFA", email);
                             TempData["Error"] = "Ha excedido el número máximo de intentos. Su cuenta ha sido bloqueada temporalmente.";
                             return RedirectToAction("Index");
                         }
@@ -446,7 +452,6 @@ namespace COMAVI_SA.Controllers
 
                     if (!verificacionExitosa)
                     {
-                        _logger.LogWarning("Intento de bypass de MFA no autorizado para usuario {Email}", email);
                         TempData["Error"] = "Error de autenticación. Por favor, inicie sesión nuevamente.";
                         return RedirectToAction("Index");
                     }
@@ -476,7 +481,6 @@ namespace COMAVI_SA.Controllers
                         // Si excedió el límite máximo, bloquear temporalmente
                         if (intentosFallidos >= 10)
                         {
-                            _logger.LogWarning("Usuario {Email} ha excedido el límite máximo de intentos de MFA", email);
                             TempData["Error"] = "Ha excedido el número máximo de intentos. Su cuenta ha sido bloqueada temporalmente.";
                             return RedirectToAction("Index");
                         }
@@ -493,7 +497,6 @@ namespace COMAVI_SA.Controllers
                 var user = await _userService.GetUserByIdAsync(userId.Value);
                 if (user == null)
                 {
-                    _logger.LogWarning("VerifyOtp POST: Usuario no encontrado después de verificación");
                     TempData["Error"] = "Usuario no encontrado. Por favor, inicie sesión nuevamente.";
                     return RedirectToAction("Index");
                 }
@@ -544,7 +547,6 @@ namespace COMAVI_SA.Controllers
 
                 // Establecer indicador de MFA completado en TempData
                 TempData["MfaCompleted"] = true;
-                _logger.LogInformation("Verificación OTP completada con éxito para usuario {Email}", email);
 
                 // Si es chofer y no ha completado su perfil, redirigir a completar perfil
                 if (user.rol == "user")
@@ -573,10 +575,43 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error durante la verificación OTP");
                 ModelState.AddModelError("", "Error en el servidor. Por favor, intente más tarde.");
                 return View(model);
             }
+        }
+
+        [HttpPost]
+        [AllowAnonymous]
+        public async Task<IActionResult> RegenerateOtp()
+        {
+            var userId = TempData["UserId"] as int?;
+            var email = TempData["UserEmail"] as string;
+
+            if (!userId.HasValue || string.IsNullOrEmpty(email))
+            {
+                TempData["Error"] = "Su sesión ha expirado. Por favor, inicie sesión nuevamente.";
+                return RedirectToAction("Index");
+            }
+
+            // Verificar que el usuario sea administrador
+            var user = await _userService.GetUserByIdAsync(userId.Value);
+            if (user == null || user.rol != "admin")
+            {
+                TempData["Error"] = "No tiene permisos para regenerar el código OTP.";
+                return RedirectToAction("Index");
+            }
+
+            // Reiniciar el timestamp para extender el tiempo
+            TempData["OtpTimestamp"] = DateTime.Now.Ticks.ToString();
+
+            // Mantener los datos del usuario en TempData para la siguiente solicitud
+            TempData.Keep("UserId");
+            TempData.Keep("UserEmail");
+            TempData.Keep("RememberMe");
+            TempData.Keep("ReturnUrl");
+
+            var model = new OtpViewModel { Email = email };
+            return View("VerifyOtp", model);
         }
 
         [Authorize]
@@ -605,7 +640,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al regenerar códigos de respaldo");
                 TempData["Error"] = "Error al regenerar los códigos de respaldo";
                 return RedirectToAction("Profile");
             }
@@ -647,7 +681,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al desactivar MFA");
                 TempData["Error"] = "Error al desactivar la autenticación de dos factores";
                 return RedirectToAction("Profile");
             }
@@ -660,6 +693,7 @@ namespace COMAVI_SA.Controllers
             return Task.FromResult<IActionResult>(View());
         }
 
+        [RateLimit(3, 600)] // 3 intentos en 10 minutos
         [AllowAnonymous]
         [HttpPost]
         public async Task<IActionResult> Register(RegisterViewModel model)
@@ -696,7 +730,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al registrar usuario");
                 ModelState.AddModelError("", "Error en el servidor. Por favor, intente más tarde.");
                 return View(model);
             }
@@ -744,7 +777,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al verificar usuario");
                 ModelState.AddModelError("", "Error en el servidor. Por favor, intente más tarde.");
                 return View(model);
             }
@@ -771,11 +803,9 @@ namespace COMAVI_SA.Controllers
         [HttpGet]
         public async Task<IActionResult> CompletarPerfil()
         {
-            _logger.LogInformation("Iniciando método CompletarPerfil (GET)");
 
             if (!User.Identity.IsAuthenticated)
             {
-                _logger.LogWarning("Intento de acceso sin autenticación a CompletarPerfil");
                 return RedirectToAction("Index");
             }
 
@@ -783,13 +813,11 @@ namespace COMAVI_SA.Controllers
             {
                 // Obtener el ID del usuario actual
                 int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-                _logger.LogInformation("CompletarPerfil: Usuario autenticado con ID {UserId}", userId);
 
                 var usuario = await _context.Usuarios.FindAsync(userId);
 
                 if (usuario == null)
                 {
-                    _logger.LogWarning("No se encontró el usuario con ID {UserId} en la base de datos", userId);
                     return RedirectToAction("Index");
                 }
 
@@ -800,20 +828,16 @@ namespace COMAVI_SA.Controllers
                 // Si ya existe un perfil, redirigir a SubirDocumentos
                 if (choferExistente != null)
                 {
-                    _logger.LogInformation("Se encontró un perfil existente para el usuario. ID de chofer: {IdChofer}, ID usuario: {IdUsuario}",
-                        choferExistente.id_chofer, choferExistente.id_usuario);
+
                     TempData["SuccessMessage"] = "Su perfil ya está completo. Ahora puede subir sus documentos.";
-                    _logger.LogInformation("Redirigiendo a SubirDocumentos, ya que el perfil está completo");
                     return RedirectToAction("SubirDocumentos");
                 }
 
-                _logger.LogInformation("No se encontró un perfil existente para el usuario con ID: {UserId}. Mostrando vista para completar el perfil", userId);
                 // Si no existe perfil, mostrar la vista para completarlo
                 return View();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al verificar el perfil del usuario: {Message}", ex.Message);
                 TempData["Error"] = "Error al verificar su perfil. Por favor, intente más tarde.";
                 return RedirectToAction("Index", "Home");
             }
@@ -826,28 +850,19 @@ namespace COMAVI_SA.Controllers
         {
             try
             {
-                _logger.LogInformation("CompletarPerfil POST recibido. IsValid: {IsValid}", ModelState.IsValid);
 
                 if (!ModelState.IsValid && model.Estado != null)
                 {
-                    // Registrar errores específicos de validación
-                    foreach (var error in ModelState.Values.SelectMany(v => v.Errors))
-                    {
-                        _logger.LogWarning("Error de validación: {Error}", error.ErrorMessage);
-                    }
+
                     return View(model);
                 }
 
-                _logger.LogInformation("Datos del modelo: Edad={Edad}, Cedula={Cedula}, Licencia={Licencia}",
-                    model.Edad, model.Numero_Cedula, model.Licencia);
 
                 int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-                _logger.LogInformation("UserId obtenido: {UserId}", userId);
 
                 var usuario = await _context.Usuarios.FindAsync(userId);
                 if (usuario == null)
                 {
-                    _logger.LogWarning("No se encontró el usuario con ID {UserId}", userId);
                     return RedirectToAction("Index");
                 }
 
@@ -857,7 +872,6 @@ namespace COMAVI_SA.Controllers
 
                 if (choferExistente != null)
                 {
-                    _logger.LogInformation("Ya existe un perfil para este usuario con ID: {IdUsuario}", userId);
                     TempData["SuccessMessage"] = "Su perfil ya está completo. Ahora puede subir sus documentos.";
                     return RedirectToAction("SubirDocumentos");
                 }
@@ -877,21 +891,18 @@ namespace COMAVI_SA.Controllers
 
                 _context.Choferes.Add(nuevoChofer);
 
-                _logger.LogInformation("Guardando cambios en la base de datos para el usuario con ID: {UserId}", userId);
                 await _context.SaveChangesAsync();
-                _logger.LogInformation("Cambios guardados exitosamente. Redirigiendo a SubirDocumentos");
 
                 TempData["SuccessMessage"] = "Perfil completado exitosamente.";
                 return RedirectToAction("SubirDocumentos");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al completar perfil de usuario: {Message}", ex.Message);
 
                 // Intentar obtener más información sobre la excepción
                 if (ex.InnerException != null)
                 {
-                    _logger.LogError(ex.InnerException, "Inner Exception: {Message}", ex.InnerException.Message);
+                    throw;
                 }
 
                 ModelState.AddModelError("", "Error en el servidor. Por favor, intente más tarde.");
@@ -908,39 +919,86 @@ namespace COMAVI_SA.Controllers
             try
             {
                 int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+
+                // Consulta optimizada que obtiene solo los datos necesarios
                 var chofer = await _context.Choferes
-                    .FirstOrDefaultAsync(c => c.id_usuario == userId);
+                    .AsNoTracking()
+                    .Where(c => c.id_usuario == userId)
+                    .Select(c => new { c.id_chofer, c.nombreCompleto })
+                    .FirstOrDefaultAsync();
+
                 if (chofer == null)
                 {
                     TempData["Error"] = "Debe completar su perfil primero.";
                     return RedirectToAction("Profile");
                 }
 
-                var documentosExistentes = await _context.Documentos
+                // Definir los tipos de documentos requeridos
+                var tiposRequeridos = new List<string> { "licencia", "carnet", "seguro", "tarjeta" };
+
+                // Consulta optimizada para obtener documentos con sus estados más recientes por tipo
+                var tiposDocumentosExistentes = await _context.Documentos
+                    .AsNoTracking()
                     .Where(d => d.id_chofer == chofer.id_chofer)
+                    .GroupBy(d => d.tipo_documento)
+                    .Select(g => new {
+                        TipoDocumento = g.Key,
+                        Estado = g.OrderByDescending(d => d.estado_validacion == "verificado")
+                                  .ThenByDescending(d => d.fecha_emision)
+                                  .Select(d => d.estado_validacion)
+                                  .FirstOrDefault(),
+                        Documento = g.OrderByDescending(d => d.fecha_emision)
+                                     .Select(d => new Documentos
+                                     {
+                                         id_documento = d.id_documento,
+                                         tipo_documento = d.tipo_documento,
+                                         fecha_emision = d.fecha_emision,
+                                         fecha_vencimiento = d.fecha_vencimiento,
+                                         estado_validacion = d.estado_validacion
+                                     })
+                                     .FirstOrDefault()
+                    })
                     .ToListAsync();
 
-                // Definir los tipos de documentos requeridos
-                var tiposRequeridos = new List<string> { "licencia", "carnet", "seguro", "tarjeta" }; // Ajusta según tus requisitos
+                // Determinar documentos faltantes con una sola operación
+                var documentosFaltantes = tiposRequeridos
+                    .Except(tiposDocumentosExistentes.Select(t => t.TipoDocumento))
+                    .ToList();
 
-                // Verificar qué documentos faltan
-                var tiposExistentes = documentosExistentes.Select(d => d.tipo_documento).ToList();
-                var documentosFaltantes = tiposRequeridos.Except(tiposExistentes).ToList();
+                // Verificar si todos los documentos están verificados con una sola operación
+                bool todosVerificados = tiposDocumentosExistentes.Count == tiposRequeridos.Count &&
+                                       tiposDocumentosExistentes.All(d => d.Estado == "verificado");
+
+                // Crear modelo con los documentos existentes
+                var documentosExistentes = tiposDocumentosExistentes
+                    .Where(t => t.Documento != null)
+                    .Select(t => t.Documento)
+                    .ToList();
 
                 var model = new CargaDocumentoViewModel
                 {
                     DocumentosExistentes = documentosExistentes,
-                    DocumentosFaltantes = documentosFaltantes 
+                    DocumentosFaltantes = documentosFaltantes,
+                    IdChofer = chofer.id_chofer
                 };
 
-                bool tieneTodosLosDocumentos = !documentosFaltantes.Any();
-                bool todosVerificados = documentosExistentes.All(d => d.estado_validacion == "verificado");
-
-                if (tieneTodosLosDocumentos && todosVerificados)
+                // Redireccionar si todos los documentos están verificados
+                if (todosVerificados)
                 {
                     TempData["InfoMessage"] = "Todos sus documentos ya están verificados.";
                     return RedirectToAction("Profile");
                 }
+
+                // Cachear los datos para reducir consultas futuras (válido por 5 minutos)
+                string cacheKey = $"documentos_chofer_{chofer.id_chofer}";
+                _cache.Set(cacheKey, new
+                {
+                    DocumentosExistentes = documentosExistentes,
+                    DocumentosFaltantes = documentosFaltantes
+                }, new MemoryCacheEntryOptions()
+                        .SetAbsoluteExpiration(TimeSpan.FromMinutes(5))
+                        .SetSize(1)
+                    );
 
                 return View(model);
             }
@@ -950,6 +1008,7 @@ namespace COMAVI_SA.Controllers
                 return RedirectToAction("Profile");
             }
         }
+        
         [Authorize(Roles = "admin,user")]
         [HttpPost]
         public async Task<IActionResult> SubirDocumentos(CargaDocumentoViewModel model)
@@ -1044,18 +1103,15 @@ namespace COMAVI_SA.Controllers
                     .Where(u => u.rol == "admin")
                     .ToListAsync();
 
-                foreach (var admin in admins)
+                var notificaciones = admins.Select(admin => new Notificaciones_Usuario
                 {
-                    var notificacion = new Notificaciones_Usuario
-                    {
-                        id_usuario = admin.id_usuario,
-                        tipo_notificacion = "Documento Nuevo",
-                        fecha_hora = DateTime.Now,
-                        mensaje = $"El chofer {chofer.nombreCompleto} ha subido un nuevo documento ({model.TipoDocumento}) que requiere validación."
-                    };
+                    id_usuario = admin.id_usuario,
+                    tipo_notificacion = "Documento Nuevo",
+                    fecha_hora = DateTime.Now,
+                    mensaje = $"El chofer {chofer.nombreCompleto} ha subido un nuevo documento ({model.TipoDocumento})..."
+                }).ToList();
 
-                    _context.NotificacionesUsuario.Add(notificacion);
-                }
+                _context.NotificacionesUsuario.AddRange(notificaciones);
 
                 await _context.SaveChangesAsync();
 
@@ -1064,7 +1120,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al subir documento");
                 ModelState.AddModelError("", "Error en el servidor. Por favor, intente más tarde.");
                 return View(model);
             }
@@ -1084,7 +1139,6 @@ namespace COMAVI_SA.Controllers
             try
             {
                 string sessionId = HttpContext.Session.Id;
-                _logger.LogInformation("Iniciando proceso de logout para sesión {SessionId}", sessionId);
 
                 // Limpiar token JWT de la sesión
                 string jwtToken = HttpContext.Session.GetString("JwtToken");
@@ -1096,7 +1150,6 @@ namespace COMAVI_SA.Controllers
                     {
                         // Añadir a la lista negra por 24 horas
                         blacklistService.AddToBlacklist(jwtToken, TimeSpan.FromHours(24));
-                        _logger.LogInformation("Token JWT añadido a la lista negra");
                     }
                 }
 
@@ -1104,7 +1157,6 @@ namespace COMAVI_SA.Controllers
                 if (User.Identity.IsAuthenticated)
                 {
                     var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-                    _logger.LogInformation("Eliminando sesión activa actual para usuario {UserId}", userId);
 
                     // Obtener información para ayudar a identificar la sesión actual
                     string userAgent = Request.Headers["User-Agent"].ToString();
@@ -1131,12 +1183,9 @@ namespace COMAVI_SA.Controllers
                     {
                         _context.SesionesActivas.Remove(sesionActual);
                         await _context.SaveChangesAsync();
-                        _logger.LogInformation("Eliminada sesión activa con ID {SesionId} de la base de datos", sesionActual.id_sesion);
                     }
-                    else
-                    {
-                        _logger.LogWarning("No se encontró una sesión activa para eliminar para el usuario {UserId}", userId);
-                    }
+                    
+                    
 
                     var idSesionParam = new SqlParameter("@idSesion", SqlDbType.NVarChar, 500) { Value = sessionId };
                     var idUsuarioParam = new SqlParameter("@idUsuario", SqlDbType.Int) { Value = userId };
@@ -1154,7 +1203,6 @@ namespace COMAVI_SA.Controllers
                 TempData.Remove("ReturnUrl");
 
                 // Eliminar todas las cookies con configuración exhaustiva
-                _logger.LogInformation("Eliminando todas las cookies");
                 foreach (var cookie in Request.Cookies.Keys)
                 {
                     Response.Cookies.Delete(cookie, new CookieOptions
@@ -1165,7 +1213,6 @@ namespace COMAVI_SA.Controllers
                         HttpOnly = true,
                         Path = "/"
                     });
-                    _logger.LogDebug("Cookie eliminada: {CookieName}", cookie);
                 }
 
                 // Asegurar que se eliminan las cookies de autenticación específicas
@@ -1197,26 +1244,20 @@ namespace COMAVI_SA.Controllers
                 });
 
                 // Limpiar datos de sesión
-                _logger.LogInformation("Limpiando datos de sesión");
                 HttpContext.Session.Clear();
 
                 // Cerrar autenticación 
-                _logger.LogInformation("Cerrando autenticación por cookies");
                 await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-                await HttpContext.SignOutAsync(JwtBearerDefaults.AuthenticationScheme);
-                await HttpContext.SignOutAsync("Identity.Application"); // Para asegurarnos
 
                 // Limpiar el principal de autenticación
                 HttpContext.User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity());
 
-                _logger.LogInformation("Proceso de logout completado correctamente");
 
                 // Forzar nueva sesión con parámetros para evitar cacheo
                 return RedirectToAction("Index", new { t = DateTime.Now.Ticks, clean = true, forceNew = true });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error grave durante el cierre de sesión");
 
                 try
                 {
@@ -1266,9 +1307,74 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al restablecer contraseña");
                 ModelState.AddModelError("", "Error en el servidor. Por favor, intente más tarde.");
                 return View(model);
+            }
+        }
+
+        [Authorize(Roles = "user")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SolicitarMantenimiento(int idCamion, string observaciones)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(observaciones))
+                {
+                    TempData["Error"] = "Debe proporcionar observaciones para solicitar mantenimiento.";
+                    return RedirectToAction("Profile", "Login");
+                }
+
+                // Obtener ID del chofer actual
+                int userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+                var chofer = await _context.Choferes
+                    .FirstOrDefaultAsync(c => c.id_usuario == userId);
+
+                if (chofer == null)
+                {
+                    TempData["Error"] = "No se encontró su perfil de chofer.";
+                    return RedirectToAction("Profile", "Login");
+                }
+
+                // Verificar que el camión está asignado al chofer
+                var camion = await _context.Camiones
+                    .FirstOrDefaultAsync(c => c.id_camion == idCamion && c.chofer_asignado == chofer.id_chofer);
+
+                if (camion == null)
+                {
+                    TempData["Error"] = "No tiene permiso para solicitar mantenimiento para este camión.";
+                    return RedirectToAction("Profile", "Login");
+                }
+
+                // Verificar si ya existe una solicitud pendiente
+                bool solicitudPendiente = await _context.Solicitudes_Mantenimiento
+                            .AnyAsync(s => s.id_camion == idCamion && s.id_chofer == chofer.id_chofer && s.estado == "pendiente");
+
+                if (solicitudPendiente)
+                {
+                    TempData["Info"] = "Ya tiene una solicitud de mantenimiento pendiente para este camión.";
+                    return RedirectToAction("Profile", "Login");
+                }
+
+                // Registrar la solicitud usando el procedimiento almacenado
+                await _databaseRepository.ExecuteQueryProcedureAsync<object>(
+                    "sp_SolicitarMantenimiento",
+                    new
+                    {
+                        id_chofer = chofer.id_chofer,
+                        id_camion = idCamion,
+                        observaciones
+                    }
+                );
+
+                TempData["SuccessMessage"] = "Solicitud de mantenimiento enviada correctamente.";
+
+                return RedirectToAction("Profile", "Login");
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = "Error al procesar su solicitud de mantenimiento.";
+                return RedirectToAction("Profile", "Login");
             }
         }
 
@@ -1336,6 +1442,18 @@ namespace COMAVI_SA.Controllers
                             ViewBag.TieneCamionAsignado = false;
                         }
 
+                        if (ViewBag.TieneCamionAsignado == true)
+                        {
+                            ViewBag.IdCamion = camion.id_camion;
+
+                            // Verificar si hay solicitudes pendientes
+                            var solicitudPendiente = await _context.Solicitudes_Mantenimiento
+                                .AnyAsync(s => s.id_camion == camion.id_camion &&
+                                               s.id_chofer == chofer.id_chofer &&
+                                               s.estado == "pendiente");
+
+                            ViewBag.SolicitudPendiente = solicitudPendiente;
+                        }
                         // Obtener documentos del chofer
                         var documentos = await _context.Documentos
                             .Where(d => d.id_chofer == chofer.id_chofer)
@@ -1371,12 +1489,12 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al cargar perfil de usuario");
                 TempData["Error"] = "Error al cargar los datos del perfil.";
                 return RedirectToAction("Index", "Home");
             }
         }
 
+        [RateLimit(3, 900)] // 3 intentos en 15 minutos
         [AllowAnonymous]
         [HttpGet]
         public IActionResult ForgotPassword()
@@ -1426,12 +1544,10 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al procesar solicitud de restablecimiento de contraseña");
                 ModelState.AddModelError("", "Error en el servidor. Por favor, intente más tarde.");
                 return View();
             }
         }
-
 
         [Authorize]
         [HttpGet]
@@ -1457,7 +1573,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al cargar la página de cambio de contraseña");
                 TempData["Error"] = "Error al cargar la página de cambio de contraseña.";
                 return RedirectToAction("Profile");
             }
@@ -1514,7 +1629,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al cambiar la contraseña del usuario");
                 ModelState.AddModelError("", "Error al cambiar la contraseña. Por favor, intente más tarde.");
                 return View(model);
             }
@@ -1539,7 +1653,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al enviar correo de confirmación de cambio de contraseña");
                 // No lanzamos la excepción para que el proceso de cambio de contraseña continúe
             }
         }
@@ -1587,7 +1700,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al enviar correo de verificación");
                 throw;
             }
         }
@@ -1631,4 +1743,6 @@ namespace COMAVI_SA.Controllers
 
         #endregion
     }
+#nullable enable
+
 }

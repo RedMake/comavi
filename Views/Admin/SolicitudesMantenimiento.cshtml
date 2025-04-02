@@ -1,0 +1,194 @@
+﻿@model List<COMAVI_SA.Models.SolicitudMantenimientoViewModel>
+@{
+    ViewData["Title"] = "Gestión de Solicitudes de Mantenimiento";
+}
+
+<div class="container-fluid">
+    <h1 class="h3 mb-2 text-gray-800">Solicitudes de Mantenimiento</h1>
+    <p class="mb-4">Gestión de solicitudes de mantenimiento para camiones.</p>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @TempData["SuccessMessage"]
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @TempData["Error"]
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    }
+
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            @if (Model.Count == 0)
+            {
+                <div class="text-center py-4">
+                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                    <p>No hay solicitudes de mantenimiento pendientes.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="solicitudesTable" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Chofer</th>
+                                <th>Camión</th>
+                                <th>Fecha Solicitud</th>
+                                <th>Observaciones</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var solicitud in Model)
+                            {
+                                <tr>
+                                    <td>@solicitud.IdSolicitud</td>
+                                    <td>@solicitud.NombreChofer</td>
+                                    <td>@solicitud.InfoCamion</td>
+                                    <td>@solicitud.FechaSolicitud.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-info ver-observaciones"
+                                                data-toggle="modal" data-target="#observacionesModal"
+                                                data-observaciones="@solicitud.Observaciones">
+                                            <i class="fas fa-eye"></i> Ver
+                                        </button>
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-success procesar-solicitud"
+                                                data-toggle="modal" data-target="#procesarModal"
+                                                data-id="@solicitud.IdSolicitud"
+                                                data-info="@($"{solicitud.NombreChofer} - {solicitud.InfoCamion}")">
+                                            <i class="fas fa-check"></i> Procesar
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Modal Observaciones -->
+<div class="modal fade" id="observacionesModal" tabindex="-1" role="dialog" aria-labelledby="observacionesModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="observacionesModalLabel">Observaciones</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p id="observacionesTexto"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Procesar Solicitud -->
+<div class="modal fade" id="procesarModal" tabindex="-1" role="dialog" aria-labelledby="procesarModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="procesarModalLabel">Procesar Solicitud de Mantenimiento</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form asp-action="ProcesarSolicitudMantenimiento" method="post">
+                <div class="modal-body">
+                    <input type="hidden" id="idSolicitud" name="idSolicitud" />
+
+                    <div class="alert alert-info">
+                        <span>Camión y Chofer: <strong id="infoSolicitud"></strong></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Decisión</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="estado" id="estadoAprobado" value="aprobado" checked>
+                            <label class="form-check-label" for="estadoAprobado">
+                                Aprobar y programar mantenimiento
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="estado" id="estadoRechazado" value="rechazado">
+                            <label class="form-check-label" for="estadoRechazado">
+                                Rechazar solicitud
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="seccionMantenimiento">
+                        <div class="form-group">
+                            <label for="descripcion">Descripción del mantenimiento</label>
+                            <textarea class="form-control" id="descripcion" name="descripcion" rows="3" required></textarea>
+                        </div>
+
+                        <div class="card mb-3">
+                            <div class="card-header py-2">
+                                <h6 class="mb-0">Información de Costos</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="costo">Costo total (incluye 13% IVA)</label>
+                                            <input type="number" class="form-control" id="costo" name="costo" step="0.01" min="0" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="moneda">Moneda</label>
+                                            <select class="form-control" id="moneda" name="moneda">
+                                                <option value="CRC">Colones (₡)</option>
+                                                <option value="USD">Dólares ($)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- El contenedor para el tipo de cambio se insertará aquí mediante JavaScript -->
+
+                                <div class="alert alert-info mt-2">
+                                    <small>
+                                        <i class="fas fa-info-circle"></i> El sistema calculará automáticamente el desglose
+                                        con 13% de IVA. El costo base y el impuesto se calcularán al enviar el formulario.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <input type="hidden" id="detallesCosto" name="detallesCosto" value="">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Procesar Solicitud</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/solicitudes-mantenimiento.js"></script>
+}

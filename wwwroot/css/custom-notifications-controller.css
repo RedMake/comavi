@@ -1,0 +1,75 @@
+﻿/* Contenedor de notificaciones con altura fija y scrollbar */
+.notifications-list {
+    max-height: 350px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+/* Estilos para la scrollbar */
+.notifications-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.notifications-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.notifications-list::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+    .notifications-list::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+
+/* Mejorar la apariencia de las notificaciones */
+.list-group-item {
+    margin-bottom: 10px !important;
+    border-radius: 4px !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Estilos para botones de acciones */
+.btn-mark-read, .btn-delete {
+    transition: all 0.2s ease;
+}
+
+    .btn-mark-read:hover {
+        background-color: #1cc88a;
+        color: white;
+    }
+
+    .btn-delete:hover {
+        background-color: #e74a3b;
+        color: white;
+    }
+
+/* Contador de notificaciones en la cabecera */
+.notification-count {
+    font-size: 0.8rem;
+    padding: 3px 8px;
+    background-color: #4e73df;
+    color: white;
+    border-radius: 10px;
+}
+
+/* Paginación de notificaciones */
+.notification-pagination {
+    margin-top: 15px;
+}
+
+/* Ajustes para mantener una altura consistente en la tarjeta */
+.card-body.notification-container {
+    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Mensaje de no hay notificaciones */
+.no-notifications {
+    text-align: center;
+    padding: 2rem 0;
+}
+

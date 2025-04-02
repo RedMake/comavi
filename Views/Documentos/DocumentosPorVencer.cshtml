@@ -115,13 +115,7 @@
                             }
                         </tbody>
                     </table>
-                </div>
-                
-                <div class="mt-4">
-                    <a href="@Url.Action("GenerarReporteDocumentos", "Documentos", new { estado = "porVencer", diasAnticipacion = diasAnticipacion })" class="btn btn-secondary">
-                        <i class="fas fa-file-pdf"></i> Generar Reporte PDF
-                    </a>
-                </div>
+                </div>        
             }
         </div>
     </div>
@@ -153,6 +147,5 @@
 </div>
 
 @section Scripts {
-    <script src="~/js/datatable-config-documentsPage.js"></script>
-    <script src="~/js/datatables-global.js"></script>
+    <script src="~/js/documentos.js"></script>
 }

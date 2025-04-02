@@ -2,6 +2,7 @@
 @using System.Security.Claims
 
 @{
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
     ViewData["Title"] = "Configurar Autenticación de Dos Factores";
     Layout = "_Layout";
 }
@@ -122,9 +123,11 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
     <script>
+
         // Configuración para el generador de QR
         @if (ViewBag.MfaHabilitado != true && !string.IsNullOrEmpty(Model.Secret))
         {
+
             <text>
                 var qrConfig = {
                     generateQR: true,

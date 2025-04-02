@@ -8,22 +8,22 @@ using System.Security.Claims;
 
 namespace COMAVI_SA.Controllers
 {
+#nullable disable
+#pragma warning disable CS0168
+
     [Authorize(Roles = "admin,user")]
     public class CamionController : Controller
     {
         private readonly ComaviDbContext _context;
-        private readonly ILogger<CamionController> _logger;
         private readonly IPdfService _pdfService;
         private readonly IEmailService _emailService;
 
         public CamionController(
             ComaviDbContext context,
-            ILogger<CamionController> logger,
             IPdfService pdfService,
             IEmailService emailService)
         {
             _context = context;
-            _logger = logger;
             _pdfService = pdfService;
             _emailService = emailService;
         }
@@ -68,7 +68,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener información del camión asignado");
                 TempData["Error"] = "Error al cargar la información del camión.";
                 return RedirectToAction("Profile", "Login");
             }
