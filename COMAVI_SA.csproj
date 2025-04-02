@@ -33,7 +33,4 @@
 	<ItemGroup>
 		<Using Include="Xunit" />
 	</ItemGroup>
-	<ItemGroup>
-	  <Folder Include="Tests\" />
-	</ItemGroup>
 </Project>

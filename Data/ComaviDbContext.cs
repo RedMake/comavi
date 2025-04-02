@@ -9,20 +9,20 @@ namespace COMAVI_SA.Data
         {
         }
 
-        public DbSet<Usuario> Usuarios { get; set; }
-        public DbSet<IntentosLogin> IntentosLogin { get; set; }
-        public DbSet<SesionesActivas> SesionesActivas { get; set; }
-        public DbSet<Notificaciones_Usuario> NotificacionesUsuario { get; set; }
-        public DbSet<RestablecimientoContrasena> RestablecimientoContrasena { get; set; }
-        public DbSet<MFA> MFA { get; set; }
-        public DbSet<CodigosRespaldoMFA> CodigosRespaldoMFA { get; set; } 
-        public DbSet<Choferes> Choferes { get; set; }
-        public DbSet<Camiones> Camiones { get; set; }
-        public DbSet<Documentos> Documentos { get; set; }
-        public DbSet<Mantenimiento_Camiones> Mantenimiento_Camiones { get; set; }
-        public DbSet<PreferenciasNotificacion> PreferenciasNotificacion { get; set; }
-        public DbSet<EventoAgenda> EventosAgenda { get; set; }
-        public DbSet<Solicitudes_Mantenimiento> Solicitudes_Mantenimiento { get; set; }
+        public virtual DbSet<Usuario> Usuarios { get; set; }
+        public virtual DbSet<IntentosLogin> IntentosLogin { get; set; }
+        public virtual DbSet<SesionesActivas> SesionesActivas { get; set; }
+        public virtual DbSet<Notificaciones_Usuario> NotificacionesUsuario { get; set; }
+        public virtual DbSet<RestablecimientoContrasena> RestablecimientoContrasena { get; set; }
+        public virtual DbSet<MFA> MFA { get; set; }
+        public virtual DbSet<CodigosRespaldoMFA> CodigosRespaldoMFA { get; set; } 
+        public virtual DbSet<Choferes> Choferes { get; set; }
+        public virtual DbSet<Camiones> Camiones { get; set; }
+        public virtual DbSet<Documentos> Documentos { get; set; }
+        public virtual DbSet<Mantenimiento_Camiones> Mantenimiento_Camiones { get; set; }
+        public virtual DbSet<PreferenciasNotificacion> PreferenciasNotificacion { get; set; }
+        public virtual DbSet<EventoAgenda> EventosAgenda { get; set; }
+        public virtual DbSet<Solicitudes_Mantenimiento> Solicitudes_Mantenimiento { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
