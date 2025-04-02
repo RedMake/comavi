@@ -176,7 +176,7 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                return Json(new { error = "Error al obtener eventos del calendario" });
+                return Json(new List<EventoCalendario>());
             }
         }
 

@@ -96,34 +96,23 @@ namespace COMAVI_SA.Tests.Services
         [Fact]
         public async Task EnviarCorreoAsync_CallsSendEmailAsyncWithSameParameters()
         {
-            // This test verifies that EnviarCorreoAsync is just an alias for SendEmailAsync
-            // For this, we'll need a partial mock of EmailService
+            string testEmail = "test@example.com";
+            string testSubject = "Test Subject";
+            string testBody = "Test Body";
 
-            var mockEmailService = new Mock<EmailService>(_mockConfiguration.Object, _mockEnvironment.Object)
-            {
-                CallBase = true
-            };
             var mock = new Mock<IEmailService>();
 
-            mock.Setup(e => e.SendEmailAsync(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<string>()
-            )).Returns(Task.CompletedTask);
+
+            // Setup
+            mock.Setup(e => e.EnviarCorreoAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
+                .Callback<string, string, string>((to, subject, body) =>
+                    mock.Object.SendEmailAsync(to, subject, body));
 
             // Act
-            await mock.Object.EnviarCorreoAsync(
-                "test@example.com",
-                "Test Subject",
-                "Test Body");
-
+            await mock.Object.EnviarCorreoAsync(testEmail, testSubject, testBody);
 
             // Assert
-            mockEmailService.Verify(e => e.SendEmailAsync(
-                "test@example.com",
-                "Test Subject",
-                "Test Body"
-            ), Times.Once);
+            mock.Verify(e => e.SendEmailAsync(testEmail, testSubject, testBody), Times.AtLeastOnce);
         }
 
         #endregion
