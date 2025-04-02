@@ -1,49 +1,408 @@
 ﻿@{
-    ViewData["Title"] = "Dashboard";
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+    ViewData["Title"] = "Inicio";
 }
-
-<h1 class="h3 mb-2 text-gray-800">Estadísticas</h1>
-<p class="mb-4">Datos sobre camiones, choferes, y documentos actualizados.</p>
-
-<div class="row">
-
-    @* <div class="col-xl-8 col-lg-7">
+@section Styles {
+    <link href="~/css/custom-home-stylesheet.css" rel="stylesheet" />
+}
+@if (!User.Identity.IsAuthenticated)
+{
+    <!-- Home para usuarios no autenticados -->
+    <div class="container-fluid">
+        <!-- Encabezado con banner de bienvenida -->
         <div class="card shadow mb-4">
+            <div class="card-body p-0">
+                <div class="row">
+                    <div class="col-lg-12 p-5 bg-primary text-white text-center">
+                        <h1 class="h2 mb-3">Bienvenido a COMAVI S.A.</h1>
+                        <p class="lead mb-4">Sistema administrativo para la gestión de camiones y choferes</p>
+                        <div class="mt-4">
+                            <a href="@Url.Action("Index", "Login")" class="btn btn-light btn-lg mr-2">
+                                <i class="fas fa-sign-in-alt mr-1"></i> Iniciar Sesión
+                            </a>
+                            <a href="@Url.Action("Register", "Login")" class="btn btn-outline-light btn-lg">
+                                <i class="fas fa-user-plus mr-1"></i> Registrarme
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Características principales -->
+        <div class="row">
+            <div class="col-lg-4 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-body text-center py-5">
+                        <div class="mb-3">
+                            <i class="fas fa-truck fa-4x text-primary"></i>
+                        </div>
+                        <h5 class="card-title">Gestión de Flota</h5>
+                        <p class="card-text">Control eficiente de toda su flota de camiones, seguimiento de mantenimientos y asignación de choferes.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-body text-center py-5">
+                        <div class="mb-3">
+                            <i class="fas fa-id-card fa-4x text-primary"></i>
+                        </div>
+                        <h5 class="card-title">Documentación Digital</h5>
+                        <p class="card-text">Mantenga al día la documentación de choferes y vehículos con alertas de vencimientos y validación automática.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 mb-4">
+                <div class="card shadow h-100">
+                    <div class="card-body text-center py-5">
+                        <div class="mb-3">
+                            <i class="fas fa-chart-line fa-4x text-primary"></i>
+                        </div>
+                        <h5 class="card-title">Reportes y Estadísticas</h5>
+                        <p class="card-text">Acceda a reportes detallados y estadísticas para optimizar la gestión y tomar decisiones informadas.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección de beneficios del sistema -->
+        <div class="card shadow mb-4 mt-4">
             <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">Número de Camiones Activos</h6>
+                <h6 class="m-0 font-weight-bold text-primary">Beneficios de Nuestro Sistema</h6>
             </div>
             <div class="card-body">
-                <div class="chart-area">
-                    <canvas id="myAreaChart"></canvas>
+                <div class="row">
+                    <div class="col-lg-6">
+                        <div class="benefit-item mb-4">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="icon-circle bg-primary text-white mr-3">
+                                    <i class="fas fa-bell"></i>
+                                </div>
+                                <h5 class="mb-0">Alertas Automáticas</h5>
+                            </div>
+                            <p>Reciba notificaciones oportunas sobre vencimientos de documentos, mantenimientos programados y otras fechas importantes.</p>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="benefit-item mb-4">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="icon-circle bg-success text-white mr-3">
+                                    <i class="fas fa-tachometer-alt"></i>
+                                </div>
+                                <h5 class="mb-0">Optimización de Recursos</h5>
+                            </div>
+                            <p>Reduzca hasta un 30% los tiempos de inactividad por mantenimientos no programados y mejore la gestión de su flota.</p>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="benefit-item mb-4">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="icon-circle bg-info text-white mr-3">
+                                    <i class="fas fa-clipboard-check"></i>
+                                </div>
+                                <h5 class="mb-0">Cumplimiento Normativo</h5>
+                            </div>
+                            <p>Asegure que todos sus vehículos y conductores cumplan con los requisitos legales vigentes en Costa Rica.</p>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="benefit-item mb-4">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="icon-circle bg-warning text-white mr-3">
+                                    <i class="fas fa-chart-line"></i>
+                                </div>
+                                <h5 class="mb-0">Reportes Avanzados</h5>
+                            </div>
+                            <p>Acceda a reportes detallados y personalizables sobre el desempeño de su flota y el estado de su documentación.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección de contacto y soporte -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Soporte Técnico 24/7</h6>
+            </div>
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-lg-7">
+                        <h4 class="mb-3">¿Necesita ayuda con el sistema?</h4>
+                        <p>Nuestro equipo de soporte técnico está disponible para ayudarle con cualquier consulta o problema que pueda surgir:</p>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-envelope text-primary mr-3 fa-lg"></i>
+                            <p class="mb-0"><strong>Email:</strong> soporte@docktrack.lat</p>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-phone text-primary mr-3 fa-lg"></i>
+                            <p class="mb-0"><strong>Teléfono:</strong> +506 2551-1117</p>
+                        </div>
+                        <div class="mt-4">
+                            <a href="@Url.Action("FAQ", "Home")" class="btn btn-primary mr-2">
+                                <i class="fas fa-question-circle mr-1"></i> Preguntas Frecuentes
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-lg-5 text-center d-none d-lg-block">
+                        <img src="~/img/support_team.png" alt="Equipo de soporte" class="img-fluid rounded" style="max-height: 300px; border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+}
+else if (User.IsInRole("user"))
+{
+    <!-- Home para usuarios autenticados con rol "user" -->
+    <div class="container-fluid">
+        <!-- Dashboard Header -->
+        <div class="d-sm-flex align-items-center justify-content-between mb-4">
+            <h1 class="h3 mb-0 text-gray-800">Panel de Control</h1>
+            <div>
+                <a href="@Url.Action("CamionAsignado", "Camion")" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm mr-2">
+                    <i class="fas fa-truck fa-sm text-white-50"></i> Mi Camión
+                </a>
+                <a href="@Url.Action("Index", "Calendar")" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
+                    <i class="fas fa-calendar fa-sm text-white-50"></i> Calendario de Vencimientos
+                </a>
+            </div>
+        </div>
 
-    <div class="col-xl-8 col-lg-7">
+        <!-- Tarjetas de información -->
+        <div class="row">
+            <!-- Camión Asignado -->
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-primary shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                    Camión Asignado
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">@ViewBag.InfoCamion</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-truck fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Licencia -->
+            <div class="col-xl-3 col-md-6 mb-4">
+                @{
+                    string badgeClass = "badge-success";
+                    string estadoLicencia = "Vigente";
+
+                    if (ViewBag.DiasParaVencimiento <= 0)
+                    {
+                        badgeClass = "badge-danger";
+                        estadoLicencia = "Vencida";
+                    }
+                    else if (ViewBag.DiasParaVencimiento <= 30)
+                    {
+                        badgeClass = "badge-warning";
+                        estadoLicencia = "Por vencer";
+                    }
+                }
+
+                <div class="card border-left-info shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                    Licencia <span class="badge @badgeClass">@estadoLicencia</span>
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                    Vence: @(ViewBag.FechaVencLicencia?.ToString("dd/MM/yyyy") ?? "No disponible")
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-id-card fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Documentos Pendientes -->
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-warning shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                    Documentos Pendientes
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">@ViewBag.DocumentosPendientes</div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-file-alt fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Próximo Mantenimiento -->
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-danger shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                                    Próximo Mantenimiento
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                    @(ViewBag.ProximoMantenimiento?.ToString("dd/MM/yyyy") ?? "No programado")
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-tools fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Próximos Vencimientos -->
+        <div class="row">
+            <div class="col-lg-6">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">Próximos Vencimientos</h6>
+                    </div>
+                    <div class="card-body">
+                        @if (ViewBag.ProximosVencimientos == null || ViewBag.ProximosVencimientos.Count == 0)
+                        {
+                            <div class="text-center py-4">
+                                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                                <p>No hay documentos con vencimiento próximo.</p>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-bordered" width="100%" cellspacing="0">
+                                    <thead>
+                                        <tr>
+                                            <th>Documento</th>
+                                            <th>Vencimiento</th>
+                                            <th>Días Restantes</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var doc in ViewBag.ProximosVencimientos)
+                                        {
+                                            <tr>
+                                                <td>@doc.tipo_documento</td>
+                                                <td>@doc.fecha_vencimiento.ToString("dd/MM/yyyy")</td>
+                                                <td>
+                                                    <span class="badge @(doc.dias_restantes <= 7 ? "badge-danger" : "badge-warning")">
+                                                        @doc.dias_restantes días
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Eventos Recientes -->
+            <div class="col-lg-6">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <h6 class="m-0 font-weight-bold text-primary">Eventos de Agenda Próximos</h6>
+                    </div>
+                    <div class="card-body">
+                        @if (ViewBag.EventosAgenda == null || ViewBag.EventosAgenda.Count == 0)
+                        {
+                            <div class="text-center py-4">
+                                <i class="fas fa-calendar-check fa-3x text-info mb-3"></i>
+                                <p>No hay eventos programados próximamente.</p>
+                                <a href="@Url.Action("Create", "Agenda")" class="btn btn-sm btn-primary mt-2">
+                                    <i class="fas fa-plus"></i> Crear Evento
+                                </a>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-bordered" width="100%" cellspacing="0">
+                                    <thead>
+                                        <tr>
+                                            <th>Título</th>
+                                            <th>Fecha</th>
+                                            <th>Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var evento in ViewBag.EventosAgenda)
+                                        {
+                                            <tr>
+                                                <td>@evento.titulo</td>
+                                                <td>@evento.fecha_inicio.ToString("dd/MM/yyyy")</td>
+                                                <td>
+                                                    <span class="badge
+                                                        @(evento.estado == "Completado" ? "badge-success" :
+                                                          evento.estado == "Pendiente" ? "badge-warning" : "badge-danger")">
+                                                        @evento.estado
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="text-center mt-3">
+                                <a href="@Url.Action("Index", "Agenda")" class="btn btn-sm btn-primary">
+                                    Ver todos los eventos
+                                </a>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Consejos y Recordatorios -->
         <div class="card shadow mb-4">
             <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">Cantidad de Choferes Activos</h6>
+                <h6 class="m-0 font-weight-bold text-primary">Consejos y Recordatorios</h6>
             </div>
             <div class="card-body">
-                <div class="chart-bar">
-                    <canvas id="myBarChart"></canvas>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="fas fa-lightbulb text-warning mr-2"></i>Seguridad Vial</h5>
+                                <p class="card-text">Recuerde respetar los límites de velocidad: 60 km/h en zona urbana, 80 km/h en carreteras nacionales y 100 km/h en autopistas para vehículos de carga.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="fas fa-clock text-info mr-2"></i>Descansos Obligatorios</h5>
+                                <p class="card-text">Tome un descanso de 30 minutos después de cada 4 horas continuas de conducción para mantener la seguridad y el cumplimiento normativo.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-center mt-3">
+                    <a href="@Url.Action("ConsejosAdvertencias", "Home")" class="btn btn-sm btn-secondary">
+                        Ver más consejos y recomendaciones
+                    </a>
                 </div>
             </div>
         </div>
     </div>
-
-    <div class="col-xl-4 col-lg-5">
-        <div class="card shadow mb-4">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">Documentos Actualizados</h6>
-            </div>
-            <div class="card-body">
-                <div class="chart-pie pt-4">
-                    <canvas id="myPieChart"></canvas>
-                </div>
-            </div>
-        </div>
-    </div> *@
-
-</div>
+}

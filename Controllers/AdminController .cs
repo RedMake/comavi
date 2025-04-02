@@ -74,12 +74,6 @@ namespace COMAVI_SA.Controllers
         }
 
         [HttpGet]
-        public IActionResult ConsejosAdvertencias()
-        {
-            return View();
-        }
-
-        [HttpGet]
         public async Task<IActionResult> Dashboard()
         {
             try

@@ -24,21 +24,24 @@
                 </a>
             </li>
 
-            <li>
-                <hr class="sidebar-divider my-0" />
-            </li>
-            <li class="nav-item active">
-                <a class="nav-link" href="@Url.Action(User.IsInRole("admin") ? "Dashboard" : "Index", User.IsInRole("admin") ? "Admin" : "Home")">
-                    <i class="fas fa-fw fa-tachometer-alt"></i>
-                    <span>Dashboard</span>
-                </a>
-            </li>
-            
-            <li>
-                <hr class="sidebar-divider my-0" />
-            </li>
+            @if (User.Identity.IsAuthenticated)
+            {
+                <li>
+                    <hr class="sidebar-divider my-0" />
+                </li>
+                <li class="nav-item active">
+                    <a class="nav-link" href="@Url.Action(User.IsInRole("admin") ? "Dashboard" : "Index", User.IsInRole("admin") ? "Admin" : "Home")">
+                        <i class="fas fa-fw fa-tachometer-alt"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
 
-            
+                <li>
+                    <hr class="sidebar-divider my-0" />
+                </li>
+            }
+
+
             @if (User.IsInRole("admin"))
             {
                 <li class="nav-item">
@@ -124,7 +127,7 @@
                     <hr class="sidebar-divider my-0" />
                 </li>
             }
-            
+
 
             @if (User.IsInRole("user"))
             {
@@ -156,31 +159,10 @@
                     </div>
                 </li>
             }
-            @{
-#pragma warning disable CS8602 // Dereference of a possibly null reference.
 
-                if (!User.Identity.IsAuthenticated)
-                {
-                    <li class="nav-item">
-                        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseLogin" aria-expanded="true" aria-controls="collapseLogin">
-                            <i class="fas fa-solid fa-user"></i>
-                            <span>Acceso</span>
-                        </a>
-                        <div id="collapseLogin" class="collapse" aria-labelledby="headingLogin" data-parent="#accordionSidebar">
-                            <div class="bg-white py-2 collapse-inner rounded">
-                                <a class="collapse-item" href="@Url.Action("Index", "Login")">Iniciar Sesión</a>
-                                <a class="collapse-item" href="@Url.Action("Register", "Login")">Registrarse</a>
-                                <a class="collapse-item" href="@Url.Action("ForgotPassword", "Login")">Restablecer Contraseña</a>
-                            </div>
-                        </div>
-                    </li>
-                }
-#pragma warning restore CS8602 // Dereference of a possibly null reference.
-            }
-           
 
         </ul>
-
+        <!-- Parte de arriba del navbar -->
         <div id="content-wrapper" class="d-flex flex-column">
             <div id="content">
                 <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
@@ -203,27 +185,26 @@
                     }
 
                     <ul class="navbar-nav ml-auto">
+
                         @if (User.Identity.IsAuthenticated)
                         {
-
                             <li class="nav-item">
-                                <a class="nav-link" href="@Url.Action("ConsejosAdvertencias", "Admin")">
+                                <a class="nav-link" href="@Url.Action("ConsejosAdvertencias", "Home")">
                                     <i class="fas fa-exclamation-circle"></i>
                                 </a>
                             </li>
-
                             <li class="nav-item dropdown no-arrow d-sm-none">
                                 <a class="nav-link dropdown-toggle" href="#" id="searchDropdown" role="button"
-                                   data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                     <i class="fas fa-search fa-fw"></i>
                                 </a>
                                 <div class="dropdown-menu dropdown-menu-right p-3 shadow animated--grow-in"
-                                     aria-labelledby="searchDropdown">
+                                aria-labelledby="searchDropdown">
                                     <form class="form-inline mr-auto w-100 navbar-search">
                                         <div class="input-group">
                                             <input id="buscarContainerIndex" type="text" class="form-control bg-light border-0 small"
-                                                   placeholder="Buscar por..." aria-label="Search"
-                                                   aria-describedby="basic-addon2">
+                                            placeholder="Buscar por..." aria-label="Search"
+                                            aria-describedby="basic-addon2">
                                             <div class="input-group-append">
                                                 <button class="btn btn-primary" type="button">
                                                     <i class="fas fa-search fa-sm"></i>
@@ -236,12 +217,12 @@
 
                             <li class="nav-item dropdown no-arrow mx-1">
                                 <a class="nav-link dropdown-toggle" href="#" id="alertsDropdown" role="button"
-                                   data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                     <i class="fas fa-bell fa-fw"></i>
                                     <span class="badge badge-danger badge-counter" id="notificationsCount">0</span>
                                 </a>
                                 <div class="dropdown-list dropdown-menu dropdown-menu-right shadow animated--grow-in"
-                                     aria-labelledby="alertsDropdown" id="notificationsDropdown">
+                                aria-labelledby="alertsDropdown" id="notificationsDropdown">
                                     <h6 class="dropdown-header">
                                         Centro de Alertas
                                     </h6>
@@ -271,13 +252,13 @@
 
                             <li class="nav-item dropdown no-arrow">
                                 <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
-                                   data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                     <span class="mr-2 d-none d-lg-inline text-gray-600 small">@User.Identity.Name</span>
                                     <img class="img-profile rounded-circle"
-                                         src="~/img/undraw_profile.svg">
+                                    src="~/img/undraw_profile.svg">
                                 </a>
                                 <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in"
-                                     aria-labelledby="userDropdown">
+                                aria-labelledby="userDropdown">
                                     <a class="dropdown-item" href="@Url.Action("Profile", "Login")">
                                         <i class="fas fa-user fa-sm fa-fw mr-2 text-gray-400"></i>
                                         Mi Perfil
@@ -300,14 +281,16 @@
 
                         }
                         else
+                        
                         {
-                            <li class="nav-item">
-                                <a class="nav-link" href="@Url.Action("Index", "Login")">
-                                    <i class="fas fa-sign-in-alt fa-sm fa-fw mr-2 text-gray-400"></i>
-                                    Iniciar Sesión
+                            <li class="nav-item" style="position: absolute; left: 50%; right: 50%; transform: translate(-50%, -50%);">
+                                <a class="nav-link" href="@Url.Action("Index", "Home")">
+                                    <i class="fas fa-house-user"></i>
                                 </a>
                             </li>
+                            
                         }
+
                     </ul>
                 </nav>
 
@@ -315,15 +298,66 @@
                     @RenderBody()
                 </div>
 
-                
+
             </div>
-            <footer class="sticky-footer bg-white">
-                <div class="container my-auto">
-                    <div class="copyright text-center my-auto">
-                        <span>Copyright &copy; COMAVI S.A 2025</span>
+            @if (User.Identity.IsAuthenticated || !User.Identity.IsAuthenticated)
+            {
+                <footer class="sticky-footer py-4 mt-auto" style="
+                    background: floralwhite;">
+                <div class="container">
+                    <div class="row">
+                        <!-- Columna de información de la empresa -->
+                        <div class="col-lg-4 mb-3 mb-lg-0">
+                            <h5 class="text-uppercase font-weight-bold mb-3">COMAVI S.A.</h5>
+                            <p class="mb-2 text-muted">Soluciones integrales para el transporte y logística.</p>
+                        </div>
+
+                        <!-- Columna de enlaces rápidos -->
+                        <div class="col-lg-4 mb-3 mb-lg-0">
+                            <h5 class="text-uppercase font-weight-bold mb-3">Enlaces rápidos</h5>
+                            <ul class="list-unstyled">
+                                <li class="mb-2"><a href="@Url.Action("About", "Home")" class="text-decoration-none text-muted"><i class="fas fa-chevron-right fa-xs mr-1"></i> Nosotros</a></li>
+                                <li class="mb-2"><a href="@Url.Action("Privacy", "Home")" class="text-decoration-none text-muted"><i class="fas fa-chevron-right fa-xs mr-1"></i> Política de Privacidad</a></li>
+                                <li class="mb-2"><a href="@Url.Action("Terms", "Home")" class="text-decoration-none text-muted"><i class="fas fa-chevron-right fa-xs mr-1"></i> Términos y Condiciones</a></li>
+                                <li><a href="@Url.Action("FAQ", "Home")" class="text-decoration-none text-muted"><i class="fas fa-chevron-right fa-xs mr-1"></i> Preguntas Frecuentes</a></li>
+                            </ul>
+                        </div>
+
+                        <!-- Columna de contacto -->
+                        <div class="col-lg-4">
+                            <h5 class="text-uppercase font-weight-bold mb-3">Contáctenos</h5>
+
+                            <p class="mb-2 text-muted">
+                                <i class="fas fa-map-marker-alt mr-2"></i> 
+                                Trans. 11, Provincia de Cartago, Cartago
+                                Costa Rica
+                            </p>
+                            <p class="mb-2 text-muted">
+                                <i class="fas fa-envelope mr-2"></i>
+                                soporte@docktrack.lat |  info@comavicr.com
+                            </p>
+
+                            <p class="mb-2 text-muted">
+                                <i class="fas fa-phone mr-2"></i> +506 2551-1117 (Atención al cliente)
+                            </p>
+                            <p class="mb-2 text-muted">
+                                <i class="fas fa-clock mr-2"></i>
+                                Lunes a Viernes: 8:00 AM - 5:00 PM<br>
+                                Sábados: 8:30 AM - 12:00 PM<br>
+                                Domingos: Cerrado
+                            </p>
+                        </div>
                     </div>
+                    <div class="row mt-4">
+                        <div class="col-12 text-center">
+                            <p class="mb-0 small text-muted">&copy; COMAVI S.A 2025. Todos los derechos reservados.</p>
+                        </div>
+                    </div>
+
                 </div>
             </footer>
+                
+            }
         </div> 
     </div>
 
@@ -366,9 +400,11 @@
     <script src="~/vendor/datatables/dataTables.bootstrap4.min.js"></script>
     <script src="~/vendor/chart.js/Chart.min.js"></script>
     <script src="~/vendor/dompurify/purify.min.js"></script>
-    <script src="~/js/notificaciones.js"></script>
-    <script src="~/js/security-fixes.js"></script>
-    <script src="~/js/datatables-global.js"></script>
+    @if (User.Identity.IsAuthenticated){
+        <script src="~/js/notificaciones.js"></script>
+        <script src="~/js/security-fixes.js"></script>
+        <script src="~/js/datatables-global.js"></script>
+    }
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

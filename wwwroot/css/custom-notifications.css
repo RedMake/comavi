@@ -5,24 +5,24 @@
     scrollbar-width: thin;
 }
 
-    /* Estilo para la barra de desplazamiento (webkit browsers) */
-    #notificationsContainer::-webkit-scrollbar {
-        width: 6px;
-    }
+/* Estilo para la barra de desplazamiento (webkit browsers) */
+#notificationsContainer::-webkit-scrollbar {
+    width: 6px;
+}
 
-    #notificationsContainer::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 10px;
-    }
+#notificationsContainer::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
 
-    #notificationsContainer::-webkit-scrollbar-thumb {
-        background: #888;
-        border-radius: 10px;
-    }
+#notificationsContainer::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+}
 
-        #notificationsContainer::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
+#notificationsContainer::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
 
 /* Asegurar que el dropdown tenga un tamaño fijo para mostrar correctamente el scrollbar */
 #notificationsDropdown {

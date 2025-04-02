@@ -19,7 +19,13 @@ namespace COMAVI_SA.Filters
             "/Login/Register",
             "/Login/ForgotPassword",
             "/Login/ResetPassword",
-            "/Home/SesionExpirada"
+            "/Home/SesionExpirada",
+            "/Home/About",
+            "/Home/FAQ",
+            "/Home/Terms",
+            "/Home/Privacy",
+            "/Home/ConsejosAdvertencias",
+            "/Maintenance/Index"
         };
 
         public override async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
