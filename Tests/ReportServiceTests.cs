@@ -13,7 +13,6 @@ namespace COMAVIxUnitTest
 {
     public class ReportServiceTests
     {
-        private readonly Mock<ILogger<ReportService>> _mockLogger;
         private readonly ComaviDbContext _dbContext;
         private readonly ReportService _reportService;
 
@@ -25,8 +24,7 @@ namespace COMAVIxUnitTest
                 .Options;
 
             _dbContext = new ComaviDbContext(options);
-            _mockLogger = new Mock<ILogger<ReportService>>();
-            _reportService = new ReportService(_dbContext, _mockLogger.Object);
+            _reportService = new ReportService(_dbContext);
 
             // Configurar datos de prueba
             SetupTestData();

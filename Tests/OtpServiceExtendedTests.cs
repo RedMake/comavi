@@ -8,6 +8,8 @@ using Xunit;
 
 namespace COMAVIxUnitTest
 {
+#nullable disable
+
     /// <summary>
     /// Pruebas extendidas para OtpService, con énfasis en los códigos de respaldo
     /// </summary>

@@ -14,13 +14,15 @@ using Xunit;
 
 namespace COMAVIxUnitTest
 {
+#nullable disable
+#pragma warning disable CS0649 // El campo 'UserServiceTests._context' nunca se asigna y siempre tendrá el valor predeterminado null
+
     public class UserServiceTests
     {
         private readonly ComaviDbContext _context;
         private readonly Mock<IPasswordService> _mockPasswordService;
         private readonly Mock<IDatabaseRepository> _mockDatabaseRepository;
         private readonly Mock<IOtpService> _mockOtpService;
-        private readonly Mock<ILogger<UserService>> _mockLogger;
         private readonly Mock<IConfiguration> _mockConfiguration;
         private readonly UserService _userService;
         private List<Usuario> _usuarios;
@@ -64,7 +66,6 @@ namespace COMAVIxUnitTest
             // Configurar mocks
             _mockPasswordService = new Mock<IPasswordService>();
             _mockOtpService = new Mock<IOtpService>();
-            _mockLogger = new Mock<ILogger<UserService>>();
             _mockConfiguration = new Mock<IConfiguration>();
             var mockSection = new Mock<IConfigurationSection>();
 
@@ -104,7 +105,6 @@ namespace COMAVIxUnitTest
                 _context,
                 _mockPasswordService.Object,
                 _mockOtpService.Object,
-                _mockLogger.Object,
                 _mockConfiguration.Object,
                 _mockDatabaseRepository.Object);
         }

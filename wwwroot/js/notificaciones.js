@@ -107,10 +107,9 @@
 
     // Cargar notificaciones después de 10 segundos
     setTimeout(function () {
-        console.log("Cargando notificaciones después de 10 segundos");
         cargarNotificaciones();
 
-        // Actualizar notificaciones cada 60 segundos después de la primera carga
+        // Actualizar notificaciones cada 30 segundos después de la primera carga
         setInterval(cargarNotificaciones, 30000);
     }, 10000); // 10000 ms = 10 segundos
 

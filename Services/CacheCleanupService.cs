@@ -2,30 +2,32 @@
 
 namespace COMAVI_SA.Services
 {
+#pragma warning disable CS0168
+
     // Servicio para limpieza de caché
     public class CacheCleanupService : IHostedService, IDisposable
     {
         private readonly IMemoryCache _cache;
         private readonly ICacheKeyTracker _cacheKeyTracker;
-        private readonly ILogger<CacheCleanupService> _logger;
         private Timer _timer;
 
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
         public CacheCleanupService(
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
             IMemoryCache cache,
-            ICacheKeyTracker cacheKeyTracker,
-            ILogger<CacheCleanupService> logger)
+            ICacheKeyTracker cacheKeyTracker)
         {
             _cache = cache;
             _cacheKeyTracker = cacheKeyTracker;
-            _logger = logger;
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Servicio de limpieza de caché iniciado");
 
             // Ejecutar cada 30 minutos
+#pragma warning disable CS8622 // Nullability of reference types in type of parameter doesn't match the target delegate (possibly because of nullability attributes).
             _timer = new Timer(DoCleanup, null, TimeSpan.Zero, TimeSpan.FromMinutes(30));
+#pragma warning restore CS8622 // Nullability of reference types in type of parameter doesn't match the target delegate (possibly because of nullability attributes).
 
             return Task.CompletedTask;
         }
@@ -34,7 +36,6 @@ namespace COMAVI_SA.Services
         {
             try
             {
-                _logger.LogInformation("Iniciando limpieza programada de caché");
 
                 // Limpiar claves antiguas del tracker
                 _cacheKeyTracker.CleanupOldKeys(TimeSpan.FromHours(2));
@@ -44,11 +45,10 @@ namespace COMAVI_SA.Services
                 CleanupUserCache();
                 CleanupInactiveSessionsCache();
 
-                _logger.LogInformation("Limpieza de caché completada");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error durante la limpieza de caché");
+                throw;
             }
         }
 
@@ -64,12 +64,11 @@ namespace COMAVI_SA.Services
                 foreach (var key in dashboardKeys)
                 {
                     _cache.Remove(key);
-                    _logger.LogDebug($"Eliminada clave de caché de dashboard antigua: {key}");
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al limpiar caché de dashboard");
+                throw;
             }
         }
 
@@ -88,14 +87,13 @@ namespace COMAVI_SA.Services
                         if (DateTime.UtcNow.Subtract(timestamp) > TimeSpan.FromHours(1))
                         {
                             _cache.Remove(key);
-                            _logger.LogDebug($"Eliminada clave de caché de usuario antigua: {key}");
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al limpiar caché de usuarios");
+                throw;
             }
         }
 
@@ -114,20 +112,18 @@ namespace COMAVI_SA.Services
                         if (DateTime.UtcNow.Subtract(timestamp) > TimeSpan.FromMinutes(30))
                         {
                             _cache.Remove(key);
-                            _logger.LogDebug($"Eliminada clave de caché de sesión inactiva: {key}");
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al limpiar caché de sesiones");
+                throw;
             }
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Servicio de limpieza de caché detenido");
             _timer?.Change(Timeout.Infinite, 0);
             return Task.CompletedTask;
         }

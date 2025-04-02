@@ -1,5 +1,7 @@
 ﻿@model COMAVI_SA.Models.PerfilViewModel
 @{
+#pragma warning disable CS8602, CS8600 // Suprimir varios warnings de null reference
+
     ViewData["Title"] = "Mi Perfil";
 
     // Verificamos si el usuario tiene un perfil de chofer completo
@@ -54,7 +56,7 @@
         </div>
     }
 
-    <!-- Header con botones de acción -->
+    <!-- Header con título -->
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
         <h1 class="h3 mb-0 text-gray-800">Mi Perfil</h1>
 
@@ -64,12 +66,58 @@
             <div>
                 @if (ViewBag.TieneCamionAsignado == true)
                 {
-                    <a href="@Url.Action("CamionAsignado", "Perfil")" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm me-2">
+                    <a href="@Url.Action("CamionAsignado", "Camion")" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm me-2">
                         <i class="fas fa-truck fa-sm text-white-50"></i> Ver Mi Camión
                     </a>
+                    <button type="button" class="d-none d-sm-inline-block btn btn-sm btn-warning shadow-sm"
+                            data-toggle="modal" data-target="#mantenimientoUserModal">
+                        <i class="fas fa-tools fa-sm text-white-50"></i> Mantenimiento
+                    </button>
                 }
             </div>
         }
+    </div>
+
+    <!-- Modal de Mantenimiento -->
+    <div class="modal fade" id="mantenimientoUserModal" tabindex="-1" aria-labelledby="mantenimientoModalUserLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="mantenimientoModalUserLabel">Mantenimiento de Camión</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <p>Camión asignado: <strong>@ViewBag.InfoCamion</strong></p>
+                        @if (ViewBag.SolicitudPendiente == true)
+                        {
+                            <div class="alert alert-info">
+                                <i class="fas fa-tools mr-2"></i> Tiene una solicitud de mantenimiento pendiente.
+                            </div>
+                        }
+                        else
+                        {
+                            <form asp-controller="Login" asp-action="SolicitarMantenimiento" method="post">
+                                <input type="hidden" name="idCamion" value="@ViewBag.IdCamion" />
+                                <div class="form-group">
+                                    <label for="observaciones">Observaciones de mantenimiento</label>
+                                    <textarea class="form-control" id="observaciones" name="observaciones" rows="3" required></textarea>
+                                    <small class="form-text text-muted">Describa detalladamente el problema o razón del mantenimiento</small>
+                                </div>
+                                <div class="d-flex justify-content-end mt-3">
+                                    <button type="button" class="btn btn-secondary me-2 mx-1" data-dismiss="modal">Cancelar</button>
+                                    <button type="submit" class="btn btn-warning">
+                                        <i class="fas fa-exclamation-triangle"></i> Solicitar Mantenimiento
+                                    </button>
+                                </div>
+                            </form>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Sección para completar perfil (solo se muestra si el perfil no está completo) -->
@@ -338,7 +386,7 @@
                             <div class="mb-3">
                                 <h6 class="font-weight-bold">Autenticación de dos factores</h6>
                                 <div class="d-flex align-items-center mb-2">
-                                    <div class="me-3">
+                                    <div class="me-3 mx-1">
                                         @if (Model.MfaHabilitado)
                                         {
                                             <span class="badge badge-success">Habilitada</span>
@@ -372,7 +420,7 @@
                                 <h6 class="font-weight-bold">Contraseña</h6>
                                 <div class="d-flex align-items-center">
                                     <div class="me-3">
-                                        <span class="text-muted">
+                                        <span class="text-muted mx-1">
                                             Última actualización:
                                             @if (Model.FechaActualizacionPassword.HasValue)
                                             {

@@ -7,11 +7,13 @@ using System.Security.Claims;
 
 namespace COMAVI_SA.Controllers
 {
+#nullable disable
+#pragma warning disable CS0168
+
     [Authorize(Roles = "admin,user")]
     public class NotificationsController : Controller
     {
         private readonly ComaviDbContext _context;
-        private readonly ILogger<NotificationsController> _logger;
         private const int DefaultPageSize = 5; // Número de notificaciones por página
 
         public NotificationsController(
@@ -19,7 +21,6 @@ namespace COMAVI_SA.Controllers
             ILogger<NotificationsController> logger)
         {
             _context = context;
-            _logger = logger;
         }
 
         // Método existente
@@ -66,7 +67,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al cargar la página de notificaciones");
                 TempData["Error"] = "Error al cargar las notificaciones.";
                 return RedirectToAction("Profile", "Login");
             }
@@ -100,7 +100,6 @@ namespace COMAVI_SA.Controllers
                 // Calcular total de páginas
                 int totalPaginas = (int)Math.Ceiling(totalNotificaciones / (double)elementosPorPagina);
 
-                _logger.LogInformation($"Solicitando página {pagina} con {elementosPorPagina} elementos");
 
 
                 // Obtener notificaciones para la página solicitada
@@ -129,7 +128,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener página de notificaciones");
                 return Json(new { success = false, message = "Error al cargar notificaciones." });
             }
         }
@@ -176,7 +174,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al guardar preferencias de notificación");
                 TempData["Error"] = "Error al guardar las preferencias de notificación.";
                 return RedirectToAction(nameof(Index));
             }
@@ -207,7 +204,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al marcar notificación como leída");
                 return Json(new { success = false, message = "Error al marcar la notificación como leída." });
             }
         }
@@ -237,7 +233,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al eliminar notificación");
                 return Json(new { success = false, message = "Error al eliminar la notificación." });
             }
         }
@@ -283,9 +278,10 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener notificaciones no leídas");
                 return Json(new { success = false, message = "Error al obtener notificaciones no leídas." });
             }
         }
     }
+#nullable enable
+
 }

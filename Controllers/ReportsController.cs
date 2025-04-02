@@ -6,21 +6,20 @@ using System.Security.Claims;
 
 namespace COMAVI_SA.Controllers
 {
+#nullable disable
+
     [Authorize(Roles = "admin,user")]
     public class ReportsController : Controller
     {
         private readonly IReportService _reportService;
         private readonly ComaviDbContext _context;
-        private readonly ILogger<ReportsController> _logger;
 
         public ReportsController(
             IReportService reportService,
-            ComaviDbContext context,
-            ILogger<ReportsController> logger)
+            ComaviDbContext context)
         {
             _reportService = reportService;
             _context = context;
-            _logger = logger;
         }
 
         [HttpGet]
@@ -35,7 +34,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al generar reporte de conductor");
                 TempData["Error"] = "Error al generar el reporte: " + ex.Message;
                 return RedirectToAction("Profile", "Login");
             }
@@ -53,10 +51,11 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al generar reporte de vencimientos");
                 TempData["Error"] = "Error al generar el reporte: " + ex.Message;
                 return RedirectToAction("Profile", "Login");
             }
         }
     }
+#nullable enable
+
 }

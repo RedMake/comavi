@@ -3,17 +3,19 @@ using COMAVI_SA.Models;
 using COMAVI_SA.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace COMAVI_SA.Controllers
 {
-    
+#pragma warning disable CS0168 // La variable 'ex' se ha declarado pero nunca se usa
+
+
     [Authorize(Policy = "RequireAdminRole")]
     [VerificarAutenticacion]
     public class AdminController : Controller
     {
         private readonly IAdminService _adminService;
         private readonly IAuditService _auditService;
-        private readonly ILogger<AdminController> _logger;
         private readonly INotificationService _notificationService;
         private readonly IEmailService _emailService;
         private readonly IReportService _reportService;
@@ -23,7 +25,6 @@ namespace COMAVI_SA.Controllers
         public AdminController(
             IAdminService adminService,
             IAuditService auditService,
-            ILogger<AdminController> logger,
             INotificationService notificationService,
             IEmailService emailService,
             IReportService reportService,
@@ -32,13 +33,13 @@ namespace COMAVI_SA.Controllers
         {
             _adminService = adminService;
             _auditService = auditService;
-            _logger = logger;
             _notificationService = notificationService;
             _emailService = emailService;
             _reportService = reportService;
             _userService = userService;
             _mantenimientoService = mantenimientoService; 
         }
+#nullable disable
 
         #region Dashboard y Reportes
 
@@ -61,14 +62,12 @@ namespace COMAVI_SA.Controllers
                 else
                 {
                     // Timeout ocurrió
-                    _logger.LogWarning("Timeout al cargar el dashboard de administración");
                     TempData["Warning"] = "El dashboard está tardando demasiado en cargar. Mostrando datos básicos.";
                     return View(new AdminDashboardViewModel());
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al cargar el dashboard de administración");
                 TempData["Error"] = "Error al cargar el dashboard de administración";
                 return RedirectToAction("ListarChoferes");
             }
@@ -99,12 +98,10 @@ namespace COMAVI_SA.Controllers
                     // Obtener datos para gráficos
                     var mantenimientosPorMes = await _adminService.GetMantenimientosPorMesAsync(DateTime.Now.Year);
                     ViewBag.MantenimientosPorMes = mantenimientosPorMes;
-                    _logger.LogInformation("MantenimientosPorMes obtenidos correctamente: {0} registros",
-                        mantenimientosPorMes?.Count ?? 0);
+                        
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error al obtener mantenimientos por mes");
                     // No propagar la excepción, continuar con el resto de datos
                 }
 
@@ -112,12 +109,9 @@ namespace COMAVI_SA.Controllers
                 {
                     var camionesEstados = await _adminService.GetEstadosCamionesAsync();
                     ViewBag.CamionesEstados = camionesEstados;
-                    _logger.LogInformation("CamionesEstados: {0}",
-                        System.Text.Json.JsonSerializer.Serialize(camionesEstados));
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error al obtener estados de camiones");
                     // No propagar la excepción, continuar con el resto de datos
                 }
 
@@ -125,12 +119,10 @@ namespace COMAVI_SA.Controllers
                 {
                     var documentosEstados = await _adminService.GetEstadosDocumentosAsync();
                     ViewBag.DocumentosEstados = documentosEstados;
-                    _logger.LogInformation("DocumentosEstados obtenidos correctamente: {0} registros",
-                        documentosEstados?.Count ?? 0);
+                   
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error al obtener estados de documentos");
                     // No propagar la excepción, continuar con el resto de datos
                 }
 
@@ -139,12 +131,10 @@ namespace COMAVI_SA.Controllers
                     // Recientes actividades
                     var actividades = await _adminService.GetActividadesRecientesAsync(10);
                     ViewBag.Actividades = actividades;
-                    _logger.LogInformation("Actividades recientes obtenidas correctamente: {0} registros",
-                        actividades?.Count ?? 0);
+                   
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error al obtener actividades recientes");
                     // No propagar la excepción, continuar con el resto de datos
                 }
 
@@ -152,7 +142,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error general al cargar dashboard");
                 await _auditService.LogExceptionAsync("Dashboard", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al cargar los datos del dashboard";
                 return View(new COMAVI_SA.Models.DashboardViewModel());
@@ -187,7 +176,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al generar reporte de mantenimientos");
                 await _auditService.LogExceptionAsync("ReporteMantenimientos", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al generar el reporte de mantenimientos";
                 return RedirectToAction("ReportesGenerales");
@@ -216,7 +204,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al exportar reporte de mantenimientos a PDF");
                 await _auditService.LogExceptionAsync("ExportarReporteMantenimientosPDF", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al generar el PDF de mantenimientos";
                 return RedirectToAction("GenerarReporteMantenimientos", new { fechaInicio, fechaFin });
@@ -239,7 +226,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al generar reporte de documentos vencidos");
                 await _auditService.LogExceptionAsync("ReporteDocumentosVencidos", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al generar el reporte de documentos vencidos";
                 return RedirectToAction("ReportesGenerales");
@@ -266,7 +252,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al exportar reporte de documentos vencidos a PDF");
                 await _auditService.LogExceptionAsync("ExportarReporteDocumentosVencidosPDF", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al generar el PDF de documentos vencidos";
                 return RedirectToAction("GenerarReporteDocumentosVencidos", new { diasPrevios });
@@ -278,13 +263,11 @@ namespace COMAVI_SA.Controllers
         {
             try
             {
-                _logger.LogInformation("Iniciando actualización programada del caché del dashboard");
                 await _adminService.GetDashboardDataAsync(forceRefresh: true);
-                _logger.LogInformation("Caché del dashboard actualizado correctamente");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al actualizar caché del dashboard en segundo plano");
+                throw;
             }
         }
 
@@ -305,7 +288,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al listar usuarios");
                 await _auditService.LogExceptionAsync("ListarUsuarios", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al cargar la lista de usuarios";
                 return View(new List<UsuarioAdminViewModel>());
@@ -337,7 +319,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener datos del usuario");
                 await _auditService.LogExceptionAsync("EditarUsuarioForm", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al obtener datos del usuario";
                 return RedirectToAction("ListarUsuarios");
@@ -378,7 +359,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al actualizar usuario");
                 await _auditService.LogExceptionAsync("ActualizarUsuario", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al actualizar el usuario";
                 return View(model);
@@ -412,7 +392,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al cambiar estado del usuario");
                 await _auditService.LogExceptionAsync("CambiarEstadoUsuario", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al cambiar el estado del usuario";
                 return RedirectToAction("ListarUsuarios");
@@ -446,7 +425,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al resetear contraseña");
                 await _auditService.LogExceptionAsync("ResetearContrasena", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al resetear la contraseña";
                 return RedirectToAction("ListarUsuarios");
@@ -473,7 +451,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener sesiones activas");
                 await _auditService.LogExceptionAsync("VerSesionesActivas", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al obtener las sesiones activas";
                 return RedirectToAction("ListarUsuarios");
@@ -527,7 +504,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al generar reporte de usuarios");
                 await _auditService.LogExceptionAsync("ReporteUsuarios", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al generar el reporte de usuarios";
                 return RedirectToAction("ListarUsuarios");
@@ -551,13 +527,54 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al exportar reporte de usuarios a PDF");
                 await _auditService.LogExceptionAsync("ExportarReporteUsuariosPDF", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al generar el PDF de usuarios";
                 return RedirectToAction("GenerarReporteUsuarios", new { rol });
             }
         }
 
+        [HttpGet]
+        public async Task<IActionResult> SolicitudesMantenimiento()
+        {
+            try
+            {
+                var solicitudes = await _adminService.GetSolicitudesMantenimientoPendientesAsync();
+                return View(solicitudes);
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = "Error al cargar las solicitudes.";
+                return RedirectToAction("Index", "Home");
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ProcesarSolicitudMantenimiento(int idSolicitud, string estado,
+            string descripcion = null, decimal? costo = null, string moneda = "CRC", string detallesCosto = null)
+        {
+            try
+            {
+                int adminId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+
+                await _adminService.ProcesarSolicitudMantenimientoAsync(
+                    idSolicitud, adminId, estado, descripcion, costo, moneda, detallesCosto);
+
+                TempData["SuccessMessage"] = $"Solicitud {(estado == "aprobado" ? "aprobada" : "rechazada")} correctamente.";
+                return RedirectToAction("SolicitudesMantenimiento");
+            }
+            catch (ArgumentException ex)
+            {
+                TempData["Error"] = ex.Message;
+                return RedirectToAction("SolicitudesMantenimiento");
+            }
+            catch (Exception ex)
+            {
+                TempData["Error"] = "Error al procesar la solicitud.";
+                return RedirectToAction("SolicitudesMantenimiento");
+            }
+        }
+        
         #endregion
 
         #region Gestión de Camiones
@@ -575,7 +592,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al listar camiones");
                 await _auditService.LogExceptionAsync("ListarCamiones", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al cargar la lista de camiones";
                 return View(new List<CamionViewModel>());
@@ -619,7 +635,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al registrar camión");
                 await _auditService.LogExceptionAsync("RegistrarCamion", ex.Message, User.Identity.Name ?? "sistema");
                 TempData["Error"] = "Error al registrar el camión";
                 return RedirectToAction("ListarCamiones");
@@ -646,7 +661,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener datos del camión");
                 await _auditService.LogExceptionAsync("ObtenerCamion", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al obtener datos del camión";
                 return RedirectToAction("ListarCamiones");
@@ -686,7 +700,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al actualizar camión");
                 await _auditService.LogExceptionAsync("ActualizarCamion", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al actualizar el camión";
                 return View(camion);
@@ -720,7 +733,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al desactivar camión");
                 await _auditService.LogExceptionAsync("DesactivarCamion", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al desactivar el camión";
                 return RedirectToAction("ListarCamiones");
@@ -754,7 +766,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al activar camión");
                 await _auditService.LogExceptionAsync("ActivarCamion", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al activar el camión";
                 return RedirectToAction("ListarCamiones");
@@ -788,7 +799,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al eliminar camión");
                 await _auditService.LogExceptionAsync("EliminarCamion", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al eliminar el camión";
                 return RedirectToAction("ListarCamiones");
@@ -810,7 +820,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al cargar datos para asignar chofer");
                 await _auditService.LogExceptionAsync("AsignarChoferForm", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al cargar los datos necesarios";
                 return RedirectToAction("Index");
@@ -844,7 +853,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al asignar chofer");
                 await _auditService.LogExceptionAsync("AsignarChofer", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al asignar el chofer";
                 return RedirectToAction("ListarCamiones");
@@ -870,7 +878,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener historial de mantenimiento");
                 await _auditService.LogExceptionAsync("HistorialMantenimiento", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al obtener el historial de mantenimiento";
                 return RedirectToAction("ListarCamiones");
@@ -888,7 +895,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al actualizar estados de mantenimiento");
                 await _auditService.LogExceptionAsync("ActualizarEstadoMantenimiento", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al actualizar estados de mantenimiento";
                 return RedirectToAction("NotificacionesMantenimiento");
@@ -932,7 +938,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al registrar mantenimiento");
                 await _auditService.LogExceptionAsync("RegistrarMantenimiento", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al registrar el mantenimiento";
                 return RedirectToAction("HistorialMantenimiento", new { idCamion = mantenimiento.id_camion });
@@ -955,7 +960,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener notificaciones de mantenimiento");
                 await _auditService.LogExceptionAsync("NotificacionesMantenimiento", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al obtener las notificaciones de mantenimiento";
                 return RedirectToAction("Index");
@@ -976,7 +980,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al generar reporte de camiones");
                 await _auditService.LogExceptionAsync("ReporteCamiones", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al generar el reporte de camiones";
                 return RedirectToAction("ListarCamiones");
@@ -999,7 +1002,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al exportar reporte de camiones a PDF");
                 await _auditService.LogExceptionAsync("ExportarReporteCamionesPDF", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al generar el PDF de camiones";
                 return RedirectToAction("GenerarReporteCamiones", new { estado });
@@ -1019,11 +1021,11 @@ namespace COMAVI_SA.Controllers
 
                 ViewBag.Filtro = filtro;
                 ViewBag.Estado = estado;
+
                 return View(choferes);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al listar choferes");
                 await _auditService.LogExceptionAsync("ListarChoferes", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al cargar la lista de choferes";
                 return View(new List<ChoferViewModel>());
@@ -1041,7 +1043,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al cargar la página de registro de chofer");
                 await _auditService.LogExceptionAsync("RegistrarChoferForm", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al cargar los datos necesarios";
                 return RedirectToAction("Index");
@@ -1089,7 +1090,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al registrar chofer");
                 await _auditService.LogExceptionAsync("RegistrarChofer", ex.Message, User.Identity.Name ?? "sistema");
 
                 // Mejora: Muestra un mensaje más específico basado en la excepción
@@ -1106,6 +1106,11 @@ namespace COMAVI_SA.Controllers
         {
             try
             {
+
+                if (!ModelState.IsValid)
+                {
+                    throw new InvalidOperationException("El modelo no es válido. Verifique los datos de entrada.");
+                }
                 var chofer = await _adminService.GetChoferByIdAsync(id);
 
                 if (chofer == null)
@@ -1117,22 +1122,26 @@ namespace COMAVI_SA.Controllers
                 var usuarios = await _adminService.GetUsuariosDisponiblesParaChoferAsync(id);
                 ViewBag.Usuarios = usuarios;
 
+
                 return View(chofer);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener datos del chofer");
                 await _auditService.LogExceptionAsync("ActualizarDatosChoferForm", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al obtener datos del chofer";
                 return RedirectToAction("ListarChoferes");
             }
         }
-
+       
         [HttpPost]
         public async Task<IActionResult> ActualizarDatosChofer(Choferes chofer)
         {
             try
             {
+                if (ModelState.ContainsKey("Usuario"))
+                {
+                    ModelState.Remove("Usuario");
+                }
                 if (!ModelState.IsValid)
                 {
                     var usuarios = await _adminService.GetUsuariosDisponiblesParaChoferAsync(chofer.id_chofer);
@@ -1145,20 +1154,17 @@ namespace COMAVI_SA.Controllers
                 if (result)
                 {
                     TempData["Success"] = "Datos del chofer actualizados exitosamente";
-
                     // Registrar en auditoría
                     await _auditService.LogAuditEventAsync(
                         "ChoferUpdate",
                         $"Actualización exitosa de chofer ID: {chofer.id_chofer}",
                         User.Identity.Name
                     );
-
                     return RedirectToAction("ListarChoferes");
                 }
                 else
                 {
                     TempData["Error"] = "Error al actualizar los datos del chofer";
-
                     var usuarios = await _adminService.GetUsuariosDisponiblesParaChoferAsync(chofer.id_chofer);
                     ViewBag.Usuarios = usuarios;
                     return View(chofer);
@@ -1166,10 +1172,8 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al actualizar datos del chofer");
                 await _auditService.LogExceptionAsync("ActualizarDatosChofer", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al actualizar los datos del chofer";
-
                 var usuarios = await _adminService.GetUsuariosDisponiblesParaChoferAsync(chofer.id_chofer);
                 ViewBag.Usuarios = usuarios;
                 return View(chofer);
@@ -1203,7 +1207,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al desactivar chofer");
                 await _auditService.LogExceptionAsync("DesactivarChofer", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al desactivar el chofer";
                 return RedirectToAction("ListarChoferes");
@@ -1237,7 +1240,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al activar chofer");
                 await _auditService.LogExceptionAsync("ActivarChofer", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al activar chofer";
                 return RedirectToAction("ListarChoferes");
@@ -1271,7 +1273,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al eliminar chofer");
                 await _auditService.LogExceptionAsync("EliminarChofer", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al eliminar el chofer";
                 return RedirectToAction("ListarChoferes");
@@ -1291,7 +1292,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al generar reporte de choferes");
                 await _auditService.LogExceptionAsync("ReporteChoferes", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al generar el reporte de choferes";
                 return RedirectToAction("ListarChoferes");
@@ -1314,7 +1314,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al exportar reporte de choferes a PDF");
                 await _auditService.LogExceptionAsync("ExportarReporteChoferesPDF", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al generar el PDF de choferes";
                 return RedirectToAction("GenerarReporteChoferes", new { estado });
@@ -1341,7 +1340,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener documentos del chofer");
                 await _auditService.LogExceptionAsync("ObtenerDocumentosChofer", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al obtener los documentos del chofer";
                 return RedirectToAction("ListarChoferes");
@@ -1369,7 +1367,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al cargar datos para actualizar documentos");
                 await _auditService.LogExceptionAsync("ActualizarDocumentosForm", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al cargar los datos necesarios";
                 return RedirectToAction("ListarChoferes");
@@ -1408,7 +1405,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al actualizar documentos");
                 await _auditService.LogExceptionAsync("ActualizarDocumento", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al actualizar los documentos";
                 return RedirectToAction("ObtenerDocumentosChofer", new { idChofer = documento.id_chofer });
@@ -1429,7 +1425,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al monitorear vencimientos");
                 await _auditService.LogExceptionAsync("MonitorearVencimientos", ex.Message, User.Identity.Name);
                 TempData["Error"] = "Error al monitorear los vencimientos";
                 return RedirectToAction("Index");
@@ -1437,6 +1432,9 @@ namespace COMAVI_SA.Controllers
         }
 
         #endregion
-    
+
+#nullable enable
+#pragma warning restore CS0168 // Variable is declared but never used
+
     }
 }

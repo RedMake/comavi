@@ -17,11 +17,9 @@ namespace COMAVI_SA.Services
     public class JwtBlacklistService : IJwtBlacklistService
     {
         private readonly ConcurrentDictionary<string, DateTime> _blacklistedTokens = new();
-        private readonly ILogger<JwtBlacklistService> _logger;
 
-        public JwtBlacklistService(ILogger<JwtBlacklistService> logger)
+        public JwtBlacklistService()
         {
-            _logger = logger;
 
             // Iniciar limpieza periódica
             var timer = new System.Threading.Timer(
@@ -35,7 +33,6 @@ namespace COMAVI_SA.Services
         {
             var expiration = DateTime.Now.Add(expirationTime);
             _blacklistedTokens.TryAdd(token, expiration);
-            _logger.LogInformation("Token añadido a la lista negra hasta {Expiration}", expiration);
         }
 
         public bool IsTokenBlacklisted(string token)
@@ -56,7 +53,6 @@ namespace COMAVI_SA.Services
                 _blacklistedTokens.TryRemove(token, out _);
             }
 
-            _logger.LogInformation("Limpieza de tokens expirados completada. Se eliminaron {Count} tokens", expiredTokens.Count);
         }
     }
 }

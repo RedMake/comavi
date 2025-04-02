@@ -14,14 +14,12 @@ namespace COMAVIxUnitTest
     public class PdfServiceTests
     {
         private readonly Mock<IWebHostEnvironment> _mockEnvironment;
-        private readonly Mock<ILogger<PdfService>> _mockLogger;
         private readonly PdfService _pdfService;
         private readonly string _testFolderPath;
 
         public PdfServiceTests()
         {
             _mockEnvironment = new Mock<IWebHostEnvironment>();
-            _mockLogger = new Mock<ILogger<PdfService>>();
 
             // Configurar ruta de prueba
             _testFolderPath = Path.Combine(Path.GetTempPath(), "COMAVI_Tests", "uploads", "pdfs");
@@ -29,7 +27,7 @@ namespace COMAVIxUnitTest
 
             _mockEnvironment.Setup(m => m.WebRootPath).Returns(Path.Combine(Path.GetTempPath(), "COMAVI_Tests"));
 
-            _pdfService = new PdfService(_mockEnvironment.Object, _mockLogger.Object);
+            _pdfService = new PdfService(_mockEnvironment.Object);
         }
 
         [Fact]
@@ -90,6 +88,7 @@ namespace COMAVIxUnitTest
         }
 
         // Limpieza después de las pruebas
+        [Fact]
         public void Dispose()
         {
             try

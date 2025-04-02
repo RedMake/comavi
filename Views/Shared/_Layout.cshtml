@@ -91,12 +91,21 @@
                 <li>
                     <hr class="sidebar-divider my-0" />
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link collapsed" href="@Url.Action("ListarCamiones", "Admin")">
+
+                <li class="nav-item my-2">
+                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseCamiones" aria-expanded="true" aria-controls="collapseCamiones">
                         <i class="fas fa-truck"></i>
                         <span>Camiones</span>
                     </a>
+                    <div id="collapseCamiones" class="collapse" aria-labelledby="headingCamiones" data-parent="#accordionSidebar">
+                        <div class="bg-white py-2 collapse-inner rounded">
+                            <a class="collapse-item" href="@Url.Action("ListarCamiones", "Admin")">Lista de Camiones</a>
+                            <a class="collapse-item" href="@Url.Action("SolicitudesMantenimiento", "Admin")" style="overflow: auto;text-overflow: ellipsis;white-space: break-spaces;max-width: 100%;">Solicitudes de usuario para Mantenimiento</a>
+                        </div>
+
+                    </div>
                 </li>
+
                 <li>
                     <hr class="sidebar-divider my-0" />
                 </li>
@@ -147,24 +156,27 @@
                     </div>
                 </li>
             }
+            @{
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
 
-            @if (!User.Identity.IsAuthenticated)
-            {
-                <li class="nav-item">
-                    <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseLogin" aria-expanded="true" aria-controls="collapseLogin">
-                        <i class="fas fa-solid fa-user"></i>
-                        <span>Acceso</span>
-                    </a>
-                    <div id="collapseLogin" class="collapse" aria-labelledby="headingLogin" data-parent="#accordionSidebar">
-                        <div class="bg-white py-2 collapse-inner rounded">
-                            <a class="collapse-item" href="@Url.Action("Index", "Login")">Iniciar Sesión</a>
-                            <a class="collapse-item" href="@Url.Action("Register", "Login")">Registrarse</a>
-                            <a class="collapse-item" href="@Url.Action("ForgotPassword", "Login")">Restablecer Contraseña</a>
+                if (!User.Identity.IsAuthenticated)
+                {
+                    <li class="nav-item">
+                        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseLogin" aria-expanded="true" aria-controls="collapseLogin">
+                            <i class="fas fa-solid fa-user"></i>
+                            <span>Acceso</span>
+                        </a>
+                        <div id="collapseLogin" class="collapse" aria-labelledby="headingLogin" data-parent="#accordionSidebar">
+                            <div class="bg-white py-2 collapse-inner rounded">
+                                <a class="collapse-item" href="@Url.Action("Index", "Login")">Iniciar Sesión</a>
+                                <a class="collapse-item" href="@Url.Action("Register", "Login")">Registrarse</a>
+                                <a class="collapse-item" href="@Url.Action("ForgotPassword", "Login")">Restablecer Contraseña</a>
+                            </div>
                         </div>
-                    </div>
-                </li>
+                    </li>
+                }
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
             }
-
            
 
         </ul>

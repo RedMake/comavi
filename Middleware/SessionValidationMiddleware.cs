@@ -8,16 +8,16 @@ using COMAVI_SA.Services;
 
 namespace COMAVI_SA.Middleware
 {
+#nullable disable
+#pragma warning disable CS0168
+
     public class SessionValidationMiddleware : IMiddleware
     {
-        private readonly ILogger<SessionValidationMiddleware> _logger;
         private readonly ComaviDbContext _context;
 
         public SessionValidationMiddleware(
-            ILogger<SessionValidationMiddleware> logger,
             ComaviDbContext context)
         {
-            _logger = logger;
             _context = context;
         }
 
@@ -32,7 +32,6 @@ namespace COMAVI_SA.Middleware
 
             if (context.User.Identity?.IsAuthenticated == true && isAuthPath && !isVerifyOtpPath)
             {
-                _logger.LogDebug("Validando sesión para ruta {Path}", context.Request.Path);
 
                 // Verificar si el usuario ha completado MFA
                 bool mfaRedirect = context.User.HasClaim(c => c.Type == "MfaCompleted" && c.Value == "true");
@@ -50,7 +49,6 @@ namespace COMAVI_SA.Middleware
 
                 if (!await IsValidSession(context))
                 {
-                    _logger.LogWarning("Sesión inválida detectada. Forzando logout");
 
                     // Limpiar sesión
                     context.Session.Clear();
@@ -79,7 +77,6 @@ namespace COMAVI_SA.Middleware
             {
                 if (!context.User.HasClaim(c => c.Type == ClaimTypes.NameIdentifier))
                 {
-                    _logger.LogWarning("Usuario sin ID en claims");
                     return false;
                 }
 
@@ -90,7 +87,6 @@ namespace COMAVI_SA.Middleware
 
                 if (!sesionActiva)
                 {
-                    _logger.LogWarning("No se encontró sesión activa en BD para usuario {UserId}", userId);
                     return false;
                 }
 
@@ -102,7 +98,6 @@ namespace COMAVI_SA.Middleware
                     var blacklistService = context.RequestServices.GetService<IJwtBlacklistService>();
                     if (blacklistService != null && blacklistService.IsTokenBlacklisted(jwt))
                     {
-                        _logger.LogWarning("Token JWT en lista negra");
                         return false;
                     }
                 }
@@ -113,14 +108,12 @@ namespace COMAVI_SA.Middleware
 
                 if (sesionDb != null && sesionDb.dispositivo != currentUserAgent)
                 {
-                    _logger.LogWarning("Cambio de User-Agent detectado para usuario {UserId}", userId);
                     return false;
                 }
 
                 var user = await _context.Usuarios.FindAsync(userId);
                 if (user != null && user.mfa_habilitado && !context.User.HasClaim(c => c.Type == "MfaCompleted" && c.Value == "true"))
                 {
-                    _logger.LogWarning("Usuario con MFA habilitado pero sin verificación completa {UserId}", userId);
                     return false;
                 }
 
@@ -135,7 +128,6 @@ namespace COMAVI_SA.Middleware
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error validando sesión");
                 return false; // Ante cualquier error, invalidar la sesión
             }
         }

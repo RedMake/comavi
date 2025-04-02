@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Http;
 
 namespace COMAVI_SA.Services
 {
+#pragma warning disable CS0168
+
     public interface IAuditService
     {
         Task LogAuditEventAsync(string eventType, string details, string username, string? ip = null);
@@ -12,16 +14,13 @@ namespace COMAVI_SA.Services
     public class AuditService : IAuditService
     {
         private readonly IDatabaseRepository _databaseRepository;
-        private readonly ILogger<AuditService> _logger;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
         public AuditService(
             IDatabaseRepository databaseRepository,
-            ILogger<AuditService> logger,
             IHttpContextAccessor httpContextAccessor)
         {
             _databaseRepository = databaseRepository;
-            _logger = logger;
             _httpContextAccessor = httpContextAccessor;
         }
 
@@ -44,7 +43,7 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al registrar evento de auditoría");
+                throw;
             }
         }
 
@@ -66,7 +65,7 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al registrar excepción para auditoría");
+                throw;
             }
         }
 

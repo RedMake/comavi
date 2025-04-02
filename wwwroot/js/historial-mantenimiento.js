@@ -104,55 +104,95 @@ function inicializarTablaMantenimientos() {
  * Configura el modal de detalle de mantenimiento
  */
 function configurarModalDetalle() {
-    $('#detalleMantenimientoModal').on('show.bs.modal', function (event) {
+    const modal = $('#detalleMantenimientoModal');
+
+    // Almacenar el elemento que abrió el modal
+    let lastFocusedElement;
+
+    modal.on('show.bs.modal', function (event) {
+        // Almacenar el elemento que activó el modal
+        lastFocusedElement = $(event.relatedTarget);
+
         const button = $(event.relatedTarget);
         const id = button.data('id');
         const descripcion = button.data('descripcion');
         const fecha = button.data('fecha');
         const costo = button.data('costo');
         const moneda = button.data('moneda') || 'CRC';
-        const detalles = button.data('detalles');
+        // Obtener el valor directamente del atributo para evitar parsing automático
+        const detallesAttr = button.attr('data-detalles');
 
         const simbolo = moneda === 'USD' ? '$' : '₡';
 
-        const modal = $(this);
-        modal.find('#detalle-id').text(id);
-        modal.find('#detalle-descripcion').text(descripcion);
-        modal.find('#detalle-fecha').text(fecha);
-        modal.find('#detalle-costo').text(`${simbolo}${parseFloat(costo).toFixed(2)}`);
+        const modalEl = $(this);
+        modalEl.find('#detalle-id').text(id);
+        modalEl.find('#detalle-descripcion').text(descripcion);
+        modalEl.find('#detalle-fecha').text(fecha);
+        modalEl.find('#detalle-costo').text(`${simbolo}${parseFloat(costo).toFixed(2)}`);
 
         // Manejar detalles adicionales si existen
-        if (detalles) {
+        if (detallesAttr && detallesAttr !== 'null' && detallesAttr !== '') {
             try {
-                const detallesObj = JSON.parse(detalles);
+                // Intentar parsear el JSON - importante usar el atributo raw
+                let detallesObj = JSON.parse(detallesAttr);
 
-                // Mostrar el desglose
-                $('#detalleDesgloseContainer').show();
-                $('#detalleNoDesgloseContainer').hide();
+                // Verificar si detallesObj tiene las propiedades esperadas
+                const tieneProps = detallesObj &&
+                    (detallesObj.costo_base !== undefined ||
+                        detallesObj.impuesto_iva !== undefined ||
+                        detallesObj.otros_costos !== undefined);
 
-                // Llenar datos con formato
-                const formatearDetalle = (valor) => {
-                    return parseFloat(valor).toFixed(2);
-                };
+                if (tieneProps) {
+                    // Mostrar el desglose
+                    $('#detalleDesgloseContainer').show();
+                    $('#detalleNoDesgloseContainer').hide();
 
-                $('#detalle-costo-base').text(`${simbolo}${formatearDetalle(detallesObj.costo_base)}`);
-                $('#detalle-impuesto').text(`${simbolo}${formatearDetalle(detallesObj.impuesto_iva)}`);
-                $('#detalle-otros-costos').text(`${simbolo}${formatearDetalle(detallesObj.otros_costos)}`);
-                $('#detalle-tipo-cambio').text(`₡${formatearDetalle(detallesObj.tipo_cambio)} por USD`);
+                    // Función segura para formatear valores
+                    const formatearDetalle = (valor) => {
+                        if (valor === null || valor === undefined || isNaN(parseFloat(valor))) {
+                            return '0.00';
+                        }
+                        return parseFloat(valor).toFixed(2);
+                    };
 
+                    // Usar operador de coalescencia nula para manejar valores nulos
+                    $('#detalle-costo-base').text(`${simbolo}${formatearDetalle(detallesObj.costo_base ?? 0)}`);
+                    $('#detalle-impuesto').text(`${simbolo}${formatearDetalle(detallesObj.impuesto_iva ?? 0)}`);
+                    $('#detalle-otros-costos').text(`${simbolo}${formatearDetalle(detallesObj.otros_costos ?? 0)}`);
+
+                    // Tipo de cambio (con valor predeterminado)
+                    const tipoCambio = detallesObj.tipo_cambio ?? 625;
+                    $('#detalle-tipo-cambio').text(`₡${formatearDetalle(tipoCambio)} por USD`);
+                } else {
+                    throw new Error('Objeto de detalles no tiene las propiedades esperadas');
+                }
             } catch (e) {
-                console.error('Error al parsear detalles:', e);
+                console.error('Error al procesar detalles JSON:', e.message);
+
+                // Mostrar mensaje de error
                 $('#detalleDesgloseContainer').hide();
                 $('#detalleNoDesgloseContainer').show();
             }
         } else {
-            // No hay desglose
+            // No hay desglose o es nulo
             $('#detalleDesgloseContainer').hide();
             $('#detalleNoDesgloseContainer').show();
         }
     });
-}
 
+    // Cuando el modal se muestra completamente, establecer el foco en un elemento apropiado
+    modal.on('shown.bs.modal', function (event) {
+        // Establecer el foco en el botón de cerrar
+        $(this).find('.btn-secondary').trigger('focus');
+    });
+
+    // Cuando se oculta el modal, devolver el foco al elemento que lo abrió
+    modal.on('hidden.bs.modal', function () {
+        if (lastFocusedElement && lastFocusedElement.length) {
+            lastFocusedElement.focus();
+        }
+    });
+}
 /**
  * Configura el formulario de registro de mantenimiento con cálculo de costos
  */
@@ -312,14 +352,6 @@ function configurarFormularioMantenimiento() {
         const tipoCambio = parseFloat(tipoCambioInput.value) || 625;
         const monedaActual = monedaSelect.value;
 
-        // Verificar valores para depuración
-        console.log("Valores para cálculo:", {
-            costoBase,
-            impuestoIva,
-            otrosCostos,
-            tipoCambio,
-            monedaActual
-        });
 
         // Calcular total en la moneda seleccionada
         const totalEnMonedaActual = costoBase + impuestoIva + otrosCostos;
@@ -343,16 +375,6 @@ function configurarFormularioMantenimiento() {
         if (totalUSDSpan) {
             totalUSDSpan.textContent = `$${totalUSD.toFixed(2)}`;
         }
-
-        // Para verificación - mostrar en consola los valores
-        console.log(`Calculando totales: CRC=₡${totalCRC.toFixed(2)}, USD=${totalUSD.toFixed(2)}`);
-        console.log("Detalles para guardar:", {
-            costo_base: costoBase,
-            impuesto_iva: impuestoIva,
-            otros_costos: otrosCostos,
-            tipo_cambio: tipoCambio,
-            moneda_actual: monedaActual
-        });
 
         // Asignar al campo oculto de costo
         costoInput.value = totalEnMonedaActual.toFixed(2);
@@ -491,7 +513,6 @@ function configurarFormularioMantenimiento() {
     // Comprobar después de un pequeño retraso que los totales se muestran correctamente
     setTimeout(() => {
         calcularTotales();
-        console.log("Valores de totales actualizados después de timeout");
     }, 500);
 }
 

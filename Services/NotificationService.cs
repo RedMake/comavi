@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace COMAVI_SA.Services
 {
+#pragma warning disable CS0168
+
     public interface INotificationService
     {
         Task SendExpirationNotificationsAsync();
@@ -14,23 +16,19 @@ namespace COMAVI_SA.Services
     {
         private readonly ComaviDbContext _context;
         private readonly IEmailService _emailService;
-        private readonly ILogger<NotificationService> _logger;
 
         public NotificationService(
             ComaviDbContext context,
-            IEmailService emailService,
-            ILogger<NotificationService> logger)
+            IEmailService emailService)
         {
             _context = context;
             _emailService = emailService;
-            _logger = logger;
         }
 
         public async Task SendExpirationNotificationsAsync()
         {
             try
             {
-                _logger.LogInformation("Iniciando envío de notificaciones de vencimiento");
 
                 // Obtener todos los choferes activos con sus preferencias
                 var choferes = await _context.Choferes
@@ -67,15 +65,14 @@ namespace COMAVI_SA.Services
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Error al procesar notificaciones para el chofer {ChoferId}", chofer.id_chofer);
+                        throw;
                     }
                 }
 
-                _logger.LogInformation("Finalizado envío de notificaciones de vencimiento");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al enviar notificaciones de vencimiento");
+                throw;
             }
         }
 
@@ -194,7 +191,7 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al enviar correo de vencimiento a {Email}", email);
+                throw;
             }
         }
 
@@ -234,7 +231,7 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al crear notificación para el usuario {UserId}", userId);
+                throw;
             }
         }
     }

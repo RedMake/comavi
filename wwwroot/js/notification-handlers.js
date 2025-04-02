@@ -36,7 +36,6 @@
             '<p>Cargando notificaciones...</p>' +
             '</div>'
         );
-        console.log("Solicitando notificaciones para página:", pagina);
 
         $.ajax({
             url: '/Notifications/ObtenerPagina',
@@ -48,7 +47,6 @@
             },
             success: function (response) {
                 if (response.success) {
-                    console.log("Respuesta recibida:", response);
 
 
                     // Actualizar variables de paginación

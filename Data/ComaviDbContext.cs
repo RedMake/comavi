@@ -22,6 +22,7 @@ namespace COMAVI_SA.Data
         public DbSet<Mantenimiento_Camiones> Mantenimiento_Camiones { get; set; }
         public DbSet<PreferenciasNotificacion> PreferenciasNotificacion { get; set; }
         public DbSet<EventoAgenda> EventosAgenda { get; set; }
+        public DbSet<Solicitudes_Mantenimiento> Solicitudes_Mantenimiento { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -41,6 +42,7 @@ namespace COMAVI_SA.Data
             modelBuilder.Entity<CodigosRespaldoMFA>().ToTable("CodigosRespaldoMFA");
             modelBuilder.Entity<PreferenciasNotificacion>().ToTable("PreferenciasNotificacion");
             modelBuilder.Entity<EventoAgenda>().ToTable("EventosAgenda");
+            modelBuilder.Entity<Solicitudes_Mantenimiento>().ToTable("Solicitudes_Mantenimiento");
 
             // Índices para mejorar el rendimiento
             modelBuilder.Entity<Usuario>()
@@ -93,7 +95,20 @@ namespace COMAVI_SA.Data
             modelBuilder.Entity<EventoAgenda>()
                 .HasIndex(e => e.fecha_inicio);
 
-            // Relaciones que no están explícitamente definidas en las propiedades
+            modelBuilder.Entity<Solicitudes_Mantenimiento>()
+                .HasIndex(s => s.id_chofer);
+
+            modelBuilder.Entity<Solicitudes_Mantenimiento>()
+                .HasIndex(s => s.id_camion);
+
+            modelBuilder.Entity<Solicitudes_Mantenimiento>()
+                .HasIndex(s => s.estado);
+
+            modelBuilder.Entity<Solicitudes_Mantenimiento>()
+                .HasIndex(s => s.fecha_solicitud);
+
+
+            // Relaciones que no están explícitamente definidas en las propiedades y demas configuraciones de las entidades
             modelBuilder.Entity<Camiones>()
                 .HasOne(c => c.Chofer)
                 .WithMany()
@@ -127,6 +142,26 @@ namespace COMAVI_SA.Data
                 .WithOne()
                 .HasForeignKey<PreferenciasNotificacion>(p => p.id_usuario)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Solicitudes_Mantenimiento>()
+                .HasOne(s => s.Camion)
+                .WithMany()
+                .HasForeignKey(s => s.id_camion)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Solicitudes_Mantenimiento>()
+                .HasOne(s => s.Chofer)
+                .WithMany()
+                .HasForeignKey(s => s.id_chofer)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Solicitudes_Mantenimiento>()
+                .Property(s => s.estado)
+                .HasDefaultValue("pendiente");
+
+            modelBuilder.Entity<Solicitudes_Mantenimiento>()
+                .Property(s => s.fecha_solicitud)
+                .HasDefaultValueSql("GETDATE()");
 
             //modelBuilder.Entity<Usuario>()
             //    .Property(u => u.mfa_habilitado)

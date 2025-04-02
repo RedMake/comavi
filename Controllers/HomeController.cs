@@ -16,19 +16,26 @@ namespace COMAVI_SA.Controllers
 
     public class HomeController : Controller
     {
-        private readonly ILogger<HomeController> _logger;
         private readonly ComaviDbContext _context;
-        private readonly string _connectionString;
+        private readonly IAuthorizationService _authorizationService;
 
-        public HomeController(ILogger<HomeController> logger, ComaviDbContext context)
+        public HomeController( ComaviDbContext context, IAuthorizationService authorizationService)
         {
-            _logger = logger;
             _context = context;
+            _authorizationService = authorizationService;
         }
 
         public async Task<IActionResult> Index()
         {
-            return View();
+            var authResult = await _authorizationService.AuthorizeAsync(User, "RequireAdminRole");
+            if (authResult.Succeeded)
+            {
+                return RedirectToAction("Index", "Admin");
+            }
+            else
+            {
+                return View();
+            }
         }
 
         [AllowAnonymous]

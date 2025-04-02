@@ -3,6 +3,8 @@ using System.Collections.Concurrent;
 
 namespace COMAVI_SA.Services
 {
+#pragma warning disable CS0168
+
     public interface ICacheKeyTracker
     {
         void TrackKey(string key);
@@ -16,12 +18,10 @@ namespace COMAVI_SA.Services
     {
         private readonly ConcurrentDictionary<string, DateTime> _trackedKeys = new ConcurrentDictionary<string, DateTime>();
         private readonly IMemoryCache _cache;
-        private readonly ILogger<CacheKeyTracker> _logger;
 
-        public CacheKeyTracker(IMemoryCache cache, ILogger<CacheKeyTracker> logger)
+        public CacheKeyTracker(IMemoryCache cache)
         {
             _cache = cache;
-            _logger = logger;
         }
 
         public void TrackKey(string key)
@@ -41,7 +41,6 @@ namespace COMAVI_SA.Services
                 var cutoff = DateTime.UtcNow.Subtract(age);
                 int keysRemoved = 0;
 
-                _logger.LogInformation($"Iniciando limpieza de claves de caché más antiguas que {age.TotalHours} horas");
 
                 var keysToRemove = _trackedKeys
                     .Where(kvp => kvp.Value < cutoff)
@@ -57,11 +56,10 @@ namespace COMAVI_SA.Services
                     }
                 }
 
-                _logger.LogInformation($"Limpieza de caché completada. Se eliminaron {keysRemoved} claves antiguas");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error durante la limpieza de claves de caché antiguas");
+                throw;
             }
         }
 
@@ -69,7 +67,6 @@ namespace COMAVI_SA.Services
         {
             try
             {
-                _logger.LogWarning("Ejecutando purga completa de caché");
 
                 int keysRemoved = 0;
                 foreach (var key in _trackedKeys.Keys.ToList())
@@ -81,11 +78,10 @@ namespace COMAVI_SA.Services
                     }
                 }
 
-                _logger.LogWarning($"Purga de caché completada. Se eliminaron {keysRemoved} claves");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error durante la purga completa de caché");
+                throw;
             }
         }
 
@@ -145,10 +141,14 @@ namespace COMAVI_SA.Services
 
             foreach (var key in keys)
             {
+#pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
                 if (cache.TryGetValue(key, out T value))
                 {
+#pragma warning disable CS8601 // Possible null reference assignment.
                     result[key] = value;
+#pragma warning restore CS8601 // Possible null reference assignment.
                 }
+#pragma warning restore CS8600 // Converting null literal or possible null value to non-nullable type.
             }
 
             return result;

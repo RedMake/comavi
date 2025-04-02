@@ -15,7 +15,6 @@ namespace COMAVIxUnitTest
 {
     public class SessionCleanupServiceTests
     {
-        private readonly Mock<ILogger<SessionCleanupService>> _mockLogger;
         private readonly ComaviDbContext _dbContext;
         private readonly SessionCleanupService _sessionCleanupService;
 
@@ -27,8 +26,7 @@ namespace COMAVIxUnitTest
                 .Options;
 
             _dbContext = new ComaviDbContext(options);
-            _mockLogger = new Mock<ILogger<SessionCleanupService>>();
-            _sessionCleanupService = new SessionCleanupService(_dbContext, _mockLogger.Object);
+            _sessionCleanupService = new SessionCleanupService(_dbContext);
         }
 
         [Fact]

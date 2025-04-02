@@ -17,12 +17,10 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        console.log("Datos cargados:", mantenimientos.length, "registros");
 
         // Preparar datos para el gráfico de costos por camión
         const datosPorCamion = prepararDatosCostoPorCamion(mantenimientos);
 
-        console.log("Datos procesados para gráficos:", {
             datosPorCamion
         });
 
@@ -56,8 +54,7 @@ function inicializarTablaMantenimientos() {
             try {
                 const dataTableInstance = $(tablaElement).DataTable();
 
-                // ¡SOLUCIÓN AQUÍ! - No intentar destruir si ya sabemos que hay problemas
-                console.log('Tabla ya inicializada, continuando con la existente');
+                // No intentar destruir si ya sabemos que hay problemas
                 return; // Simplemente usar la instancia existente y salir
             } catch (error) {
                 console.warn('Error al acceder a la instancia existente:', error);
@@ -85,7 +82,6 @@ function inicializarTablaMantenimientos() {
                     }
                 ]
             });
-            console.log('DataTable inicializado correctamente');
         } catch (initError) {
             console.error('Error durante la inicialización de DataTable:', initError);
         }
@@ -261,7 +257,6 @@ function crearGraficoCostoPorCamion(datos) {
             }
         });
 
-        console.log('Gráfico de costos por camión creado correctamente');
     } catch (error) {
         console.error('Error al crear gráfico de costos por camión:', error);
 

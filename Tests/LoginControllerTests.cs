@@ -1,10 +1,12 @@
 ﻿using COMAVI_SA.Controllers;
 using COMAVI_SA.Data;
 using COMAVI_SA.Models;
+using COMAVI_SA.Repository;
 using COMAVI_SA.Services;
 using Dapper;
 using iText.Commons.Actions.Contexts;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -24,8 +26,13 @@ using Xunit;
 
 namespace COMAVIxUnitTest
 {
+#nullable disable
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+#pragma warning disable CS0169 // The field 'LoginControllerTests._userService' is never used
+
     public class LoginControllerTests
     {
+        private readonly Mock<IDatabaseRepository> _mockDatabaseRepository;
         private readonly Mock<IUserService> _mockUserService;
         private readonly Mock<IPasswordService> _mockPasswordService;
         private readonly Mock<IOtpService> _mockOtpService;
@@ -34,20 +41,25 @@ namespace COMAVIxUnitTest
         private readonly Mock<IPdfService> _mockPdfService;
         private readonly ComaviDbContext _context;
         private readonly UserService _userService; 
-        private readonly Mock<ILogger<LoginController>> _mockLogger;
         private readonly LoginController _controller;
         private readonly ITempDataDictionary _tempData;
         private readonly Mock<IMemoryCache> _mockCache;
+        private readonly Mock<IAuthorizationService> __mockAuthorizationService;
+
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
         public LoginControllerTests()
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
         {
+            _mockDatabaseRepository = new Mock<IDatabaseRepository>();
             _mockUserService = new Mock<IUserService>();
             _mockPasswordService = new Mock<IPasswordService>();
             _mockOtpService = new Mock<IOtpService>();
             _mockJwtService = new Mock<IJwtService>();
             _mockEmailService = new Mock<IEmailService>();
             _mockPdfService = new Mock<IPdfService>(); 
-            _mockLogger = new Mock<ILogger<LoginController>>();
             _mockCache = new Mock<IMemoryCache>();
+            __mockAuthorizationService = new Mock<IAuthorizationService>();
+
             // Configurar DbContext en memoria
             var options = new DbContextOptionsBuilder<ComaviDbContext>()
                 .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
@@ -57,6 +69,7 @@ namespace COMAVIxUnitTest
 
             // Configurar controlador con HttpContext para TempData y Session
             _controller = new LoginController(
+                _mockDatabaseRepository.Object,
                 _mockUserService.Object,
                 _mockPasswordService.Object,
                 _mockCache.Object,
@@ -65,7 +78,7 @@ namespace COMAVIxUnitTest
                 _mockEmailService.Object,
                 _mockPdfService.Object, 
                 _context,
-                _mockLogger.Object
+                __mockAuthorizationService.Object
             );
 
             // Configurar HttpContext mock correctamente
@@ -415,7 +428,9 @@ namespace COMAVIxUnitTest
 
             // Verify the user status was updated
             var updatedUser = await _context.Usuarios.FindAsync(user.id_usuario);
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
             Assert.Equal("verificado", updatedUser.estado_verificacion);
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
         }
         // Tests adicionales para ConfigurarMFA
        
@@ -553,12 +568,7 @@ namespace COMAVIxUnitTest
             // Assert
             var viewResult = Assert.IsType<ViewResult>(result);
             Assert.False(_controller.ModelState.IsValid);
-            _mockLogger.Verify(l => l.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => true),
-                It.IsAny<Exception>(),
-                It.Is<Func<It.IsAnyType, Exception, string>>((v, t) => true)), Times.Once);
+            
         }
 
     }

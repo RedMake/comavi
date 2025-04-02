@@ -13,7 +13,6 @@ namespace COMAVI_SA.Middleware
     public class DatabaseResilienceMiddleware
     {
         private readonly RequestDelegate _next;
-        private readonly ILogger<DatabaseResilienceMiddleware> _logger;
         private readonly IServiceProvider _serviceProvider;
         private static DateTime _lastCheckTime = DateTime.MinValue;
         private static bool _isDbAvailable = true;
@@ -23,11 +22,9 @@ namespace COMAVI_SA.Middleware
 
         public DatabaseResilienceMiddleware(
             RequestDelegate next,
-            ILogger<DatabaseResilienceMiddleware> logger,
             IServiceProvider serviceProvider)
         {
             _next = next;
-            _logger = logger;
             _serviceProvider = serviceProvider;
         }
 
@@ -52,7 +49,6 @@ namespace COMAVI_SA.Middleware
             // Si la base de datos está caída y la ruta no es de mantenimiento, redirigir a página de mantenimiento
             if (!_isDbAvailable && !context.Request.Path.StartsWithSegments("/Maintenance"))
             {
-                _logger.LogWarning("Base de datos no disponible. Redirigiendo a página de mantenimiento");
                 RedirectToMaintenance(context);
                 return;
             }
@@ -63,7 +59,6 @@ namespace COMAVI_SA.Middleware
             }
             catch (Exception ex) when (IsDatabaseException(ex))
             {
-                _logger.LogError(ex, "Error de conexión a base de datos detectado");
 
                 // Marcar la base de datos como no disponible
                 _isDbAvailable = false;
@@ -109,7 +104,6 @@ namespace COMAVI_SA.Middleware
             // Sanitizar el mensaje para evitar inyección
             _lastErrorMessage = _lastErrorMessage?.Replace("<", "&lt;").Replace(">", "&gt;") ?? "Error desconocido";
 
-            _logger.LogError("Información de error: Código {ErrorCode}, Mensaje: {ErrorMessage}", _lastErrorCode, _lastErrorMessage);
         }
 
         private async Task CheckDatabaseStatusAsync()
@@ -123,12 +117,10 @@ namespace COMAVI_SA.Middleware
                 await dbContext.Database.ExecuteSqlRawAsync("SELECT 1");
 
                 _isDbAvailable = true;
-                _logger.LogInformation("Conexión a base de datos restablecida");
             }
             catch (Exception ex)
             {
                 _isDbAvailable = false;
-                _logger.LogWarning(ex, "Base de datos sigue sin estar disponible");
                 ExtractErrorInfo(ex);
             }
             finally

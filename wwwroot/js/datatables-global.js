@@ -10,6 +10,9 @@ document.addEventListener('DOMContentLoaded', function () {
         // Verificar si la tabla existe en el DOM
         if (table.length === 0) return null;
 
+        if ($.fn.DataTable.isDataTable(selector)) {
+            return $(selector).DataTable().destroy();
+        }
         // Configuración por defecto
         const defaultOptions = {
             language: {
@@ -18,10 +21,78 @@ document.addEventListener('DOMContentLoaded', function () {
             responsive: true,
             pageLength: 10,
             lengthMenu: [[5, 10, 25, 50, -1], [5, 10, 25, 50, "Todos"]],
-            dom: 'Bfrtip',
+            dom: '<"row"<"col-sm-6"l><"col-sm-6"f>><"row"<"col-sm-12"tr>><"row"<"col-sm-5"i><"col-sm-7"p>><"row"<"col-sm-12"B>>',
             buttons: [
-                'copy', 'excel', 'pdf', 'print'
+                {
+                    extend: 'copy',
+                    text: '<i class="fas fa-copy"></i> Copiar',
+                    className: 'btn btn-primary btn-sm'
+                },
+                {
+                    extend: 'excel',
+                    text: '<i class="fas fa-file-excel"></i> Excel',
+                    className: 'btn btn-success btn-sm',
+                    exportOptions: {
+                        columns: ':visible'
+                    }
+                },
+                {
+                    extend: 'pdf',
+                    text: '<i class="fas fa-file-pdf"></i> PDF',
+                    className: 'btn btn-danger btn-sm',
+                    orientation: 'landscape',
+                    pageSize: 'LEGAL',
+                    exportOptions: {
+                        columns: ':visible'
+                    }
+                },
+                {
+                    extend: 'print',
+                    text: '<i class="fas fa-print"></i> Imprimir',
+                    className: 'btn btn-info btn-sm',
+                    exportOptions: {
+                        columns: ':visible'
+                    }
+                },
+                {
+                    extend: 'colvis',
+                    text: '<i class="fas fa-columns"></i> Columnas',
+                    className: 'btn btn-secondary btn-sm'
+                }
             ],
+            // Búsqueda y filtrado mejorados
+            search: {
+                smart: true    // Búsqueda inteligente
+            },
+            searchDelay: 500,  // Retraso en milisegundos para búsquedas
+
+            // Rendimiento para tablas grandes
+            deferRender: true,
+            scroller: true,    // Activar scroll virtual para tablas grandes
+            scrollY: '50vh',   // Altura del área de scroll
+            scrollCollapse: true,
+
+            // Características visuales adicionales
+            stateSave: true,   // Guardar el estado de la tabla (ordenación, filtros, etc.)
+            autoWidth: false,  // Mejor rendimiento
+
+            // Integración con Bootstrap
+            processing: true,
+            rowCallback: function (row, data) {
+                // Puedes personalizar las filas aquí
+                // Por ejemplo, agregar clases condicionales
+                if (data[4] === 'activo') {  // Suponiendo que el estado está en la columna 4
+                    $(row).addClass('table-success');
+                }
+            },
+
+            // Mejoras de accesibilidad
+            initComplete: function (settings, json) {
+                // Código que se ejecuta cuando la tabla está completamente inicializada
+                $('.dataTables_filter input').attr('aria-label', 'Buscar');
+                $('.dataTables_length select').attr('aria-label', 'Número de registros por página');
+            },
+
             // Evitar problemas de reinicialización
             destroy: true
         };
@@ -41,19 +112,23 @@ document.addEventListener('DOMContentLoaded', function () {
     // Configuraciones de tablas específicas
     const tableConfigs = {
         '#dataTable': {
-            order: [[3, 'asc']] // Ordenar por días restantes
+            order: [[3, 'asc']], // Ordenar por días restantes
+            pageLength: 5
         },
         '#pendientesTable': {
-            order: [[4, 'desc']] // Ordenar por fecha de subida
+            order: [[4, 'desc']], // Ordenar por fecha de subida
+            pageLength: 10
         },
         '#porVencerTable': {
             order: [[5, 'asc']], // Ordenar por días restantes
             columnDefs: [
                 { type: 'num', targets: 5 }
-            ]
+            ],
+            pageLength: 10
         },
-        '#historialTable': {
-            order: [[2, 'desc']] // Ordenar por fecha de emisión
+        '#historialTable': { 
+            order: [[2, 'desc']], // Ordenar por fecha de emisión
+            pageLength: 10
         },
         '#choferesTable': {
             pageLength: 25
@@ -67,20 +142,27 @@ document.addEventListener('DOMContentLoaded', function () {
         '#documentsTable': {
             pageLength: 5
         },
+        '#solicitudesTable': {
+            pageLength: 10
+        },
         '#licenciasTable': {
             order: [[4, 'asc']],
             columnDefs: [
                 { type: 'num', targets: 4 }
-            ]
+            ],
+            pageLength: 10
         },
         '#dataTableDocumentsAdmin': {
-            order: [[5, 'asc']]
+            order: [[5, 'asc']],
+            pageLength: 10
         },
         '#dataTableLicenciasAdmin': {
-            order: [[4, 'asc']]
+            order: [[4, 'asc']],
+            pageLength: 10
         },
         '#dataTableRecentAdminMaintenanceReport': {
-            order: [[4, 'desc']]
+            order: [[4, 'desc']],
+            pageLength: 10
         }
     };
 
@@ -142,7 +224,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // Cambiar filtro de días automáticamente
-    $('#diasAnticipacion').change(function () {
-        $(this).closest('form').submit();
+    $('#diasAnticipacion').on('change', function (event) {
+        $(this).closest('form').trigger('submit');
     });
 });

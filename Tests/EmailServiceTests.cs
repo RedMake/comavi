@@ -9,18 +9,19 @@ using Xunit;
 
 namespace COMAVIxUnitTest
 {
+#nullable disable
+#pragma warning disable CS0168
+
     public class EmailServiceTests
     {
         private readonly Mock<IConfiguration> _mockConfiguration;
         private readonly Mock<IWebHostEnvironment> _mockEnvironment;
-        private readonly Mock<ILogger<EmailService>> _mockLogger;
         private readonly EmailService _emailService;
 
         public EmailServiceTests()
         {
             _mockConfiguration = new Mock<IConfiguration>();
             _mockEnvironment = new Mock<IWebHostEnvironment>();
-            _mockLogger = new Mock<ILogger<EmailService>>();
 
             // Configurar entorno de desarrollo para usar contraseña local
             // IsDevelopment() es un método de extensión que comprueba si EnvironmentName == "Development"
@@ -30,8 +31,7 @@ namespace COMAVIxUnitTest
 
             _emailService = new EmailService(
                 _mockConfiguration.Object,
-                _mockEnvironment.Object,
-                _mockLogger.Object);
+                _mockEnvironment.Object);
         }
 
         [Fact]
@@ -61,11 +61,7 @@ namespace COMAVIxUnitTest
             catch (Exception ex)
             {
                 // Cualquier otra excepción indica un problema diferente
-                // pero para efectos de prueba, lo consideramos válido
-                _mockLogger.Verify(l => l.LogError(
-                    It.IsAny<Exception>(),
-                    It.Is<string>(s => s.Contains(to))),
-                    Times.AtMostOnce());
+                throw;
             }
 
             // No verificamos ninguna assertion específica, solo 

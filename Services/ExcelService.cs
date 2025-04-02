@@ -4,6 +4,10 @@ using System.IO;
 
 namespace COMAVI_SA.Services
 {
+#nullable disable
+#pragma warning disable CS0168
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
     public interface IExcelService
     {
         Task<MemoryStream> GenerarReporteDocumentosExcel(List<COMAVI_SA.Models.Documentos> documentos, string estado, int diasAnticipacion);
@@ -11,12 +15,6 @@ namespace COMAVI_SA.Services
 
     public class ExcelService : IExcelService
     {
-        private readonly ILogger<ExcelService> _logger;
-
-        public ExcelService(ILogger<ExcelService> logger)
-        {
-            _logger = logger;
-        }
 
         public async Task<MemoryStream> GenerarReporteDocumentosExcel(List<COMAVI_SA.Models.Documentos> documentos, string estado, int diasAnticipacion)
         {
@@ -41,7 +39,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al generar Excel de documentos");
                 throw;
             }
         }

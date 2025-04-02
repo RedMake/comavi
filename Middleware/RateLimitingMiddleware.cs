@@ -2,20 +2,19 @@
 
 namespace COMAVI_SA.Middleware
 {
+#nullable disable
+
     public class RateLimitingMiddleware
     {
         private readonly RequestDelegate _next;
         private readonly IMemoryCache _cache;
-        private readonly ILogger<RateLimitingMiddleware> _logger;
 
         public RateLimitingMiddleware(
             RequestDelegate next,
-            IMemoryCache cache,
-            ILogger<RateLimitingMiddleware> logger)
+            IMemoryCache cache)
         {
             _next = next;
             _cache = cache;
-            _logger = logger;
         }
 
         public async Task InvokeAsync(HttpContext context)
@@ -35,7 +34,6 @@ namespace COMAVI_SA.Middleware
                 {
                     if (requestCount >= attribute.MaxRequests)
                     {
-                        _logger.LogWarning($"Rate limit exceeded for IP {clientIp} on {context.Request.Path}");
                         context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
                         await context.Response.WriteAsync("Too many requests. Please try again later.");
                         return;

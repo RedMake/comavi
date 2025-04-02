@@ -10,6 +10,10 @@ using System.Security.Cryptography;
 
 namespace COMAVI_SA.Services
 {
+#nullable disable
+#pragma warning disable CS0168
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
     public interface IPdfService
     {
         Task<(bool isValid, string errorMessage)> ValidatePdfAsync(IFormFile file);
@@ -23,15 +27,12 @@ namespace COMAVI_SA.Services
     public class PdfService : IPdfService
     {
         private readonly IWebHostEnvironment _hostingEnvironment;
-        private readonly ILogger<PdfService> _logger;
         private readonly string _uploadsFolder;
 
         public PdfService(
-            IWebHostEnvironment hostingEnvironment,
-            ILogger<PdfService> logger)
+            IWebHostEnvironment hostingEnvironment)
         {
             _hostingEnvironment = NotNull.Check(hostingEnvironment);
-            _logger = NotNull.Check(logger);
             _uploadsFolder = System.IO.Path.Combine(_hostingEnvironment.WebRootPath, "uploads", "pdfs");
 
             // Asegurar que exista el directorio para los archivos
@@ -75,7 +76,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al validar archivo PDF");
                 return (false, "El documento PDF no es válido o está corrupto.");
             }
         }
@@ -128,7 +128,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al extraer texto del PDF");
                 return string.Empty;
             }
         }
@@ -309,7 +308,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al generar PDF de documentos");
                 return false;
             }
         }

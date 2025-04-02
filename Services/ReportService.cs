@@ -14,6 +14,10 @@ using iText.Layout.Borders;
 
 namespace COMAVI_SA.Services
 {
+#nullable disable
+#pragma warning disable CS0168
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+
     public interface IReportService
     {
         Task<byte[]> GenerateDriverReportAsync(int userId);
@@ -30,12 +34,10 @@ namespace COMAVI_SA.Services
     public class ReportService : IReportService
     {
         private readonly ComaviDbContext _context;
-        private readonly ILogger<ReportService> _logger;
 
-        public ReportService(ComaviDbContext context, ILogger<ReportService> logger)
+        public ReportService(ComaviDbContext context)
         {
             _context = context;
-            _logger = logger;
         }
 
         public async Task<byte[]> GenerateDriverReportAsync(int userId)
@@ -221,7 +223,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al generar reporte de conductor");
                 throw;
             }
         }
@@ -409,7 +410,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al generar reporte de vencimientos");
                 throw;
             }
         }
@@ -516,7 +516,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al generar reporte de camiones en PDF");
                 throw;
             }
         }
@@ -640,7 +639,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al generar reporte de choferes en PDF");
                 throw;
             }
         }
@@ -755,7 +753,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al generar reporte de usuarios en PDF");
                 throw;
             }
         }
@@ -838,7 +835,7 @@ namespace COMAVI_SA.Services
                         }
                         catch (Exception ex)
                         {
-                            _logger.LogWarning($"Error al deserializar detalles_costo: {ex.Message}");
+                            throw;
                         }
 
                         string simbolo = mantenimiento.moneda == "USD" ? "$" : "₡";
@@ -1148,7 +1145,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al generar reporte de mantenimientos en PDF: {Message}", ex.Message);
                 throw;
             }
         }
@@ -1323,7 +1319,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al generar reporte de documentos vencidos en PDF");
                 throw;
             }
         }

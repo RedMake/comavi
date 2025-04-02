@@ -15,7 +15,6 @@ namespace COMAVIxUnitTest
     public class NotificationServiceTests
     {
         private readonly Mock<IEmailService> _mockEmailService;
-        private readonly Mock<ILogger<NotificationService>> _mockLogger;
         private readonly ComaviDbContext _dbContext;
         private readonly NotificationService _notificationService;
 
@@ -28,8 +27,7 @@ namespace COMAVIxUnitTest
 
             _dbContext = new ComaviDbContext(options);
             _mockEmailService = new Mock<IEmailService>();
-            _mockLogger = new Mock<ILogger<NotificationService>>();
-            _notificationService = new NotificationService(_dbContext, _mockEmailService.Object, _mockLogger.Object);
+            _notificationService = new NotificationService(_dbContext, _mockEmailService.Object);
         }
 
         [Fact]

@@ -11,6 +11,10 @@ using System.Collections;
 
 namespace COMAVI_SA.Services
 {
+#nullable disable
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
+#pragma warning disable CS0168 // Variable is declared but never used
+
     public interface IAdminService
     {
 
@@ -55,6 +59,9 @@ namespace COMAVI_SA.Services
         Task<List<SesionActivaViewModel>> GetSesionesActivasAsync(int idUsuario);
         Task<bool> CerrarSesionAsync(string tokenSesion);
         Task<List<UsuarioAdminViewModel>> GenerarReporteUsuariosAsync(string rol = null);
+        Task<List<SolicitudMantenimientoViewModel>> GetSolicitudesMantenimientoPendientesAsync();
+        Task<bool> ProcesarSolicitudMantenimientoAsync(int idSolicitud, int idAdmin, string estado,
+            string descripcion = null, decimal? costo = null, string moneda = "CRC", string detallesCosto = null);
 
         // Dashboard y Reportes
         Task<DashboardViewModel> GetDashboardIndicadoresAsync();
@@ -75,7 +82,6 @@ namespace COMAVI_SA.Services
         private readonly IDatabaseRepository _databaseRepository;
         private readonly IMemoryCache _cache;
         private readonly ICacheKeyTracker _cacheKeyTracker;
-        private readonly ILogger<AdminService> _logger;
         private readonly IDistributedLockProvider _lockProvider;
         private readonly IEmailService _emailService;
         private readonly IPdfService _pdfService;
@@ -87,7 +93,6 @@ namespace COMAVI_SA.Services
             IDatabaseRepository databaseRepository,
             IMemoryCache cache,
             ICacheKeyTracker cacheKeyTracker,
-            ILogger<AdminService> logger,
             IDistributedLockProvider lockProvider,
             IEmailService emailService,
             IPdfService pdfService,
@@ -98,7 +103,6 @@ namespace COMAVI_SA.Services
             _databaseRepository = databaseRepository;
             _cache = cache;
             _cacheKeyTracker = cacheKeyTracker;
-            _logger = logger;
             _lockProvider = lockProvider;
             _emailService = emailService;
             _pdfService = pdfService;
@@ -210,7 +214,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al registrar camión");
                 return false;
             }
         }
@@ -255,7 +258,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al actualizar camión");
                 return false;
             }
         }
@@ -304,7 +306,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al desactivar camión");
                 return false;
             }
         }
@@ -326,7 +327,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al activar camión");
                 return false;
             }
         }
@@ -385,7 +385,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al asignar chofer");
                 return false;
             }
         }
@@ -426,13 +425,13 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al eliminar camión");
                 return false;
             }
         }
 
         private async Task InvalidarCacheCamionesAsync()
         {
+#pragma warning disable CS0168 // Variable is declared but never used
             try
             {
                 var cacheKeys = _cacheKeyTracker.GetKeysByPrefix("Camiones_");
@@ -449,8 +448,9 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al invalidar caché de camiones");
+                throw;
             }
+#pragma warning restore CS0168 // Variable is declared but never used
         }
 
         #endregion
@@ -510,12 +510,10 @@ namespace COMAVI_SA.Services
             catch (SqlException sqlEx)
             {
                 // Captura específicamente los mensajes de error SQL
-                _logger.LogError(sqlEx, "Error SQL al registrar chofer");
                 return (false, sqlEx.Message);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al registrar chofer");
                 return (false, "Error al registrar el chofer: " + ex.Message);
             }
         }
@@ -577,6 +575,7 @@ namespace COMAVI_SA.Services
 
         public async Task<bool> ActualizarDocumentoAsync(Documentos documento)
         {
+#pragma warning disable CS0168 // Variable is declared but never used
             try
             {
                 // Utiliza el procedimiento almacenado sp_ActualizarDocumento
@@ -621,7 +620,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al actualizar documento");
                 return false;
             }
         }
@@ -704,7 +702,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al actualizar datos del chofer");
                 return false;
             }
         }
@@ -750,7 +747,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al desactivar chofer");
                 return false;
             }
         }
@@ -776,7 +772,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al activar chofer");
                 return false;
             }
         }
@@ -800,7 +795,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al eliminar chofer");
                 return false;
             }
         }
@@ -827,7 +821,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al generar reporte de choferes");
                 throw;
             }
         }
@@ -852,7 +845,7 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al invalidar caché de choferes");
+                throw;
             }
         }
         #endregion
@@ -878,7 +871,7 @@ namespace COMAVI_SA.Services
                 TimeSpan.FromMinutes(5)
             );
         }
-
+        
         public async Task<Usuario> GetUsuarioByIdAsync(int id)
         {
             string cacheKey = $"Usuario_{id}";
@@ -912,7 +905,6 @@ namespace COMAVI_SA.Services
                         rol = model.rol
                     }
                 );
-                _logger.LogInformation("Resultado {result}", result);
                 // Interpretar resultado
                 if (result == 1 || result == 0) // Éxito
                 {
@@ -931,13 +923,11 @@ namespace COMAVI_SA.Services
                 }
                 else // Otros errores
                 {
-                    _logger.LogWarning($"Error al actualizar usuario. Código: {result}");
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al actualizar usuario");
                 return false;
             }
         }
@@ -973,19 +963,18 @@ namespace COMAVI_SA.Services
                 }
                 else
                 {
-                    _logger.LogWarning($"Error al cambiar estado del usuario. Código: {result}");
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al cambiar estado del usuario");
                 return false;
             }
         }
 
         public async Task<bool> ResetearContrasenaAsync(int id)
         {
+#pragma warning disable CS0168 // Variable is declared but never used
             try
             {
                 // Generar contraseña temporal
@@ -1022,13 +1011,11 @@ namespace COMAVI_SA.Services
                 }
                 else
                 {
-                    _logger.LogWarning($"Error al resetear contraseña. Usuario ID: {id}");
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al resetear contraseña");
                 return false;
             }
         }
@@ -1082,13 +1069,11 @@ namespace COMAVI_SA.Services
                 }
                 else
                 {
-                    _logger.LogWarning($"Error al cerrar sesión. Token: {tokenSesion}");
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al cerrar sesión");
                 return false;
             }
         }
@@ -1107,7 +1092,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al generar reporte de usuarios");
                 throw;
             }
         }
@@ -1130,7 +1114,103 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al invalidar caché de usuarios");
+                throw;
+            }
+        }
+
+        public async Task<List<SolicitudMantenimientoViewModel>> GetSolicitudesMantenimientoPendientesAsync()
+        {
+            string cacheKey = "SolicitudesMantenimientoPendientes";
+            return await GetOrSetCacheAsync(
+                cacheKey,
+                async () =>
+                {
+                    var solicitudes = await _databaseRepository.ExecuteQueryProcedureAsync<SolicitudMantenimientoViewModel>(
+                        "sp_ObtenerSolicitudesMantenimientoPendientes",
+                        null
+                    );
+                    return solicitudes.ToList();
+                },
+                TimeSpan.FromMinutes(2) // Caché corto porque esta información cambia con frecuencia
+            );
+        }
+
+        public async Task<bool> ProcesarSolicitudMantenimientoAsync(int idSolicitud, int idAdmin, string estado,
+            string descripcion = null, decimal? costo = null, string moneda = "CRC", string detallesCosto = null)
+        {
+            try
+            {
+                // Validar datos según estado
+                if (estado == "aprobado" && (string.IsNullOrWhiteSpace(descripcion) || !costo.HasValue))
+                {
+                    throw new ArgumentException("Debe proporcionar descripción y costo para aprobar la solicitud.");
+                }
+
+                // Preparar detalles de costo como JSON válido
+                string jsonDetalles = null;
+                if (estado == "aprobado" && costo.HasValue)
+                {
+                    try
+                    {
+                        if (!string.IsNullOrWhiteSpace(detallesCosto))
+                        {
+                            // Verificar si es JSON válido
+                            Newtonsoft.Json.Linq.JObject.Parse(detallesCosto);
+                            jsonDetalles = detallesCosto;
+                        }
+                        else
+                        {
+                            // Crear JSON básico
+                            jsonDetalles = Newtonsoft.Json.JsonConvert.SerializeObject(new
+                            {
+                                costo_base = costo.Value,
+                                impuesto_iva = 0m,
+                                otros_costos = 0m,
+                                tipo_cambio = 625m
+                            });
+                        }
+                    }
+                    catch (Exception jsonEx)
+                    {
+
+                        // Si hay error, crear JSON válido
+                        jsonDetalles = Newtonsoft.Json.JsonConvert.SerializeObject(new
+                        {
+                            costo_base = costo.Value,
+                            impuesto_iva = 0m,
+                            otros_costos = 0m,
+                            tipo_cambio = 625m
+                        });
+                    }
+                }
+
+                // Construir parámetros
+                var parameters = new
+                {
+                    id_solicitud = idSolicitud,
+                    id_admin = idAdmin,
+                    estado = estado,
+                    descripcion = estado == "aprobado" ? descripcion : (object)DBNull.Value,
+                    costo = estado == "aprobado" ? costo.Value : 0M,
+                    moneda = estado == "aprobado" ? moneda : (object)DBNull.Value,
+                    detalles_costo = jsonDetalles != null ? jsonDetalles : (object)DBNull.Value
+                };
+
+                // Ejecutar procedimiento almacenado
+                await _databaseRepository.ExecuteNonQueryProcedureAsync(
+                    "sp_ProcesarSolicitudMantenimiento",
+                    parameters
+                );
+
+                // Invalidar caché relacionado con solicitudes de mantenimiento
+                _cache.Remove("SolicitudesMantenimientoPendientes");
+                _cache.Remove("HistorialMantenimiento");
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                throw;
             }
         }
 
@@ -1231,7 +1311,6 @@ namespace COMAVI_SA.Services
                             }
                             catch (Exception ex)
                             {
-                                _logger.LogError(ex, "Error procesando datos de mantenimientos para el índice {Index}", index);
                                 // Continuar con el siguiente elemento
                             }
 
@@ -1260,7 +1339,6 @@ namespace COMAVI_SA.Services
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Error obteniendo mantenimientos por mes para el año {Year}", anio);
                         return new List<GraficoDataViewModel>();
                     }
                 },
@@ -1308,7 +1386,6 @@ namespace COMAVI_SA.Services
 
                                 if (string.IsNullOrEmpty(estado))
                                 {
-                                    _logger.LogWarning("Estado vacío en el índice {Index}, omitiendo registro", index);
                                     continue;
                                 }
 
@@ -1329,7 +1406,6 @@ namespace COMAVI_SA.Services
                             }
                             catch (Exception ex)
                             {
-                                _logger.LogError(ex, "Error procesando datos de estados de documentos para el índice {Index}", index);
                                 // Continuar con el siguiente elemento
                             }
 
@@ -1340,7 +1416,6 @@ namespace COMAVI_SA.Services
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Error obteniendo estados de documentos");
                         return new List<GraficoDataViewModel>();
                     }
                 },
@@ -1451,7 +1526,7 @@ namespace COMAVI_SA.Services
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, $"Error al adquirir bloqueo para {lockKey}. Continuando sin bloqueo.");
+                        throw;
                     }
                 }
 
@@ -1513,7 +1588,7 @@ namespace COMAVI_SA.Services
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, $"Error al registrar clave {cacheKey} en el tracker.");
+                        throw;
                     }
                 }
 
@@ -1530,7 +1605,7 @@ namespace COMAVI_SA.Services
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogWarning(ex, $"Error al liberar bloqueo para {lockKey}");
+                        throw;
                     }
                 }
             }
@@ -1580,7 +1655,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Error al calcular tamaño de caché");
                 return 1; // Valor seguro por defecto
             }
         }
@@ -1588,4 +1662,8 @@ namespace COMAVI_SA.Services
         
         #endregion
     }
+#nullable enable
+#pragma warning restore CS0168 // Variable is declared but never used
+
+
 }

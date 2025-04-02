@@ -72,7 +72,6 @@ function inicializarGraficoArea() {
         return;
     }
 
-    console.log("Datos para gráfico de mantenimientos:", mantenimientosPorMes);
 
     // Obtener las etiquetas (nombres de los meses)
     const labels = mantenimientosPorMes.map(item => item.label);
@@ -177,7 +176,7 @@ function inicializarGraficoArea() {
 
                         let label = cantidad + " mantenimientos";
                         if (costo > 0) {
-                            label += " - Costo: $" + costo.toLocaleString();
+                            label += " - Costo: ₡" + costo.toLocaleString();
                         }
                         return label;
                     }
@@ -196,8 +195,6 @@ function inicializarGraficoCamiones() {
         console.error("No hay datos para el gráfico de estados de camiones");
         return;
     }
-
-    console.log("Datos para gráfico de camiones:", camionesEstados);
 
     var ctx2 = document.getElementById("myPieChart");
     var myPieChart = new Chart(ctx2, {
@@ -267,8 +264,6 @@ function inicializarGraficoDocumentos() {
         console.error("No hay datos para el gráfico de estados de documentos");
         return;
     }
-
-    console.log("Datos para gráfico de documentos:", documentosEstados);
 
     var ctx3 = document.getElementById("documentosChart");
     var documentosPieChart = new Chart(ctx3, {

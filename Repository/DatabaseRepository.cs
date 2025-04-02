@@ -4,6 +4,8 @@ using System.Data;
 
 namespace COMAVI_SA.Repository
 {
+#nullable disable
+
     public interface IDatabaseRepository
     {
         Task<T> ExecuteScalarProcedureAsync<T>(string procedureName, object parameters = null);
@@ -15,15 +17,12 @@ namespace COMAVI_SA.Repository
     public class DatabaseRepository : IDatabaseRepository
     {
         private readonly string _connectionString;
-        private readonly ILogger<DatabaseRepository> _logger;
         private readonly IConfiguration _configuration;
 
         public DatabaseRepository(
-            IConfiguration configuration,
-            ILogger<DatabaseRepository> logger)
+            IConfiguration configuration)
         {
             _connectionString = configuration.GetConnectionString("DefaultConnection");
-            _logger = logger;
             _configuration = configuration;
         }
 
@@ -46,7 +45,6 @@ namespace COMAVI_SA.Repository
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al abrir conexión a la base de datos después de reintentos");
                 throw new ApplicationException("No se pudo establecer conexión con la base de datos", ex);
             }
         }
@@ -120,7 +118,6 @@ namespace COMAVI_SA.Repository
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error al ejecutar procedimiento almacenado: {procedureName}");
                 throw new DatabaseOperationException($"Error al ejecutar {procedureName}", ex);
             }
         }
@@ -140,7 +137,6 @@ namespace COMAVI_SA.Repository
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error al ejecutar procedimiento almacenado: {procedureName}");
                 throw new DatabaseOperationException($"Error al ejecutar {procedureName}", ex);
             }
         }
@@ -160,7 +156,6 @@ namespace COMAVI_SA.Repository
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error al ejecutar procedimiento almacenado: {procedureName}");
                 throw new DatabaseOperationException($"Error al ejecutar {procedureName}", ex);
             }
         }
@@ -187,7 +182,6 @@ namespace COMAVI_SA.Repository
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error al ejecutar procedimiento almacenado multiple: {procedureName}");
                 throw new DatabaseOperationException($"Error al ejecutar {procedureName}", ex);
             }
         }

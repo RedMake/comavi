@@ -5,6 +5,8 @@ using Microsoft.Extensions.Logging;
 
 namespace COMAVI_SA.Services
 {
+#pragma warning disable CS0168
+
     // Interfaz para el servicio de limpieza de sesiones
     public interface ISessionCleanupService
     {
@@ -15,14 +17,11 @@ namespace COMAVI_SA.Services
     public class SessionCleanupService : ISessionCleanupService
     {
         private readonly ComaviDbContext _context;
-        private readonly ILogger<SessionCleanupService> _logger;
 
         public SessionCleanupService(
-            ComaviDbContext context,
-            ILogger<SessionCleanupService> logger)
+            ComaviDbContext context)
         {
             _context = context;
-            _logger = logger;
         }
 
         public async Task CleanupExpiredSessionsAsync()
@@ -41,12 +40,11 @@ namespace COMAVI_SA.Services
                     _context.SesionesActivas.RemoveRange(expiredSessions);
                     await _context.SaveChangesAsync();
 
-                    _logger.LogInformation("Se eliminaron {Count} sesiones expiradas", expiredSessions.Count);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al limpiar sesiones expiradas");
+                throw;
             }
         }
     }

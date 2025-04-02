@@ -10,13 +10,11 @@ namespace COMAVIxUnitTest
 {
     public class JwtBlacklistServiceTests
     {
-        private readonly Mock<ILogger<JwtBlacklistService>> _mockLogger;
         private readonly JwtBlacklistService _blacklistService;
 
         public JwtBlacklistServiceTests()
         {
-            _mockLogger = new Mock<ILogger<JwtBlacklistService>>();
-            _blacklistService = new JwtBlacklistService(_mockLogger.Object);
+            _blacklistService = new JwtBlacklistService();
         }
 
         [Fact]
@@ -26,7 +24,9 @@ namespace COMAVIxUnitTest
 
             // Assert - Verificar que la colección se inicializó correctamente
             var fieldInfo = typeof(JwtBlacklistService).GetField("_blacklistedTokens", BindingFlags.NonPublic | BindingFlags.Instance);
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
             var blacklistedTokens = fieldInfo.GetValue(_blacklistService);
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
 
             Assert.NotNull(blacklistedTokens);
         }

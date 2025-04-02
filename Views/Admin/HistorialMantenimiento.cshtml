@@ -1,5 +1,7 @@
 ﻿@model List<Mantenimiento_Camiones>
 @{
+#nullable enable
+#pragma warning disable CS8602, CS8600 // Suprimir varios warnings de null reference
     ViewData["Title"] = "Gestion de Mantenimiento";
     var camion = ViewBag.Camion;
 }
@@ -127,7 +129,28 @@
                             <tr>
                                 <td>@mantenimiento.id_mantenimiento</td>
                                 <td>@mantenimiento.fecha_mantenimiento.ToString("yyyy-MM-dd HH:mm")</td>
-                                <td>@mantenimiento.descripcion</td>
+                                <td>
+                                    @{
+                                        int maxWords = 1; // Número máximo de palabras antes de truncar
+                                        var words = mantenimiento.descripcion.Split(' ');
+                                        var truncatedDescription = words.Length > maxWords ?
+                                        string.Join(" ", words.Take(maxWords)) + "..." :
+                                        mantenimiento.descripcion;
+                                    }
+                                    @truncatedDescription
+                                    @if (words.Length > maxWords)
+                                    {
+                                        <span class="text-primary" data-toggle="modal" data-target="#detalleMantenimientoModal"
+                                              data-id="@mantenimiento.id_mantenimiento"
+                                              data-descripcion="@mantenimiento.descripcion"
+                                              data-fecha="@mantenimiento.fecha_mantenimiento.ToString("yyyy-MM-dd HH:mm")"
+                                              data-costo="@mantenimiento.costo"
+                                              data-moneda="@(mantenimiento.moneda ?? "CRC")"
+                                              data-detalles='@Html.Raw(mantenimiento.detalles_costo)'>
+                                            (Ver más)
+                                        </span>
+                                    }
+                                </td>
                                 <td>
                                     @if (detallesCosto != null && detallesCosto.costo_base != null)
                                     {
@@ -167,7 +190,7 @@
                                             data-fecha="@mantenimiento.fecha_mantenimiento.ToString("yyyy-MM-dd HH:mm")"
                                             data-costo="@mantenimiento.costo"
                                             data-moneda="@(mantenimiento.moneda ?? "CRC")"
-                                            data-detalles="@(mantenimiento.detalles_costo ?? "")">
+                                            data-detalles='@Html.Raw(mantenimiento.detalles_costo)'>
                                         <i class="fas fa-eye"></i>
                                     </button>
                                 </td>

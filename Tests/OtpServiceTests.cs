@@ -7,6 +7,8 @@ using Xunit;
 
 namespace COMAVIxUnitTest
 {
+#nullable disable
+
     public class OtpServiceTests
     {
         private readonly Mock<IConfiguration> _mockConfiguration;

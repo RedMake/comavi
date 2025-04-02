@@ -10,30 +10,33 @@ using System.IO;
 
 namespace COMAVI_SA.Controllers
 {
+#pragma warning disable CS0168
+
     [Authorize(Policy = "RequireAdminRole")]
     public class DocumentosController : Controller
     {
         private readonly ComaviDbContext _context;
         private readonly IPdfService _pdfService;
         private readonly IEmailService _emailService;
-        private readonly ILogger<DocumentosController> _logger;
         private readonly string _connectionString;
         private readonly IExcelService _excelService;
 
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
         public DocumentosController(
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
             ComaviDbContext context,
             IPdfService pdfService,
             IExcelService excelService,
             IEmailService emailService,
-            IConfiguration configuration,
-            ILogger<DocumentosController> logger)
+            IConfiguration configuration)
         {
             _context = context;
             _pdfService = pdfService;
             _excelService = excelService;
             _emailService = emailService;
-            _logger = logger;
+#pragma warning disable CS8601 // Possible null reference assignment.
             _connectionString = configuration.GetConnectionString("DefaultConnection");
+#pragma warning restore CS8601 // Possible null reference assignment.
         }
 
 
@@ -80,7 +83,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al exportar documentos a PDF");
                 TempData["Error"] = "Error al exportar documentos a PDF";
                 return RedirectToAction("GenerarReporteDocumentos", new { estado, diasAnticipacion });
             }
@@ -119,7 +121,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al exportar documentos a Excel");
                 TempData["Error"] = "Error al exportar documentos a Excel";
                 return RedirectToAction("GenerarReporteDocumentos", new { estado, diasAnticipacion });
             }
@@ -141,7 +142,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al cargar documentos pendientes de validación");
                 TempData["Error"] = "Error al cargar los documentos pendientes de validación";
                 return RedirectToAction("Index", "Admin");
             }
@@ -177,7 +177,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al ver documento PDF");
                 TempData["Error"] = "Error al abrir el documento";
                 return RedirectToAction("PendientesValidacion");
             }
@@ -247,7 +246,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al validar documento");
                 TempData["Error"] = "Error al validar el documento";
                 return RedirectToAction("PendientesValidacion");
             }
@@ -324,7 +322,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al rechazar documento");
                 TempData["Error"] = "Error al rechazar el documento";
                 return RedirectToAction("PendientesValidacion");
             }
@@ -348,7 +345,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al cargar documentos por vencer");
                 TempData["Error"] = "Error al cargar los documentos por vencer";
                 return RedirectToAction("Index", "Admin");
             }
@@ -418,7 +414,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al enviar recordatorio de vencimiento");
                 TempData["Error"] = "Error al enviar el recordatorio de vencimiento";
                 return RedirectToAction("DocumentosPorVencer");
             }
@@ -447,7 +442,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al cargar histórico de documentos");
                 TempData["Error"] = "Error al cargar el histórico de documentos";
                 return RedirectToAction("Index", "Admin");
             }
@@ -482,7 +476,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al generar reporte de documentos");
                 TempData["Error"] = "Error al generar el reporte de documentos";
                 return RedirectToAction("Index", "Admin");
             }

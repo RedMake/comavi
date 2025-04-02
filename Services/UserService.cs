@@ -7,6 +7,9 @@ using System.Security.Cryptography;
 
 namespace COMAVI_SA.Services
 {
+#nullable disable
+#pragma warning disable CS0168
+
     public interface IUserService
     {
         Task<Usuario> AuthenticateAsync(string email, string password);
@@ -40,7 +43,6 @@ namespace COMAVI_SA.Services
         private readonly ComaviDbContext _context;
         private readonly IPasswordService _passwordService;
         private readonly IOtpService _otpService;
-        private readonly ILogger<UserService> _logger;
         private readonly IConfiguration _configuration;
         private readonly IDatabaseRepository _databaseRepository;
 
@@ -48,7 +50,6 @@ namespace COMAVI_SA.Services
             ComaviDbContext context,
             IPasswordService passwordService,
             IOtpService otpService,
-            ILogger<UserService> logger,
             IConfiguration configuration,
             IDatabaseRepository databaseRepository)
 
@@ -56,7 +57,6 @@ namespace COMAVI_SA.Services
             _context = context;
             _passwordService = passwordService;
             _otpService = otpService;
-            _logger = logger;
             _configuration = configuration;
             _databaseRepository = databaseRepository;
 
@@ -101,7 +101,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al autenticar usuario");
                 return null;
             }
         }
@@ -132,7 +131,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al registrar usuario");
                 return false;
             }
         }
@@ -161,7 +159,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al verificar si la cuenta está bloqueada");
                 return false;
             }
         }
@@ -183,7 +180,7 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al registrar intento de login");
+                throw;
             }
         }
 
@@ -200,7 +197,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener secreto MFA");
                 return null;
             }
         }
@@ -224,7 +220,7 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al configurar MFA");
+                throw;
             }
         }
 
@@ -252,7 +248,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al restablecer contraseña");
                 return false;
             }
         }
@@ -295,7 +290,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al generar token de restablecimiento de contraseña");
                 return null;
             }
         }
@@ -329,7 +323,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al verificar usuario");
                 return false;
             }
         }
@@ -377,7 +370,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al habilitar MFA");
                 return false;
             }
         }
@@ -423,7 +415,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al deshabilitar MFA");
                 return false;
             }
         }
@@ -437,7 +428,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al verificar estado de MFA");
                 return false;
             }
         }
@@ -474,7 +464,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al generar códigos de respaldo");
                 return new List<string>();
             }
         }
@@ -523,7 +512,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al verificar código de respaldo");
                 return false;
             }
         }
@@ -542,7 +530,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener intentos fallidos de MFA");
                 return 0;
             }
         }
@@ -564,7 +551,7 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al registrar intento de MFA");
+                throw;
             }
         }
 
@@ -585,7 +572,7 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al reiniciar intentos fallidos de MFA");
+                throw;
             }
         }
 
@@ -637,7 +624,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al verificar código MFA");
                 return false;
             }
         }
@@ -656,7 +642,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener todos los usuarios");
                 return new List<Usuario>();
             }
         }
@@ -666,5 +651,6 @@ namespace COMAVI_SA.Services
             return _passwordService.HashPassword(password);
         }
     }
+#nullable enable
 
 }

@@ -113,7 +113,6 @@
         if (!d) return d;
         return safeHtmlSanitize(d);
       };
-      console.log('DataTables _stripHtml: Protección aplicada');
     }
 
     // Corregir escape de cadenas en línea 4506
@@ -124,7 +123,6 @@
         // Aplicar escape de manera segura para expresiones regulares
         return s.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, '\\$&');
       };
-      console.log('DataTables escapeRegex: Protección aplicada');
     }
 
     // Otras funciones problemáticas en DataTables (líneas 14882, 14787, 6104)
@@ -150,7 +148,6 @@
             return safeHtmlSanitize(result);
           }
         };
-        console.log(`DataTables ${funcName}: Protección aplicada`);
       }
     });
   }
@@ -164,7 +161,6 @@
         if (!s) return s;
         return safeHtmlEscape(s);
       };
-      console.log('Chart.js escape: Protección aplicada');
     }
 
     // Protección adicional para generación de tooltips en Chart.js
@@ -184,7 +180,6 @@
         
         return labels;
       };
-      console.log('Chart.js tooltips: Protección aplicada');
     }
   }
 
@@ -210,7 +205,6 @@
           
           return setElementContentOriginal.call(this, element, content);
         };
-        console.log('Bootstrap Tooltip: Protección aplicada');
       }
     }
     
@@ -233,7 +227,6 @@
           
           return setElementContentOriginal.call(this, element, content);
         };
-        console.log('Bootstrap Popover: Protección aplicada');
       }
     }
   }
@@ -252,7 +245,6 @@
         get: originalInnerHTMLDescriptor.get,
         configurable: true
       });
-      console.log('Global DOM innerHTML: Protección aplicada');
     }
 
     // Proteger insertAdjacentHTML
@@ -262,7 +254,6 @@
         const sanitizedHtml = safeHtmlSanitize(html);
         return originalInsertAdjacentHTML.call(this, position, sanitizedHtml);
       };
-      console.log('Global DOM insertAdjacentHTML: Protección aplicada');
     }
     
     // No sobrescribimos document.write y document.writeln porque podría romper scripts críticos
@@ -288,5 +279,4 @@
     }
   });
 
-  console.log('✅ Protección de seguridad global aplicada para bibliotecas de terceros');
 })();

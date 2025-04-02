@@ -1,32 +1,35 @@
-﻿<div class="card shadow mb-4">
+﻿@{
+    ViewData["Title"] = "Consejos y Advertencias";
+}
+
+<div class="card shadow mb-4">
     <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
         <h6 class="m-0 font-weight-bold text-primary">Consejos y Advertencias Importantes</h6>
         <div class="dropdown no-arrow">
-            <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink"
+            <a class="dropdown-toggle" href="#" role="button" id="consejos_dropdownMenuLink"
                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                 <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
             </a>
             <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in"
-                 aria-labelledby="dropdownMenuLink">
+                 aria-labelledby="consejos_dropdownMenuLink">
                 <div class="dropdown-header">Opciones:</div>
-                <a class="dropdown-item" href="#" id="printGuideBtn"><i class="fas fa-print fa-sm fa-fw mr-2 text-gray-400"></i>Imprimir Guía</a>
-                <a class="dropdown-item" href="#" id="downloadGuideBtn"><i class="fas fa-download fa-sm fa-fw mr-2 text-gray-400"></i>Descargar PDF</a>
+                <a class="dropdown-item" href="#" id="consejos_printGuideBtn"><i class="fas fa-print fa-sm fa-fw mr-2 text-gray-400"></i>Imprimir Guía</a>
             </div>
         </div>
     </div>
     <div class="card-body">
-        <div class="accordion" id="accordionGuias">
+        <div class="accordion" id="consejos_accordionGuias">
             <!-- Licencias y Documentación -->
             <div class="card">
-                <div class="card-header bg-light" id="headingOne">
+                <div class="card-header bg-light" id="consejos_headingOne">
                     <h2 class="mb-0">
                         <button class="btn btn-link btn-block text-left text-primary" type="button" data-toggle="collapse"
-                                data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                                data-target="#consejos_collapseOne" aria-expanded="true" aria-controls="consejos_collapseOne">
                             <i class="fas fa-id-card mr-2"></i> Licencias y Documentación
                         </button>
                     </h2>
                 </div>
-                <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#accordionGuias">
+                <div id="consejos_collapseOne" class="collapse show" aria-labelledby="consejos_headingOne" data-parent="#consejos_accordionGuias">
                     <div class="card-body">
                         <ul class="list-group list-group-flush">
                             <li class="list-group-item">
@@ -52,15 +55,15 @@
 
             <!-- Mantenimiento de Vehículos -->
             <div class="card">
-                <div class="card-header bg-light" id="headingTwo">
+                <div class="card-header bg-light" id="consejos_headingTwo">
                     <h2 class="mb-0">
                         <button class="btn btn-link btn-block text-left collapsed text-primary" type="button" data-toggle="collapse"
-                                data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                                data-target="#consejos_collapseTwo" aria-expanded="false" aria-controls="consejos_collapseTwo">
                             <i class="fas fa-tools mr-2"></i> Mantenimiento de Vehículos
                         </button>
                     </h2>
                 </div>
-                <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionGuias">
+                <div id="consejos_collapseTwo" class="collapse" aria-labelledby="consejos_headingTwo" data-parent="#consejos_accordionGuias">
                     <div class="card-body">
                         <ul class="list-group list-group-flush">
                             <li class="list-group-item">
@@ -86,15 +89,15 @@
 
             <!-- Jornadas y Descansos -->
             <div class="card">
-                <div class="card-header bg-light" id="headingThree">
+                <div class="card-header bg-light" id="consejos_headingThree">
                     <h2 class="mb-0">
                         <button class="btn btn-link btn-block text-left collapsed text-primary" type="button" data-toggle="collapse"
-                                data-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                                data-target="#consejos_collapseThree" aria-expanded="false" aria-controls="consejos_collapseThree">
                             <i class="fas fa-clock mr-2"></i> Jornadas y Descansos
                         </button>
                     </h2>
                 </div>
-                <div id="collapseThree" class="collapse" aria-labelledby="headingThree" data-parent="#accordionGuias">
+                <div id="consejos_collapseThree" class="collapse" aria-labelledby="consejos_headingThree" data-parent="#consejos_accordionGuias">
                     <div class="card-body">
                         <ul class="list-group list-group-flush">
                             <li class="list-group-item">
@@ -120,15 +123,15 @@
 
             <!-- Seguridad Vial -->
             <div class="card">
-                <div class="card-header bg-light" id="headingFour">
+                <div class="card-header bg-light" id="consejos_headingFour">
                     <h2 class="mb-0">
                         <button class="btn btn-link btn-block text-left collapsed text-primary" type="button" data-toggle="collapse"
-                                data-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+                                data-target="#consejos_collapseFour" aria-expanded="false" aria-controls="consejos_collapseFour">
                             <i class="fas fa-shield-alt mr-2"></i> Seguridad Vial
                         </button>
                     </h2>
                 </div>
-                <div id="collapseFour" class="collapse" aria-labelledby="headingFour" data-parent="#accordionGuias">
+                <div id="consejos_collapseFour" class="collapse" aria-labelledby="consejos_headingFour" data-parent="#consejos_accordionGuias">
                     <div class="card-body">
                         <ul class="list-group list-group-flush">
                             <li class="list-group-item">
@@ -154,15 +157,15 @@
 
             <!-- Carga y Peso -->
             <div class="card">
-                <div class="card-header bg-light" id="headingFive">
+                <div class="card-header bg-light" id="consejos_headingFive">
                     <h2 class="mb-0">
                         <button class="btn btn-link btn-block text-left collapsed text-primary" type="button" data-toggle="collapse"
-                                data-target="#collapseFive" aria-expanded="false" aria-controls="collapseFive">
+                                data-target="#consejos_collapseFive" aria-expanded="false" aria-controls="consejos_collapseFive">
                             <i class="fas fa-balance-scale mr-2"></i> Carga y Peso
                         </button>
                     </h2>
                 </div>
-                <div id="collapseFive" class="collapse" aria-labelledby="headingFive" data-parent="#accordionGuias">
+                <div id="consejos_collapseFive" class="collapse" aria-labelledby="consejos_headingFive" data-parent="#consejos_accordionGuias">
                     <div class="card-body">
                         <ul class="list-group list-group-flush">
                             <li class="list-group-item">
@@ -188,15 +191,15 @@
 
             <!-- Responsabilidad Ambiental -->
             <div class="card">
-                <div class="card-header bg-light" id="headingSix">
+                <div class="card-header bg-light" id="consejos_headingSix">
                     <h2 class="mb-0">
                         <button class="btn btn-link btn-block text-left collapsed text-primary" type="button" data-toggle="collapse"
-                                data-target="#collapseSix" aria-expanded="false" aria-controls="collapseSix">
+                                data-target="#consejos_collapseSix" aria-expanded="false" aria-controls="consejos_collapseSix">
                             <i class="fas fa-leaf mr-2"></i> Responsabilidad Ambiental
                         </button>
                     </h2>
                 </div>
-                <div id="collapseSix" class="collapse" aria-labelledby="headingSix" data-parent="#accordionGuias">
+                <div id="consejos_collapseSix" class="collapse" aria-labelledby="consejos_headingSix" data-parent="#consejos_accordionGuias">
                     <div class="card-body">
                         <ul class="list-group list-group-flush">
                             <li class="list-group-item">
@@ -229,21 +232,55 @@
         </div>
     </div>
     <div class="card-footer text-muted">
-        <small>Actualizado: Marzo 2025 - Departamento de Seguridad y Cumplimiento - COMAVI S.A.</small>
+        <small>Actualizado: Abril 2025 - Departamento de Seguridad y Cumplimiento - COMAVI S.A.</small>
     </div>
 </div>
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Botón para imprimir
+            $("#consejos_printGuideBtn").click(function(e) {
+                e.preventDefault();
+                window.print();
+            });
 
-<script>
-    $(document).ready(function() {
-        // Funcionalidad para imprimir la guía
-        $("#printGuideBtn").click(function(e) {
-            e.preventDefault();
-            window.print();
-        });
+            // Agregar botones para expandir/colapsar todos
+            var controlButtons = `
+                <div class="btn-group mb-3">
+                    <button id="consejos_expandAllBtn" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-plus-circle mr-1"></i> Abrir Todos
+                    </button>
+                    <button id="consejos_collapseAllBtn" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-minus-circle mr-1"></i> Cerrar Todos
+                    </button>
+                </div>
+            `;
 
-        // Mantener el acordeón expandido si se hace clic en su contenido
-        $('.card-body').click(function(e) {
-            e.stopPropagation();
+            // Insertar los botones antes del acordeón
+            $('#consejos_accordionGuias').before(controlButtons);
+
+            // Funcionalidad para abrir todos los paneles
+            $('#consejos_expandAllBtn').click(function() {
+                // Quitar la propiedad "parent" para evitar que se cierren entre sí
+                $('#consejos_accordionGuias .collapse').each(function() {
+                    $(this).removeAttr('data-parent');
+                });
+
+                // Abrir todos los paneles
+                $('#consejos_accordionGuias .collapse').collapse('show');
+            });
+
+            // Funcionalidad para cerrar todos los paneles
+            $('#consejos_collapseAllBtn').click(function() {
+                $('#consejos_accordionGuias .collapse').collapse('hide');
+
+                // Restaurar el comportamiento de acordeón después de cerrar
+                setTimeout(function() {
+                    $('#consejos_accordionGuias .collapse').each(function() {
+                        $(this).attr('data-parent', '#consejos_accordionGuias');
+                    });
+                }, 300); // Pequeño retraso para evitar conflictos
+            });
         });
-    });
-</script>
+    </script>
+}

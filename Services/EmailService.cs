@@ -5,6 +5,8 @@ using MimeKit;
 
 namespace COMAVI_SA.Services
 {
+#pragma warning disable CS0168
+
     public interface IEmailService
     {
         Task SendEmailAsync(string to, string subject, string body);
@@ -16,16 +18,13 @@ namespace COMAVI_SA.Services
     {
         private readonly IConfiguration _configuration;
         private readonly IWebHostEnvironment _environment;
-        private readonly ILogger<EmailService> _logger;
 
         public EmailService(
             IConfiguration configuration,
-            IWebHostEnvironment environment,
-            ILogger<EmailService> logger)
+            IWebHostEnvironment environment)
         {
             _configuration = NotNull.Check(configuration);
             _environment = NotNull.Check(environment);
-            _logger = NotNull.Check(logger);
         }
 
         public async Task SendEmailAsync(string to, string subject, string body)
@@ -45,10 +44,12 @@ namespace COMAVI_SA.Services
                 email.Body = new TextPart(MimeKit.Text.TextFormat.Html) { Text = body };
 
                 // En producción, usar las credenciales de KeyVault
+#pragma warning disable CS8604 // Possible null reference argument.
                 string password = _environment.IsDevelopment()
                     ? "_YcNJTF(H!v-3yy" // Solo para desarrollo
                     : NotNull.CheckNotNullOrEmpty(_configuration["EmailPassword"],
                         message: "La contraseña de email no está configurada en KeyVault");
+#pragma warning restore CS8604 // Possible null reference argument.
 
                 using var smtp = new SmtpClient();
                 await smtp.ConnectAsync("mail.privateemail.com", 587, SecureSocketOptions.StartTls);
@@ -56,11 +57,9 @@ namespace COMAVI_SA.Services
                 await smtp.SendAsync(email);
                 await smtp.DisconnectAsync(true);
 
-                _logger.LogInformation($"Correo enviado exitosamente a: {to}");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error al enviar correo a {to}");
                 throw;
             }
         }

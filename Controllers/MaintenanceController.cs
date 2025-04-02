@@ -8,7 +8,7 @@ namespace COMAVI_SA.Controllers
         public IActionResult Index(int errorCode = 0, string errorMessage = "")
         {
             Response.StatusCode = 503; // Service Unavailable
-            Response.Headers.Add("Retry-After", "300"); // 5 minutos
+            Response.Headers.Append("Retry-After", "300"); // 5 minutos
 
             // Pasar el código de error y mensaje a la vista
             ViewBag.ErrorCode = errorCode > 0 ? errorCode : 40613; // Valor por defecto

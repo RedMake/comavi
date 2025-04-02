@@ -1,8 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Newtonsoft.Json.Linq;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace COMAVI_SA.Models
 {
+#nullable disable
+#pragma warning disable CS8632 // The annotation for nullable reference types should only be used in code within a '#nullable' annotations context.
+
     public class Usuario
     {
         [Key]
@@ -230,6 +234,28 @@ namespace COMAVI_SA.Models
         public bool notificar_vencimiento_documentos { get; set; } = true;
     }
 
+    public class Solicitudes_Mantenimiento
+    {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int id_solicitud { get; set; }
+        public int id_camion { get; set; }
+        public int id_chofer { get; set; }
+        public DateTime fecha_solicitud { get; set; }
+        public string observaciones { get; set; }
+        public string estado { get; set; } // "pendiente", "aprobado", "rechazado", "completado"
+        public string comentario_admin { get; set; }
+        public DateTime? fecha_programada { get; set; }
+        public DateTime? fecha_completado { get; set; }
+        public DateTime? fecha_revision { get; set; }
+        public int? id_admin_revisor { get; set; }
+
+        // Propiedades de navegación
+        public virtual Camiones Camion { get; set; }
+        public virtual Choferes Chofer { get; set; }
+        public virtual Usuario AdminRevisor { get; set; }
+
+    }
     public class Choferes
     {
         [Key]
@@ -436,6 +462,57 @@ namespace COMAVI_SA.Models
 
 
     //ViewModel
+
+    public class SolicitudMantenimientoViewModel
+    {
+        // Propiedades existentes
+        public int IdSolicitud { get; set; }
+        public int IdChofer { get; set; }
+        public string NombreChofer { get; set; }
+        public int IdCamion { get; set; }
+        public string InfoCamion { get; set; }
+        public DateTime FechaSolicitud { get; set; }
+        public string Observaciones { get; set; }
+        public string Estado { get; set; }
+        public string NombreAdmin { get; set; }
+        public DateTime? FechaRevision { get; set; }
+        public string DescripcionMantenimiento { get; set; }
+        public decimal? Costo { get; set; }
+        public string Moneda { get; set; }
+        public string DetallesCosto { get; set; }
+
+        // Métodos de ayuda para extraer datos JSON de forma segura
+        public decimal GetCostoBase()
+        {
+            if (string.IsNullOrEmpty(DetallesCosto)) return Costo ?? 0;
+
+            try
+            {
+                var json = Newtonsoft.Json.Linq.JObject.Parse(DetallesCosto);
+                return json["costo_base"]?.Value<decimal>() ?? Costo ?? 0;
+            }
+            catch
+            {
+                return Costo ?? 0;
+            }
+        }
+
+        public decimal GetImpuestoIva()
+        {
+            if (string.IsNullOrEmpty(DetallesCosto)) return 0;
+
+            try
+            {
+                var json = Newtonsoft.Json.Linq.JObject.Parse(DetallesCosto);
+                return json["impuesto_iva"]?.Value<decimal>() ?? 0;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+    }
+
     public class DocumentoVencimientoIndexViewModel
     {
         public int id_documento { get; set; }

@@ -4,6 +4,8 @@ using Xunit;
 
 namespace COMAVIxUnitTest
 {
+#nullable disable
+
     public class NotNullTests
     {
         [Fact]

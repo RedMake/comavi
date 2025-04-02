@@ -7,18 +7,18 @@ using System.Security.Claims;
 
 namespace COMAVI_SA.Controllers
 {
+#nullable disable
+#pragma warning disable CS0168
+
     [Authorize(Roles = "admin,user")]
     public class CalendarController : Controller
     {
         private readonly ComaviDbContext _context;
-        private readonly ILogger<CalendarController> _logger;
 
         public CalendarController(
-            ComaviDbContext context,
-            ILogger<CalendarController> logger)
+            ComaviDbContext context)
         {
             _context = context;
-            _logger = logger;
         }
 
         [HttpGet]
@@ -98,7 +98,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al cargar la página de calendario");
                 TempData["Error"] = "Error al cargar el calendario.";
                 return RedirectToAction("Profile", "Login");
             }
@@ -177,7 +176,6 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener eventos del calendario");
                 return Json(new { error = "Error al obtener eventos del calendario" });
             }
         }

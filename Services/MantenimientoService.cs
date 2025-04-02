@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 
 namespace COMAVI_SA.Services
 {
+#pragma warning disable CS0168
+
     public interface IMantenimientoService
     {
         Task<bool> ProgramarMantenimientoAsync(Mantenimiento_Camiones mantenimiento);
@@ -21,20 +23,17 @@ namespace COMAVI_SA.Services
         private readonly IEmailService _emailService;
         private readonly INotificationService _notificationService;
         private readonly IUserService _userService;
-        private readonly ILogger<MantenimientoService> _logger;
 
         public MantenimientoService(
             IDatabaseRepository databaseRepository,
             IEmailService emailService,
             INotificationService notificationService,
-            IUserService userService,
-            ILogger<MantenimientoService> logger)
+            IUserService userService)
         {
             _databaseRepository = databaseRepository;
             _emailService = emailService;
             _notificationService = notificationService;
             _userService = userService;
-            _logger = logger;
         }
 
         public async Task<bool> ProgramarMantenimientoAsync(Mantenimiento_Camiones mantenimiento)
@@ -57,7 +56,6 @@ namespace COMAVI_SA.Services
 
                 if (resultado <= 0)
                 {
-                    _logger.LogError($"Error al registrar mantenimiento para camión ID: {mantenimiento.id_camion}");
                     return false;
                 }
 
@@ -69,7 +67,6 @@ namespace COMAVI_SA.Services
 
                 if (camion == null)
                 {
-                    _logger.LogError($"No se encontró el camión ID: {mantenimiento.id_camion}");
                     return false;
                 }
 
@@ -80,7 +77,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error al programar mantenimiento para camión ID: {mantenimiento.id_camion}");
                 return false;
             }
         }
@@ -96,7 +92,6 @@ namespace COMAVI_SA.Services
 
                 if (mantenimientosHoy == null || !mantenimientosHoy.Any())
                 {
-                    _logger.LogInformation("No hay mantenimientos programados para hoy");
                     return;
                 }
 
@@ -136,17 +131,16 @@ namespace COMAVI_SA.Services
                             );
                         }
 
-                        _logger.LogInformation($"Notificaciones enviadas para mantenimiento ID: {idMantenimiento}");
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, $"Error al enviar notificaciones para mantenimiento");
+                        throw;
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al notificar mantenimientos programados");
+                throw;
             }
         }
 
@@ -161,15 +155,10 @@ namespace COMAVI_SA.Services
 
                 if (camionesActualizados == null || !camionesActualizados.Any())
                 {
-                    _logger.LogInformation("No se actualizaron estados de camiones");
                     return;
                 }
 
-                // Registrar en el log los cambios realizados
-                foreach (var camion in camionesActualizados)
-                {
-                    _logger.LogInformation($"Camión ID: {camion.id_camion}, Placa: {camion.numero_placa}, Estado actualizado a: {camion.estado}");
-                }
+               
 
                 // Notificar a los usuarios sobre los cambios de estado
                 var usuarios = await _userService.GetAllUsersAsync();
@@ -191,7 +180,7 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al actualizar estados de camiones");
+                throw;
             }
         }
 
@@ -208,7 +197,6 @@ namespace COMAVI_SA.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener mantenimientos programados");
                 return new List<MantenimientoNotificacionViewModel>();
             }
         }
@@ -246,11 +234,9 @@ namespace COMAVI_SA.Services
                     );
                 }
 
-                _logger.LogInformation($"Notificaciones enviadas para nuevo mantenimiento de camión ID: {camion.id_camion}");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error al enviar notificaciones de nuevo mantenimiento para camión ID: {camion.id_camion}");
                 throw;
             }
         }

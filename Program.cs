@@ -27,7 +27,9 @@ builder.Services.AddDistributedMemoryCache();
 
 if (!builder.Environment.IsDevelopment())
 {
+#pragma warning disable CS8604 // Possible null reference argument.
     var keyVaultUri = new Uri(builder.Configuration["KeyVault:Endpoint"]);
+#pragma warning restore CS8604 // Possible null reference argument.
     var keyName = builder.Configuration["KeyVault:KeyName"];
     var keyUri = new Uri($"{keyVaultUri}keys/{keyName}");
     builder.Configuration.AddAzureKeyVault(keyVaultUri, new DefaultAzureCredential());
@@ -156,6 +158,8 @@ builder.Services.AddAuthentication(options =>
     options.Cookie.IsEssential = true;
 
     // Eventos avanzados para manejo de autenticación
+
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
     options.Events = new CookieAuthenticationEvents
     {
         // Al cerrar sesión, invalidar completamente la cookie
@@ -171,7 +175,9 @@ builder.Services.AddAuthentication(options =>
             {
                 //verificar si el usuario ha cambiado su contraseña recientemente
                 var userPrincipal = context.Principal;
+#pragma warning disable CS8604 // Possible null reference argument.
                 var userId = userPrincipal.FindFirstValue(ClaimTypes.NameIdentifier);
+#pragma warning restore CS8604 // Possible null reference argument.
 
                 if (!string.IsNullOrEmpty(userId))
                 {
@@ -199,6 +205,7 @@ builder.Services.AddAuthentication(options =>
             
         }
     };
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
 })
 .AddJwtBearer(options =>
 {
@@ -391,6 +398,8 @@ public class HangfireAuthorizationFilter : IDashboardAuthorizationFilter
     public bool Authorize(DashboardContext context)
     {
         var httpContext = context.GetHttpContext();
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
         return httpContext.User.Identity.IsAuthenticated && httpContext.User.IsInRole("admin");
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
     }
 }

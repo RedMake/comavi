@@ -11,12 +11,10 @@ namespace COMAVIxUnitTest
     public class UserCleanupServiceTests
     {
         private readonly Mock<IConfiguration> _mockConfiguration;
-        private readonly Mock<ILogger<UserCleanupService>> _mockLogger;
 
         public UserCleanupServiceTests()
         {
             _mockConfiguration = new Mock<IConfiguration>();
-            _mockLogger = new Mock<ILogger<UserCleanupService>>();
 
             // Setup configuration section for connection strings
             var connectionStringsSection = new Mock<IConfigurationSection>();
@@ -37,13 +35,15 @@ namespace COMAVIxUnitTest
         }
 
         [Fact]
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         public async Task CleanupNonVerifiedUsersAsync_ExecutesStoredProcedure()
+#pragma warning restore CS1998 // Async method lacks 'await' operators and will run synchronously
         {
             // Esta prueba requiere una conexión a base de datos mock o simulada
             // Por eso solo verificamos que el servicio se puede instanciar sin errores
 
             // Arrange
-            var service = new UserCleanupService(_mockConfiguration.Object, _mockLogger.Object);
+            var service = new UserCleanupService(_mockConfiguration.Object);
 
             // No ejecutamos el método real porque requeriría una conexión de BD
             // Simplemente verificamos que podemos crear el servicio sin errores

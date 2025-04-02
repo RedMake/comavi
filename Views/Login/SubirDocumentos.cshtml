@@ -42,7 +42,7 @@
                         <option value="">Seleccionar tipo de documento...</option>
                         @{
                             var documentosTipos = new[] {
-                                                "licencia", "cedula", "inscripcion", "mantenimiento"
+                                                "licencia", "cedula", "inscripcion"
                                                 };
                         }
                         @foreach (var tipo in documentosTipos)
@@ -211,36 +211,6 @@
                                     </li>
                                 </ul>
                                 <a href="@Url.Action("DescargarPlantilla", "Plantillas", new { tipoDocumento = "inscripcion" })"
-                                    class="btn btn-sm btn-primary">
-                                    <i class="fas fa-download"></i> Descargar plantilla
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <div class="card-header" id="headingMantenimiento">
-                            <h2 class="mb-0">
-                                <button class="btn btn-link btn-block text-left collapsed" type="button"
-                                    data-toggle="collapse" data-target="#collapseMantenimiento" aria-expanded="false"
-                                    aria-controls="collapseMantenimiento">
-                                    Reporte de Mantenimiento
-                                </button>
-                            </h2>
-                        </div>
-                        <div id="collapseMantenimiento" class="collapse" aria-labelledby="headingMantenimiento"
-                            data-parent="#accordionDocuments">
-                            <div class="card-body">
-                                <ul>
-                                    <li>PDF con reporte de mantenimiento realizado al vehículo</li>
-                                    <li>Debe incluir fecha del mantenimiento y kilometraje actual</li>
-                                    <li>Debe detallar los servicios realizados y piezas reemplazadas</li>
-                                    <li>Debe incluir información del vehículo (placa, modelo, VIN)</li>
-                                    <li>Debe estar firmado por el técnico responsable</li>
-                                    <li>Debe incluir datos del taller o centro de servicio</li>
-                                    <li>Debe contener recomendaciones para el próximo mantenimiento</li>
-                                </ul>
-                                <a href="@Url.Action("DescargarPlantilla", "Plantillas", new { tipoDocumento = "mantenimiento" })"
                                     class="btn btn-sm btn-primary">
                                     <i class="fas fa-download"></i> Descargar plantilla
                                 </a>

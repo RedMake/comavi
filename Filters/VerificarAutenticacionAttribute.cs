@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 
 namespace COMAVI_SA.Filters
 {
+#nullable disable
+
     public class VerificarAutenticacionAttribute : ActionFilterAttribute
     {
         private readonly List<string> rutasPublicas = new List<string> {
