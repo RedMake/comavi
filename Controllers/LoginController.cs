@@ -717,8 +717,7 @@ namespace COMAVI_SA.Controllers
                 var result = await _userService.RegisterAsync(model, verificationToken, tokenExpiration);
                 if (!result)
                 {
-                    ModelState.AddModelError("", "Error al registrar el usuario. Por favor, intente nuevamente.");
-                    return View(model);
+                    ModelState.AddModelError("", "Error al registrar el usuario. Por favor, intente nuevamente. Este error puede ser solo temporal no se preocupe");
                 }
 
                 // Enviar correo con instrucciones de verificación
@@ -726,7 +725,7 @@ namespace COMAVI_SA.Controllers
 
                 TempData["SuccessMessage"] = "Usuario registrado exitosamente. Se han enviado instrucciones de verificación al correo proporcionado.";
 
-                return RedirectToAction("Usuarios", "Sistema");
+                return RedirectToAction("Index");
             }
             catch (Exception ex)
             {
