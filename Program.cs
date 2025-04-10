@@ -1,4 +1,5 @@
 using Azure.Identity;
+using Azure.Storage.Blobs;
 using COMAVI_SA.Data;
 using COMAVI_SA.Services;
 using COMAVI_SA.Middleware;
@@ -18,8 +19,6 @@ using COMAVI_SA.Repository;
 using Microsoft.AspNetCore.DataProtection;
 using System.Security.Cryptography;
 using COMAVI_SA.Filters;
-using Azure.Storage.Blobs;
-
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,17 +27,17 @@ builder.Services.AddDistributedMemoryCache();
 
 if (!builder.Environment.IsDevelopment())
 {
-    // Configuración para producción con Managed Identity
     var blobServiceClient = new BlobServiceClient(
         new Uri("https://dumpmemorycomavi.blob.core.windows.net"),
         new DefaultAzureCredential());
-    
-    builder.Services.AddDataProtection()
-        .PersistKeysToAzureBlobStorage(blobServiceClient, "dataprotection-keys", "keys.xml")
-        .ProtectKeysWithAzureKeyVault(new Uri(builder.Configuration["KeyVault:Endpoint"] + "keys/" + builder.Configuration["KeyVault:KeyName"]), 
-                                      new DefaultAzureCredential())
-        .SetApplicationName("COMAVI_SA");
 
+    builder.Services.AddDataProtection()
+        .PersistKeysToAzureBlobStorage(
+            blobServiceClient.GetBlobContainerClient("dataprotection-keys").GetBlobClient("keys.xml")) 
+        .ProtectKeysWithAzureKeyVault(
+            new Uri($"{builder.Configuration["KeyVault:Endpoint"]}keys/{builder.Configuration["KeyVault:KeyName"]}"),
+            new DefaultAzureCredential())
+        .SetApplicationName("COMAVI_SA");
 }
 else
 {

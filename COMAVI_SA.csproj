@@ -6,10 +6,13 @@
 		<UserSecretsId>e7eef2be-d7d1-4af2-87e3-055e1a29c70d</UserSecretsId>
 	</PropertyGroup>
 	<ItemGroup>
+		<PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.5.0" />
 		<PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Keys" Version="1.4.0" />
+		<PackageReference Include="Azure.Storage.Blobs" Version="12.24.0" />
 		<PackageReference Include="ClosedXML" Version="0.104.2" />
 		<PackageReference Include="coverlet.collector" Version="6.0.4" />
 		<PackageReference Include="Hangfire.MemoryStorage" Version="1.8.1.1" />
+		<PackageReference Include="Microsoft.AspNetCore.DataProtection.AzureStorage" Version="3.1.24" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.3" />
 		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
 		<PackageReference Include="Moq" Version="4.20.72" />
