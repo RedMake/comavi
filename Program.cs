@@ -18,6 +18,7 @@ using COMAVI_SA.Repository;
 using Microsoft.AspNetCore.DataProtection;
 using System.Security.Cryptography;
 using COMAVI_SA.Filters;
+using Azure.Storage.Blobs;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -27,28 +28,30 @@ builder.Services.AddDistributedMemoryCache();
 
 if (!builder.Environment.IsDevelopment())
 {
-#pragma warning disable CS8604 // Possible null reference argument.
-    var keyVaultUri = new Uri(builder.Configuration["KeyVault:Endpoint"]);
-#pragma warning restore CS8604 // Possible null reference argument.
-    var keyName = builder.Configuration["KeyVault:KeyName"];
-    var keyUri = new Uri($"{keyVaultUri}keys/{keyName}");
-    builder.Configuration.AddAzureKeyVault(keyVaultUri, new DefaultAzureCredential());
-
+    // Configuraci贸n para producci贸n con Managed Identity
+    var blobServiceClient = new BlobServiceClient(
+        new Uri("https://dumpmemorycomavi.blob.core.windows.net"),
+        new DefaultAzureCredential());
+    
     builder.Services.AddDataProtection()
-        .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "keys")))
-        .ProtectKeysWithAzureKeyVault(keyUri, new DefaultAzureCredential())
-        .SetApplicationName("COMAVI_SA"); 
+        .PersistKeysToAzureBlobStorage(blobServiceClient, "dataprotection-keys", "keys.xml")
+        .ProtectKeysWithAzureKeyVault(new Uri(builder.Configuration["KeyVault:Endpoint"] + "keys/" + builder.Configuration["KeyVault:KeyName"]), 
+                                      new DefaultAzureCredential())
+        .SetApplicationName("COMAVI_SA");
 
 }
 else
 {
-    // Configuraci髇 para desarrollo - almacena localmente
+    // Configuraci贸n para desarrollo - almacena localmente
+    var keysPath = Path.Combine(builder.Environment.ContentRootPath, "keys");
+    Directory.CreateDirectory(keysPath); 
+    
     builder.Services.AddDataProtection()
-        .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "keys")))
-        .SetApplicationName("COMAVI_SA");
+        .PersistKeysToFileSystem(new DirectoryInfo(keysPath))
+        .SetApplicationName("COMAVI_SA");;
 }
 
-// Obtener la cadena de conexi髇
+// Obtener la cadena de conexi贸n
 var connectionString = builder.Environment.IsDevelopment()
     ? builder.Configuration.GetConnectionString("DefaultConnection")
     : builder.Configuration["ConnectionStrings:AZURE_SQL_CONNECTIONSTRING"]
@@ -141,8 +144,8 @@ builder.Services.AddAuthentication(options =>
     options.LogoutPath = "/Login/Logout";
     options.AccessDeniedPath = "/Login/AccessDenied";
 
-    // Reducir dr醩ticamente el tiempo de vida de la cookie
-    options.ExpireTimeSpan = TimeSpan.FromMinutes(30); // 30 minutos m醲imo
+    // Reducir dr谩sticamente el tiempo de vida de la cookie
+    options.ExpireTimeSpan = TimeSpan.FromMinutes(30); // 30 minutos m谩ximo
 
     // No usar SlidingExpiration para que la cookie expire siempre a tiempo fijo
     options.SlidingExpiration = false;
@@ -154,26 +157,26 @@ builder.Services.AddAuthentication(options =>
     options.Cookie.Name = "COMAVI.Auth";
     options.Cookie.Path = "/";
 
-    // Establecer que la cookie sea solo para la sesi髇 del navegador
+    // Establecer que la cookie sea solo para la sesi贸n del navegador
     options.Cookie.IsEssential = true;
 
-    // Eventos avanzados para manejo de autenticaci髇
+    // Eventos avanzados para manejo de autenticaci贸n
 
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
     options.Events = new CookieAuthenticationEvents
     {
-        // Al cerrar sesi髇, invalidar completamente la cookie
+        // Al cerrar sesi贸n, invalidar completamente la cookie
         OnSigningOut = async context =>
         {
             context.CookieOptions.Expires = DateTime.Now.AddDays(-1);
         },
 
-        // Validaci髇 de seguridad cada vez que se valida la cookie
+        // Validaci贸n de seguridad cada vez que se valida la cookie
         OnValidatePrincipal = async context =>
         {
             try
             {
-                //verificar si el usuario ha cambiado su contrase馻 recientemente
+                //verificar si el usuario ha cambiado su contrase帽a recientemente
                 var userPrincipal = context.Principal;
 #pragma warning disable CS8604 // Possible null reference argument.
                 var userId = userPrincipal.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -190,7 +193,7 @@ builder.Services.AddAuthentication(options =>
 
                     if (!sesionActiva)
                     {
-                        // Si no existe sesi髇 activa, rechazar la autenticaci髇
+                        // Si no existe sesi贸n activa, rechazar la autenticaci贸n
                         context.RejectPrincipal();
                         await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
                     }
@@ -224,17 +227,17 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(jwtSecret ?? "DefaultDevSecretKey")),
 
-        // Estos par醡etros son cr韙icos para JWT
+        // Estos par谩metros son cr铆ticos para JWT
         ClockSkew = TimeSpan.Zero, // Sin margen de tiempo adicional
-        RequireExpirationTime = true // Requerir tiempo de expiraci髇
+        RequireExpirationTime = true // Requerir tiempo de expiraci贸n
     };
 
-    // Manejar eventos de autenticaci髇 JWT
+    // Manejar eventos de autenticaci贸n JWT
     options.Events = new JwtBearerEvents
     {
         OnMessageReceived = context =>
         {
-            // Verificar si el token se encuentra en la lista negra (implementar esta l骻ica)
+            // Verificar si el token se encuentra en la lista negra (implementar esta l贸gica)
             return Task.CompletedTask;
         }
     };
@@ -260,7 +263,7 @@ builder.Services.AddSession(options =>
     options.Cookie.Name = "COMAVI.Session";
     options.Cookie.Path = "/";
 
-    // Configurar como cookie de sesi髇 鷑icamente (no persistente)
+    // Configurar como cookie de sesi贸n 煤nicamente (no persistente)
     options.Cookie.MaxAge = null;
 });
 
@@ -295,12 +298,12 @@ var app = builder.Build();
 
 if (builder.Environment.IsProduction())
 {
-    // En producci髇, migramos la base de datos de forma autom醫ica
+    // En producci贸n, migramos la base de datos de forma autom谩tica
     app.MigrateDatabase();  
 }
 else
 {
-    // En desarrollo, mostramos informaci髇 m醩 detallada del proceso
+    // En desarrollo, mostramos informaci贸n m谩s detallada del proceso
     using var scope = app.Services.CreateScope();
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
     await DbInitializer.Initialize(app.Services, logger);
