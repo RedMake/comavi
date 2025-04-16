@@ -27,17 +27,31 @@ builder.Services.AddDistributedMemoryCache();
 
 if (!builder.Environment.IsDevelopment())
 {
-    var blobServiceClient = new BlobServiceClient(
-        new Uri("https://dumpmemorycomavi.blob.core.windows.net"),
+    try
+    {
+        var blobServiceClient = new BlobServiceClient(
+        new Uri("https://dumpmemorycomavi1.blob.core.windows.net/"),
         new DefaultAzureCredential());
 
-    builder.Services.AddDataProtection()
+        builder.Services.AddDataProtection()
         .PersistKeysToAzureBlobStorage(
-            blobServiceClient.GetBlobContainerClient("dataprotection-keys").GetBlobClient("keys.xml")) 
+            blobServiceClient.GetBlobContainerClient("dataprotection-keys").GetBlobClient("keys.xml"))
         .ProtectKeysWithAzureKeyVault(
             new Uri($"{builder.Configuration["KeyVault:Endpoint"]}keys/{builder.Configuration["KeyVault:KeyName"]}"),
             new DefaultAzureCredential())
         .SetApplicationName("COMAVI_SA");
+}
+    catch (UriFormatException ex)
+    {
+        // Log the specific error during URI creation
+        Console.WriteLine($"Error creating URI for Data Protection: {ex.Message}");
+        throw; // Re-throw the exception to halt startup if configuration is fundamentally broken
+    }
+    catch (Exception ex) // Catch other potential exceptions (e.g., Azure credential issues)
+    {
+        Console.WriteLine($"Error configuring Data Protection for PRODUCTION: {ex.Message}");
+        throw;
+    }
 }
 else
 {
@@ -51,10 +65,8 @@ else
 }
 
 // Obtener la cadena de conexión
-var connectionString = builder.Environment.IsDevelopment()
-    ? builder.Configuration.GetConnectionString("DefaultConnection")
-    : builder.Configuration["ConnectionStrings:AZURE_SQL_CONNECTIONSTRING"]
-        ?? builder.Configuration.GetConnectionString("DefaultConnection");
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
 
 // Usar la misma variable al registrar el DbContext
 builder.Services.AddDbContext<ComaviDbContext>(options =>

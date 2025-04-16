@@ -19,6 +19,8 @@ namespace COMAVI_SA.Filters
             "/Login/Register",
             "/Login/ForgotPassword",
             "/Login/ResetPassword",
+            "/Login/Verificar",
+            "/Login/InstruccionesVerificacion",
             "/Home/SesionExpirada",
             "/Home/About",
             "/Home/FAQ",

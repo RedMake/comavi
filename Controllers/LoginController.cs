@@ -488,7 +488,7 @@ namespace COMAVI_SA.Controllers
                         model.IntentosFallidos = intentosFallidos;
 
                         // Actualizar timestamp para extender el tiempo
-                        TempData["OtpTimestamp"] = DateTime.Now.Ticks;
+                        TempData["OtpTimestamp"] = DateTime.Now.Ticks.ToString();
 
                         return View(model);
                     }
@@ -718,11 +718,12 @@ namespace COMAVI_SA.Controllers
                 if (!result)
                 {
                     ModelState.AddModelError("", "Error al registrar el usuario. Por favor, intente nuevamente. Este error puede ser solo temporal no se preocupe");
+                    return View(model);
                 }
 
                 // Enviar correo con instrucciones de verificación
                 await EnviarCorreoVerificacion(model.Email, model.UserName, verificationToken);
-
+                
                 TempData["SuccessMessage"] = "Usuario registrado exitosamente. Se han enviado instrucciones de verificación al correo proporcionado.";
 
                 return RedirectToAction("Index");
@@ -1699,7 +1700,7 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                throw;
+                throw ;
             }
         }
 
