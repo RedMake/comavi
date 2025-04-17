@@ -461,6 +461,12 @@ namespace COMAVI_SA.Models
     }
 
 
+    public class AppSettings
+    {
+        public string BaseUrl { get; set; }
+    }
+
+
     //ViewModel
 
     public class SolicitudMantenimientoViewModel

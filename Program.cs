@@ -18,9 +18,11 @@ using COMAVI_SA.Controllers;
 using COMAVI_SA.Repository;
 using Microsoft.AspNetCore.DataProtection;
 using System.Security.Cryptography;
-using COMAVI_SA.Filters; // Assuming this using is needed
-using System; // Added for Console.WriteLine and Exception
-using System.IO; // Added for Path and DirectoryInfo
+using COMAVI_SA.Filters; 
+using System; 
+using System.IO;
+using Microsoft.Extensions.Caching.Memory;
+using COMAVI_SA.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,7 +37,6 @@ try
 catch (Exception ex)
 {
     Console.WriteLine($"ERROR configuring Memory Cache: {ex.Message}");
-    // Consider whether to throw or allow continuation depending on criticality
 }
 
 try
@@ -47,7 +48,7 @@ try
 catch (Exception ex)
 {
     Console.WriteLine($"ERROR configuring Distributed Memory Cache: {ex.Message}");
-    // Consider whether to throw or allow continuation depending on criticality
+    
 }
 
 
@@ -58,9 +59,9 @@ if (!builder.Environment.IsDevelopment())
     try
     {
         // Validate required configuration values
-        var blobStorageUriString = "https://dumpmemorycomavi1.blob.core.windows.net/"; // Hardcoded, consider moving to config
-        var blobContainerName = "dataprotection-keys"; // Hardcoded, consider moving to config
-        var blobName = "keys.xml"; // Hardcoded, consider moving to config
+        var blobStorageUriString = "https://dumpmemorycomavi1.blob.core.windows.net/";
+        var blobContainerName = "dataprotection-keys";
+        var blobName = "keys.xml"; 
         var keyVaultEndpoint = builder.Configuration["KeyVault:Endpoint"];
         var keyVaultKeyName = builder.Configuration["KeyVault:KeyName"];
 
@@ -114,6 +115,42 @@ if (!builder.Environment.IsDevelopment())
         Console.WriteLine($"Stack Trace: {ex.StackTrace}"); // Log stack trace for detailed debugging
         throw;
     }
+
+    // --- Azure Key Vault Configuration ---
+    Console.WriteLine("Adding Azure Key Vault as a general configuration source for PRODUCTION...");
+    try
+    {
+        // Reutiliza el endpoint si es el mismo Key Vault, o usa una clave de configuración diferente si es necesario.
+        var keyVaultEndpoint = builder.Configuration["KeyVault:Endpoint"];
+
+        if (string.IsNullOrEmpty(keyVaultEndpoint))
+        {
+            Console.WriteLine("ERROR: KeyVault:Endpoint configuration is missing for general application secrets.");
+            throw new InvalidOperationException("KeyVault:Endpoint configuration is missing for general secrets.");
+        }
+        else if (Uri.TryCreate(keyVaultEndpoint, UriKind.Absolute, out var keyVaultUri))
+        {
+            Console.WriteLine($"Adding Key Vault secrets from endpoint: {keyVaultUri}");
+
+            builder.Configuration.AddAzureKeyVault(keyVaultUri, new DefaultAzureCredential());
+
+            Console.WriteLine("Azure Key Vault added successfully as a configuration source.");
+        }
+        else
+        {
+            Console.WriteLine($"ERROR: Invalid URI format for KeyVault endpoint used for general secrets: '{keyVaultEndpoint}'");
+            throw new InvalidOperationException("Invalid URI format for KeyVault endpoint.");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"ERROR adding Azure Key Vault as a configuration source: {ex.Message}");
+        Console.WriteLine("Check App Service Managed Identity permissions on Key Vault and network connectivity.");
+        Console.WriteLine($"Stack Trace: {ex.StackTrace}");
+        throw;
+    }
+    Console.WriteLine("Azure Key Vault configured successfully for general application secrets.");
+    // --- End of Azure Key Vault Configuration ---
 }
 else
 {
@@ -151,8 +188,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 if (string.IsNullOrEmpty(connectionString))
 {
     Console.WriteLine("CRITICAL ERROR: Connection string 'DefaultConnection' not found or is empty in configuration.");
-    // Depending on the app's requirements, you might throw here to prevent startup.
-    // throw new InvalidOperationException("Database connection string 'DefaultConnection' is missing.");
+    throw new InvalidOperationException("Database connection string 'DefaultConnection' is missing.");
 }
 else
 {
@@ -199,7 +235,6 @@ if (builder.Environment.IsDevelopment())
     {
         Console.WriteLine($"ERROR configuring Hangfire with Memory Storage: {ex.Message}");
         Console.WriteLine($"Stack Trace: {ex.StackTrace}");
-        // Decide if throwing is necessary for development
     }
 }
 else
@@ -208,8 +243,7 @@ else
     if (string.IsNullOrEmpty(connectionString))
     {
         Console.WriteLine("ERROR: Cannot configure Hangfire SQL Server Storage because the 'DefaultConnection' string is missing or empty.");
-        // Throw or handle appropriately, Hangfire likely won't work.
-        // throw new InvalidOperationException("Cannot configure Hangfire SQL Server Storage due to missing connection string.");
+        throw new InvalidOperationException("Cannot configure Hangfire SQL Server Storage due to missing connection string.");
     }
     else
     {
@@ -221,7 +255,7 @@ else
                 SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
                 QueuePollInterval = TimeSpan.Zero,
                 UseRecommendedIsolationLevel = true,
-                DisableGlobalLocks = true, // Check implications for your workload
+                DisableGlobalLocks = true, 
                 SchemaName = "HangfireSchema",
                 PrepareSchemaIfNecessary = true // Creates schema if not exists
             };
@@ -239,7 +273,7 @@ else
             Console.WriteLine($"ERROR configuring Hangfire with SQL Server Storage: {ex.Message}");
             Console.WriteLine("Check the database connection string, permissions, and if the Hangfire SQL Server package is installed.");
             Console.WriteLine($"Stack Trace: {ex.StackTrace}");
-            throw; // Often critical in production
+            throw; 
         }
     }
 }
@@ -258,23 +292,23 @@ catch (Exception ex)
 {
     Console.WriteLine($"ERROR adding Controllers with Views or the global filter: {ex.Message}");
     Console.WriteLine($"Stack Trace: {ex.StackTrace}");
-    // Decide if this is critical enough to throw
+    throw;
 }
 
 // --- Service Registrations (Dependency Injection) ---
 Console.WriteLine("Registering application services...");
 try
 {
-    // Example: Logging a specific service registration
     Console.WriteLine("Registering Scoped: IUserService, IPasswordService, IOtpService...");
     builder.Services.AddScoped<IUserService, UserService>();
     builder.Services.AddScoped<IPasswordService, PasswordService>();
     builder.Services.AddScoped<IOtpService, OtpService>();
 
-    Console.WriteLine("Registering Scoped: IJwtService, IEmailService, IPdfService...");
+    Console.WriteLine("Registering Scoped: IJwtService, IEmailService, IPdfService, IEmailTemplatingService...");
     builder.Services.AddScoped<IJwtService, JwtService>();
     builder.Services.AddScoped<IEmailService, EmailService>();
     builder.Services.AddScoped<IPdfService, PdfService>();
+    builder.Services.AddScoped<IEmailTemplatingService, EmailTemplatingService>();
 
     Console.WriteLine("Registering Scoped: IUserCleanupService, ISessionCleanupService, IReportService...");
     builder.Services.AddScoped<IUserCleanupService, UserCleanupService>();
@@ -297,7 +331,7 @@ try
 
     Console.WriteLine("Registering Singleton: IJwtBlacklistService, IDistributedLockProvider, ICacheKeyTracker...");
     builder.Services.AddSingleton<IJwtBlacklistService, JwtBlacklistService>();
-    builder.Services.AddSingleton<IDistributedLockProvider, MemoryCacheDistributedLockProvider>(); // Check if this is intended (in-memory lock provider)
+    builder.Services.AddSingleton<IDistributedLockProvider, MemoryCacheDistributedLockProvider>(); 
     builder.Services.AddSingleton<ICacheKeyTracker, CacheKeyTracker>();
 
     Console.WriteLine("Registering Hosted Service: CacheCleanupService...");
@@ -306,6 +340,9 @@ try
     Console.WriteLine("Registering HttpContextAccessor...");
     builder.Services.AddHttpContextAccessor();
 
+    Console.WriteLine("Registering AppSettings...");
+    builder.Services.Configure<AppSettings>(builder.Configuration.GetSection("AppSettings"));
+
     Console.WriteLine("All application services registered successfully.");
 }
 catch (Exception ex)
@@ -313,7 +350,7 @@ catch (Exception ex)
     // Catching errors during DI registration is less common unless there's a complex factory or issue finding types
     Console.WriteLine($"ERROR during service registration: {ex.Message}");
     Console.WriteLine($"Stack Trace: {ex.StackTrace}");
-    throw; // Errors here often indicate fundamental setup problems
+    throw; 
 }
 
 // --- Authentication Configuration ---
@@ -332,7 +369,7 @@ try
         options.LoginPath = "/Login/Index";
         options.LogoutPath = "/Login/Logout";
         options.AccessDeniedPath = "/Login/AccessDenied";
-        options.ExpireTimeSpan = TimeSpan.FromMinutes(30); // 30 minutos mÃ¡ximo
+        options.ExpireTimeSpan = TimeSpan.FromMinutes(30); // 30 minutes max
         options.SlidingExpiration = false; // No sliding expiration
         options.Cookie.HttpOnly = true;
         options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // Ensure HTTPS is enforced
@@ -342,76 +379,269 @@ try
         options.Cookie.IsEssential = true; // Mark as essential for GDPR/consent
         Console.WriteLine($"Cookie configured: Name={options.Cookie.Name}, Path={options.Cookie.Path}, ExpireTimeSpan={options.ExpireTimeSpan}, SecurePolicy={options.Cookie.SecurePolicy}, SameSite={options.Cookie.SameSite}, HttpOnly={options.Cookie.HttpOnly}");
 
+        var cacheDuration = TimeSpan.FromMinutes(2);
+        Console.WriteLine($"Cache duration for session/claims validation: {cacheDuration}");
 
         options.Events = new CookieAuthenticationEvents
         {
             OnSigningOut = context =>
             {
-                Console.WriteLine($"Cookie Event: OnSigningOut triggered for user {context.HttpContext.User?.Identity?.Name ?? "Unknown"}. Invalidating cookie.");
-                context.CookieOptions.Expires = DateTime.Now.AddDays(-1);
-                return Task.CompletedTask; // Removed async keyword as no await is used
+                // Event on sign-out: Clear user's cache
+                Console.WriteLine($"Cookie Event: OnSigningOut triggered. Invalidating cookie and CACHE for user {context.HttpContext.User?.Identity?.Name ?? "Unknown"}.");
+                context.CookieOptions.Expires = DateTimeOffset.UtcNow.AddDays(-1); // Expire cookie immediately
+
+                try
+                {
+                    var userIdClaim = context.HttpContext.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+                    if (!string.IsNullOrEmpty(userIdClaim))
+                    {
+                        var memoryCache = context.HttpContext.RequestServices.GetService<IMemoryCache>(); // Use GetService to avoid exception if not registered
+                        if (memoryCache != null)
+                        {
+                            var sessionCacheKey = $"session_active_{userIdClaim}";
+                            var claimsCacheKey = $"user_claims_{userIdClaim}";
+                            memoryCache.Remove(sessionCacheKey);
+                            memoryCache.Remove(claimsCacheKey);
+                            Console.WriteLine($"Cache removed for user ID {userIdClaim} (Keys: {sessionCacheKey}, {claimsCacheKey})");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"WARNING: IMemoryCache not found during OnSigningOut for user ID {userIdClaim}. Cache not cleared.");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"ERROR removing cache during OnSigningOut: {ex.Message}");
+                    // Do not stop logout due to a cache error
+                }
+
+                return Task.CompletedTask;
             },
 
             OnValidatePrincipal = async context =>
             {
                 var userIdClaim = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
-                Console.WriteLine($"Cookie Event: OnValidatePrincipal triggered. User ID from claim: {userIdClaim ?? "Not Found"}");
+                var identity = context.Principal?.Identity as ClaimsIdentity;
+
+                // Quick exit if no user ID or identity
+                if (string.IsNullOrEmpty(userIdClaim) || identity == null)
+                {
+                    Console.WriteLine("OnValidatePrincipal: No User ID claim or Identity found. Rejecting principal.");
+                    context.RejectPrincipal();
+                    await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                    return;
+                }
+
+                Console.WriteLine($"Cookie Event: OnValidatePrincipal triggered. User ID from claim: {userIdClaim}. Validating using cache (Duration: {cacheDuration})...");
+
+                // We need IMemoryCache and ComaviDbContext, resolved from the scope
+                using var scope = context.HttpContext.RequestServices.CreateScope();
+                var memoryCache = scope.ServiceProvider.GetRequiredService<IMemoryCache>();
+                var dbContext = scope.ServiceProvider.GetRequiredService<ComaviDbContext>();
+
+                // Define unique cache keys per user
+                var sessionCacheKey = $"session_active_{userIdClaim}";
+                var claimsCacheKey = $"user_claims_{userIdClaim}";
+
+                bool isSessionActive;
+                UserData? cachedUserData = null; 
+
                 try
                 {
-                    if (!string.IsNullOrEmpty(userIdClaim))
+                    // Validate Active Session (Try Cache First)
+                    if (!memoryCache.TryGetValue(sessionCacheKey, out isSessionActive))
                     {
-                        // Using is crucial for scoped services within singleton-like event handlers
-                        using var scope = context.HttpContext.RequestServices.CreateScope();
-                        var dbContext = scope.ServiceProvider.GetRequiredService<ComaviDbContext>();
-
-                        Console.WriteLine($"Validating active session for user ID: {userIdClaim}");
-                        bool sesionActiva = false;
-                        if (int.TryParse(userIdClaim, out int userIdInt))
+                        // Not in cache -> Query DB
+                        Console.WriteLine($"Cache miss for session status (Key: {sessionCacheKey}). Querying DB...");
+                        if (int.TryParse(userIdClaim, out int userIdInt_Session))
                         {
-                            sesionActiva = await dbContext.SesionesActivas
-                                                .AnyAsync(s => s.id_usuario == userIdInt);
+                            isSessionActive = await dbContext.SesionesActivas
+                                                    .AsNoTracking() // Important for reads
+                                                    .AnyAsync(s => s.id_usuario == userIdInt_Session);
+
+                            // Store result in cache
+                            var cacheEntryOptionsSession = new MemoryCacheEntryOptions()
+                                                            .SetAbsoluteExpiration(cacheDuration) // Use AbsoluteExpiration for fixed duration
+                                                            .SetSize(1); // Assign a size (cost) to this cache entry
+                            memoryCache.Set(sessionCacheKey, isSessionActive, cacheEntryOptionsSession); // Use options object
+
+                            Console.WriteLine($"DB result for session status ({isSessionActive}) stored in cache.");
                         }
                         else
                         {
-                            Console.WriteLine($"WARNING: Could not parse user ID '{userIdClaim}' to integer for session validation.");
-                        }
-
-
-                        if (!sesionActiva)
-                        {
-                            Console.WriteLine($"Session validation failed for user ID: {userIdClaim}. No active session found in DB. Rejecting principal and signing out.");
-                            context.RejectPrincipal();
-                            await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-                        }
-                        else
-                        {
-                            Console.WriteLine($"Session validation successful for user ID: {userIdClaim}. Principal accepted.");
+                            Console.WriteLine($"WARNING: Could not parse user ID '{userIdClaim}' to integer for session validation DB query.");
+                            isSessionActive = false; // Assume inactive if ID is invalid
+                                                     // Consider caching 'false' here too to avoid retries with invalid ID
+                            var cacheEntryOptionsSessionFalse = new MemoryCacheEntryOptions()
+                                .SetAbsoluteExpiration(cacheDuration)
+                                .SetSize(1); // Still size 1 even for false
+                            memoryCache.Set(sessionCacheKey, false, cacheEntryOptionsSessionFalse);
                         }
                     }
                     else
                     {
-                        Console.WriteLine("No user ID claim found in principal. Skipping DB session validation.");
-                        // Depending on policy, might want to reject here too if user ID is always expected
+                        Console.WriteLine($"Cache hit for session status (Key: {sessionCacheKey}). Active: {isSessionActive}.");
                     }
+
+                    // If session is not active (according to cache or DB), reject and exit
+                    if (!isSessionActive)
+                    {
+                        Console.WriteLine($"Session validation failed for user ID: {userIdClaim}. No active session found. Rejecting principal and signing out.");
+                        context.RejectPrincipal();
+                        await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                        // Clear cache just in case something was wrong
+                        memoryCache.Remove(sessionCacheKey);
+                        memoryCache.Remove(claimsCacheKey);
+                        return;
+                    }
+
+                    // Validate/Refresh Claims (Try Cache First)
+#pragma warning disable CS0219 // Variable is assigned but its value is never used
+                    bool needsClaimUpdate = false;
+#pragma warning restore CS0219 // Variable is assigned but its value is never used
+                    string dbRole = string.Empty;
+                    string dbUserName = string.Empty;
+
+                    if (!memoryCache.TryGetValue(claimsCacheKey, out cachedUserData) || cachedUserData == null)
+                    {
+                        // Not in cache or is null -> Query DB
+                        Console.WriteLine($"Cache miss for user claims (Key: {claimsCacheKey}). Querying DB...");
+                        if (int.TryParse(userIdClaim, out int userIdInt_Claims))
+                        {
+                            var userFromDb = await dbContext.Usuarios
+                                                 .AsNoTracking()
+                                                 .Where(u => u.id_usuario == userIdInt_Claims)
+                                                 .Select(u => new { u.rol, u.nombre_usuario }) // Fetch only what's needed
+                                                 .FirstOrDefaultAsync();
+
+                            if (userFromDb != null)
+                            {
+                                dbRole = userFromDb.rol ?? string.Empty; // Handle potential null
+                                dbUserName = userFromDb.nombre_usuario ?? string.Empty;
+                                cachedUserData = new UserData { Role = dbRole, Name = dbUserName };
+                                // Store in cache
+                                var cacheEntryOptionsClaims = new MemoryCacheEntryOptions()
+                                                                    .SetAbsoluteExpiration(cacheDuration) // Use AbsoluteExpiration for fixed duration
+                                                                    .SetSize(1); // Assign a size (cost) - adjust if needed later
+                                memoryCache.Set(claimsCacheKey, cachedUserData, cacheEntryOptionsClaims); // Use options object
+                                Console.WriteLine($"DB result for user claims (Role: {dbRole}, Name: {dbUserName}) stored in cache.");
+                            }
+                            else
+                            {
+                                // User not found in DB, even though session flag was active? Inconsistency.
+                                Console.WriteLine($"WARNING: User with ID {userIdClaim} not found in DB during claims check, despite active session flag. Rejecting.");
+                                context.RejectPrincipal();
+                                await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                                memoryCache.Remove(sessionCacheKey); // Clear session cache too
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine($"WARNING: Could not parse user ID '{userIdClaim}' to integer for claims DB query. Rejecting.");
+                            context.RejectPrincipal();
+                            await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Cache hit for user claims (Key: {claimsCacheKey}). Role: {cachedUserData.Role}, Name: {cachedUserData.Name}");
+                        dbRole = cachedUserData.Role;
+                        dbUserName = cachedUserData.Name;
+                    }
+
+                    // Compare current claims with DB/Cache and update if necessary
+                    var currentRoleClaim = identity.FindFirst(ClaimTypes.Role);
+                    var currentNameClaim = identity.FindFirst(ClaimTypes.Name);
+
+                    // Check if role or name needs updating
+                    if (currentRoleClaim?.Value != dbRole || currentNameClaim?.Value != dbUserName)
+                    {
+                        Console.WriteLine($"INFO: Claim mismatch detected for User ID {userIdClaim}.");
+                        Console.WriteLine($"  Current Role: '{currentRoleClaim?.Value ?? "null"}', DB/Cache Role: '{dbRole}'");
+                        Console.WriteLine($"  Current Name: '{currentNameClaim?.Value ?? "null"}', DB/Cache Name: '{dbUserName}'");
+                        needsClaimUpdate = true;
+
+                        // Clone identity to modify it
+                        var newIdentity = identity.Clone() as ClaimsIdentity;
+                        if (newIdentity != null) // Ensure cloning worked
+                        {
+                            // Remove old claims
+                            if (currentRoleClaim != null) newIdentity.RemoveClaim(currentRoleClaim);
+                            if (currentNameClaim != null) newIdentity.RemoveClaim(currentNameClaim);
+
+                            // Add new claims (making sure not to add null/empty if not desired)
+                            if (!string.IsNullOrEmpty(dbRole))
+                                newIdentity.AddClaim(new Claim(ClaimTypes.Role, dbRole, ClaimValueTypes.String, identity.AuthenticationType));
+                            if (!string.IsNullOrEmpty(dbUserName))
+                                newIdentity.AddClaim(new Claim(ClaimTypes.Name, dbUserName, ClaimValueTypes.String, identity.AuthenticationType));
+
+                            // Optional: Add refresh timestamp claim
+                            var lastRefreshedClaim = newIdentity.FindFirst("claims_last_refreshed");
+                            if (lastRefreshedClaim != null) newIdentity.RemoveClaim(lastRefreshedClaim);
+                            newIdentity.AddClaim(new Claim("claims_last_refreshed", DateTime.UtcNow.ToString("o"), ClaimValueTypes.DateTime, identity.AuthenticationType));
+
+                            // Replace the Principal and mark the cookie for renewal
+                            context.ReplacePrincipal(new ClaimsPrincipal(newIdentity));
+                            context.ShouldRenew = true; // IMPORTANT: so the cookie gets updated with new claims
+                            Console.WriteLine("Claims updated in Principal. Cookie marked for renewal.");
+                        }
+                        else
+                        {
+                            Console.WriteLine("ERROR: Could not clone ClaimsIdentity. Claims not updated.");
+                            context.RejectPrincipal();
+                            await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Claims for User ID {userIdClaim} are up-to-date. No update needed.");
+                    }
+
+                    // If we reach here, validation (from cache or DB) was successful
+                    Console.WriteLine($"Session and claims validation successful for user ID: {userIdClaim}. Principal accepted.");
+
                 }
-                catch (CryptographicException ex) when (ex.Message.Contains("was not found in the key ring"))
+                catch (CryptographicException ex) when (ex.Message.Contains("key ring")) // Common Data Protection error
                 {
-                    Console.WriteLine($"ERROR during OnValidatePrincipal: Data Protection key not found. Rejecting principal and signing out. Message: {ex.Message}");
-                    // This usually happens after key rotation or if keys are lost/inaccessible
+                    Console.WriteLine($"ERROR during OnValidatePrincipal: Data Protection key error. Rejecting principal and signing out. Message: {ex.Message}");
                     context.RejectPrincipal();
                     await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                    // Clear cache
+                    var sessionCacheKeyOnError = $"session_active_{userIdClaim}";
+                    var claimsCacheKeyOnError = $"user_claims_{userIdClaim}";
+                    memoryCache.Remove(sessionCacheKeyOnError);
+                    memoryCache.Remove(claimsCacheKeyOnError);
                 }
-                catch (Exception ex) // Catch other DB or unexpected errors
+                catch (Exception ex) // Catch other errors (e.g., DB temporarily unavailable)
                 {
-                    Console.WriteLine($"ERROR during OnValidatePrincipal database check for user ID {userIdClaim ?? "Unknown"}: {ex.Message}");
+                    Console.WriteLine($"ERROR during OnValidatePrincipal for user ID {userIdClaim}: {ex.Message}");
                     Console.WriteLine($"Stack Trace: {ex.StackTrace}");
-                    // Decide how to handle - rejecting might lock users out if DB is temporarily down
-                    // context.RejectPrincipal(); // Optional: Reject on any error
-                    // await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme); // Optional
+                    context.RejectPrincipal();
+                    await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                    // Clear cache
+                    var sessionCacheKeyOnError = $"session_active_{userIdClaim}";
+                    var claimsCacheKeyOnError = $"user_claims_{userIdClaim}";
+                    memoryCache.Remove(sessionCacheKeyOnError);
+                    memoryCache.Remove(claimsCacheKeyOnError);
                 }
+            },
+            OnRedirectToLogin = context =>
+            {
+                Console.WriteLine($"Cookie Event: OnRedirectToLogin triggered. Redirecting to {options.LoginPath}. Original path: {context.Request.Path}");
+                context.Response.Redirect(context.RedirectUri);
+                return Task.CompletedTask;
+            },
+            OnRedirectToAccessDenied = context =>
+            {
+                Console.WriteLine($"Cookie Event: OnRedirectToAccessDenied triggered. Redirecting to {options.AccessDeniedPath}. User: {context.HttpContext.User?.Identity?.Name ?? "Unknown"}");
+                context.Response.Redirect(context.RedirectUri);
+                return Task.CompletedTask;
             }
         };
-        Console.WriteLine("Cookie Authentication configured successfully with events.");
+        Console.WriteLine("Cookie Authentication configured successfully with CACHING events.");
     })
     .AddJwtBearer(options =>
     {
@@ -445,15 +675,15 @@ try
 
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = !string.IsNullOrEmpty(jwtIssuer), // Only validate if configured
-            ValidateAudience = !string.IsNullOrEmpty(jwtAudience), // Only validate if configured
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = jwtIssuer,
-            ValidAudience = jwtAudience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
-            ClockSkew = TimeSpan.Zero, // No tolerance for expiration time
-            RequireExpirationTime = true
+            ValidateIssuer = !string.IsNullOrEmpty(jwtIssuer), // Only validate if Issuer is configured
+            ValidateAudience = !string.IsNullOrEmpty(jwtAudience), // Only validate if Audience is configured
+            ValidateLifetime = true, // Check token expiration
+            ValidateIssuerSigningKey = true, // Validate the signature based on the key
+            ValidIssuer = jwtIssuer, // The expected issuer
+            ValidAudience = jwtAudience, // The expected audience
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)), // Key used to sign the token
+            ClockSkew = TimeSpan.Zero, // Do not allow any clock skew (token must be valid exactly now)
+            RequireExpirationTime = true // Ensure the token has an 'exp' claim
         };
         Console.WriteLine($"JWT TokenValidationParameters set: ValidateIssuer={options.TokenValidationParameters.ValidateIssuer}, ValidateAudience={options.TokenValidationParameters.ValidateAudience}, ValidateLifetime=True, ValidateIssuerSigningKey=True, ClockSkew=Zero");
 
@@ -465,11 +695,15 @@ try
                 // Log details about the token if possible (e.g., expiration, signature failure) without logging the token itself
                 if (context.Exception is SecurityTokenExpiredException)
                 {
-                    Console.WriteLine("JWT Failure Reason: Token has expired.");
+                    Console.WriteLine($"JWT Failure Detail: Token expired at {((SecurityTokenExpiredException)context.Exception).Expires}. Current time: {DateTime.UtcNow}");
                 }
                 else if (context.Exception is SecurityTokenInvalidSignatureException)
                 {
-                    Console.WriteLine("JWT Failure Reason: Token signature is invalid.");
+                    Console.WriteLine("JWT Failure Detail: Token signature validation failed. Check if the secret key matches the one used for signing.");
+                }
+                else if (context.Exception is SecurityTokenInvalidIssuerException)
+                {
+                    Console.WriteLine($"JWT Failure Detail: Invalid issuer. Expected: '{options.TokenValidationParameters.ValidIssuer}', Received: '{((SecurityTokenInvalidIssuerException)context.Exception).InvalidIssuer ?? "null"}'.");
                 }
                 return Task.CompletedTask;
             },
@@ -477,25 +711,17 @@ try
             {
                 var userId = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
                 Console.WriteLine($"JWT Event: OnTokenValidated. User ID from token: {userId ?? "Not Found"}");
-                // Placeholder for potential blacklist check
-                // var blacklistService = context.HttpContext.RequestServices.GetRequiredService<IJwtBlacklistService>();
-                // var jti = context.Principal?.FindFirstValue(JwtRegisteredClaimNames.Jti);
-                // if (blacklistService.IsBlacklisted(jti)) { context.Fail("Token is blacklisted"); }
                 return Task.CompletedTask;
             },
             OnMessageReceived = context =>
             {
-                // This event is useful if the token might be in a non-standard place (e.g., query string)
-                // Console.WriteLine("JWT Event: OnMessageReceived.");
                 // Default behavior checks Authorization header.
+                Console.WriteLine("JWT Event: OnMessageReceived. Checking for token in Authorization header.");
                 return Task.CompletedTask;
             },
             OnChallenge = context => {
                 // Called when authentication fails and challenge is issued
                 Console.WriteLine($"JWT Event: OnChallenge triggered. AuthenticationFailure: {context.AuthenticateFailure?.Message ?? "None"}");
-                // You might customize the response here (e.g., return specific error JSON)
-                // context.HandleResponse(); // Prevent default redirect/response
-                // context.Response.StatusCode = 401; ...
                 return Task.CompletedTask;
             }
         };
@@ -503,11 +729,18 @@ try
     });
     Console.WriteLine("Authentication configuration completed.");
 }
-catch (Exception ex)
+catch (InvalidOperationException ex) // Catch specific configuration errors like missing JWT secret
 {
-    Console.WriteLine($"CRITICAL ERROR configuring Authentication: {ex.Message}");
+    Console.WriteLine($"CRITICAL CONFIGURATION ERROR during Authentication setup: {ex.Message}");
+    // Rethrow because the application likely cannot function correctly without proper auth configuration.
+    throw;
+}
+catch (Exception ex) // Catch any other unexpected errors during setup
+{
+    Console.WriteLine($"CRITICAL UNEXPECTED ERROR configuring Authentication: {ex.Message}");
     Console.WriteLine($"Stack Trace: {ex.StackTrace}");
-    throw; // Authentication failure is usually critical
+    // Rethrow to prevent the application from starting in a potentially broken state.
+    throw;
 }
 
 // --- Authorization Configuration ---
@@ -518,7 +751,6 @@ try
     {
         options.AddPolicy("RequireAdminRole", policy => policy.RequireRole("admin"));
         options.AddPolicy("RequireUserRole", policy => policy.RequireRole("user"));
-        // Add console logs inside policy definitions if needed for complex policies
     });
     Console.WriteLine("Authorization Policies configured successfully.");
 }
@@ -526,7 +758,6 @@ catch (Exception ex)
 {
     Console.WriteLine($"ERROR configuring Authorization: {ex.Message}");
     Console.WriteLine($"Stack Trace: {ex.StackTrace}");
-    // Decide if throwing is necessary
 }
 
 // --- Session Configuration ---
@@ -551,7 +782,6 @@ catch (Exception ex)
 {
     Console.WriteLine($"ERROR configuring Session state: {ex.Message}");
     Console.WriteLine($"Stack Trace: {ex.StackTrace}");
-    // Consider if session failure is critical
 }
 
 // --- Memory Cache Options ---
@@ -560,7 +790,7 @@ try
     Console.WriteLine("Configuring Memory Cache Options (SizeLimit, CompactionPercentage)...");
     builder.Services.AddMemoryCache(options =>
     {
-        options.SizeLimit = 1024; // Example limit (e.g., 1024 MB or items, depends on usage)
+        options.SizeLimit = 1024; // Example limit 
         options.CompactionPercentage = 0.2; // Remove 20% when limit is reached
         Console.WriteLine($"Memory Cache Options set: SizeLimit={options.SizeLimit}, CompactionPercentage={options.CompactionPercentage}");
     });
@@ -602,7 +832,7 @@ try
 {
     Console.WriteLine("Adding Hangfire Server...");
     builder.Services.AddHangfireServer(options => {
-        // Log Hangfire server options if customized
+        // Log Hangfire server options
         Console.WriteLine($"Hangfire Server Options: WorkerCount={options.WorkerCount}, Queues={string.Join(",", options.Queues ?? new string[] { "default" })}, ServerName={options.ServerName}");
     });
     Console.WriteLine("Hangfire Server added successfully.");
@@ -612,7 +842,7 @@ catch (Exception ex)
     Console.WriteLine($"ERROR adding Hangfire Server: {ex.Message}");
     Console.WriteLine("Ensure Hangfire storage was configured correctly before adding the server.");
     Console.WriteLine($"Stack Trace: {ex.StackTrace}");
-    throw; // Hangfire server is likely essential
+    throw; // Hangfire server is essential
 }
 
 // --- Antiforgery Configuration ---
@@ -669,12 +899,7 @@ if (builder.Environment.IsProduction())
     Console.WriteLine("PRODUCTION environment detected. Attempting to migrate database...");
     try
     {
-        // Assuming MigrateDatabase is an extension method on IApplicationBuilder or WebApplication
-        // You might need to resolve DbContext here if the method requires it
-        // using var scope = app.Services.CreateScope();
-        // var dbContext = scope.ServiceProvider.GetRequiredService<ComaviDbContext>();
-        // dbContext.Database.Migrate(); // Example direct migration call
-        app.MigrateDatabase(); // Call your extension method
+        app.MigrateDatabase(); // Call extension method
         Console.WriteLine("Database migration attempted successfully (or no migrations needed).");
     }
     catch (Exception ex)
@@ -683,7 +908,7 @@ if (builder.Environment.IsProduction())
         Console.WriteLine("Check database connection, permissions, and migration scripts.");
         Console.WriteLine($"Stack Trace: {ex.StackTrace}");
         // Decide if startup should halt on migration failure
-        // throw;
+        throw;
     }
 }
 else
@@ -703,7 +928,7 @@ else
         Console.WriteLine($"ERROR during database initialization: {ex.Message}");
         Console.WriteLine($"Stack Trace: {ex.StackTrace}");
         // Decide if startup should halt on init failure
-        // throw;
+        throw;
     }
 }
 
@@ -730,11 +955,10 @@ else
 {
     Console.WriteLine("Skipping production Exception Handler and HSTS in Development environment.");
     // Consider adding UseDeveloperExceptionPage() here if not already implicitly added by default templates
-    // app.UseDeveloperExceptionPage();
+    app.UseDeveloperExceptionPage();
 }
 
 // --- Middleware Pipeline Ordering ---
-// Order is critical here!
 
 try { Console.WriteLine("Adding SessionValidationMiddleware..."); app.UseMiddleware<SessionValidationMiddleware>(); }
 catch (Exception ex) { Console.WriteLine($"ERROR adding SessionValidationMiddleware: {ex.Message}"); }
@@ -742,7 +966,6 @@ catch (Exception ex) { Console.WriteLine($"ERROR adding SessionValidationMiddlew
 try { Console.WriteLine("Adding RateLimitingMiddleware..."); app.UseMiddleware<RateLimitingMiddleware>(); }
 catch (Exception ex) { Console.WriteLine($"ERROR adding RateLimitingMiddleware: {ex.Message}"); }
 
-// Assuming UseDatabaseResilience is a custom middleware
 try { Console.WriteLine("Adding custom DatabaseResilience middleware..."); app.UseDatabaseResilience(); }
 catch (Exception ex) { Console.WriteLine($"ERROR adding DatabaseResilience middleware: {ex.Message}"); }
 
@@ -764,7 +987,7 @@ catch (Exception ex) { Console.WriteLine($"ERROR adding Authentication middlewar
 try { Console.WriteLine("Adding Authorization middleware..."); app.UseAuthorization(); }
 catch (Exception ex) { Console.WriteLine($"ERROR adding Authorization middleware: {ex.Message}"); }
 
-try { Console.WriteLine("Adding Session middleware..."); app.UseSession(); } // Must be after AuthN/AuthZ typically, before endpoints
+try { Console.WriteLine("Adding Session middleware..."); app.UseSession(); } // Must be after AuthN/AuthZ typically
 catch (Exception ex) { Console.WriteLine($"ERROR adding Session middleware: {ex.Message}"); }
 
 // --- Hangfire Dashboard ---
@@ -774,8 +997,7 @@ try
     app.UseHangfireDashboard("/hangfire", new DashboardOptions
     {
         Authorization = new[] { new HangfireAuthorizationFilter() },
-        // Add other options here if needed
-        // AppPath = "/" // Link back to the main application
+
     });
     Console.WriteLine("Hangfire Dashboard configured successfully.");
 }
@@ -790,7 +1012,6 @@ catch (Exception ex)
 // --- Register Hangfire Recurring Jobs ---
 app.Lifetime.ApplicationStarted.Register(() => {
     Console.WriteLine("Application started. Registering Hangfire recurring jobs...");
-    // It's better practice to use ILogger here, but using Console for consistency with the request.
     var logger = app.Services.GetRequiredService<ILogger<Program>>(); // Get logger for internal logging if needed
     try
     {
@@ -861,13 +1082,13 @@ try
     app.MapControllerRoute(
         name: "default",
         pattern: "{controller=Home}/{action=Index}/{id?}")
-        .AllowAnonymous(); // Be careful with AllowAnonymous on the default route
+        .AllowAnonymous(); 
 
     Console.WriteLine("Mapping maintenance controller route...");
     app.MapControllerRoute(
        name: "maintenance",
        pattern: "Maintenance/{action=Index}/{id?}")
-       .AllowAnonymous(); // Allow anonymous access to maintenance info? Double-check necessity.
+       .AllowAnonymous(); // Allow anonymous access to maintenance info
 
     Console.WriteLine("Controller routes mapped successfully.");
 }
@@ -891,7 +1112,6 @@ catch (Exception ex)
     // Catch errors that might occur during the final stages of startup or web server initialization
     Console.WriteLine($"FATAL ERROR during application run: {ex.Message}");
     Console.WriteLine($"Stack Trace: {ex.StackTrace}");
-    // Optional: Log to a file or event log here as console might not be visible
     throw; // Re-throw to ensure process termination and logging by hosting environment
 }
 
@@ -921,4 +1141,9 @@ public class HangfireAuthorizationFilter : IDashboardAuthorizationFilter
         Console.WriteLine($"Hangfire Dashboard Access Granted: User '{httpContext?.User?.Identity?.Name}' is authenticated and in 'admin' role.");
         return true; // Only allow if authenticated AND in admin role
     }
+}
+internal class UserData
+{
+    public string Role { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
 }

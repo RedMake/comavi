@@ -16,13 +16,17 @@ namespace COMAVI_SA.Services
     {
         private readonly ComaviDbContext _context;
         private readonly IEmailService _emailService;
+        private readonly IEmailTemplatingService _emailTemplatingService;
+
 
         public NotificationService(
             ComaviDbContext context,
-            IEmailService emailService)
+            IEmailService emailService,
+            IEmailTemplatingService emailTemplatingService)
         {
             _context = context;
             _emailService = emailService;
+            _emailTemplatingService = emailTemplatingService;
         }
 
         public async Task SendExpirationNotificationsAsync()
@@ -166,26 +170,27 @@ namespace COMAVI_SA.Services
         {
             try
             {
-                string asunto = vencido
-                    ? $"ALERTA: {tipoDocumento} Vencido - COMAVI S.A."
-                    : $"AVISO: {tipoDocumento} Próximo a Vencer - COMAVI S.A.";
-
                 string estado = vencido ? "VENCIDO" : "PRÓXIMO A VENCER";
                 string accion = vencido ? "debe renovar inmediatamente" : "debe gestionar la renovación";
 
-                var emailBody = $@"
-                <h2>Alerta de Vencimiento - Sistema COMAVI</h2>
-                <p>Estimado/a {nombre},</p>
-                <p>Le informamos que su <strong>{tipoDocumento}</strong> se encuentra <strong>{estado}</strong>.</p>
-                <p>Detalles:</p>
-                <ul>
-                    <li><strong>Documento:</strong> {tipoDocumento}</li>
-                    <li><strong>Fecha de Vencimiento:</strong> {fechaVencimiento.ToString("dd/MM/yyyy")}</li>
-                    <li><strong>Estado:</strong> {estado}</li>
-                </ul>
-                <p>Usted {accion} este documento para continuar operando normalmente.</p>
-                <p>Puede acceder al <a href='https://docktrack.lat'>Sistema COMAVI</a> para más detalles y ver el calendario de vencimientos.</p>
-                <p>Atentamente,<br>Equipo COMAVI</p>";
+                var templateData = new Dictionary<string, string>
+                {
+                    {"NombreUsuario", nombre},
+                    {"TipoDocumento", tipoDocumento},
+                    {"Estado", estado},
+                    {"FechaVencimiento", fechaVencimiento.ToString("dd/MM/yyyy")},
+                    {"AccionRequerida", accion}
+                };
+
+                string templateName = vencido ? "DocumentoVencido.html" : "DocumentoPorVencer.html";
+
+                var emailBody = await _emailTemplatingService.LoadAndPopulateTemplateAsync(
+                    templateName,
+                    templateData);
+
+                string asunto = vencido
+                    ? $"ALERTA: {tipoDocumento} Vencido - COMAVI S.A."
+                    : $"AVISO: {tipoDocumento} Próximo a Vencer - COMAVI S.A.";
 
                 await _emailService.SendEmailAsync(email, asunto, emailBody);
             }

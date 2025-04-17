@@ -400,3 +400,6 @@ FodyWeavers.xsd
 
 # My own ignorable files / folders
 /keys/
+Properties/serviceDependencies.local.json
+Properties/serviceDependencies.json
+Properties/serviceDependencies/

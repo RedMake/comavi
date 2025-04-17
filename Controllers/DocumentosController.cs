@@ -20,6 +20,8 @@ namespace COMAVI_SA.Controllers
         private readonly IEmailService _emailService;
         private readonly string _connectionString;
         private readonly IExcelService _excelService;
+        private readonly IEmailTemplatingService _emailTemplatingService; 
+
 
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
         public DocumentosController(
@@ -28,15 +30,17 @@ namespace COMAVI_SA.Controllers
             IPdfService pdfService,
             IExcelService excelService,
             IEmailService emailService,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IEmailTemplatingService emailTemplatingService)
         {
-            _context = context;
+            _context = context; 
             _pdfService = pdfService;
             _excelService = excelService;
             _emailService = emailService;
 #pragma warning disable CS8601 // Possible null reference assignment.
             _connectionString = configuration.GetConnectionString("DefaultConnection");
 #pragma warning restore CS8601 // Possible null reference assignment.
+            _emailTemplatingService = emailTemplatingService;
         }
 
 
@@ -198,18 +202,16 @@ namespace COMAVI_SA.Controllers
                     return RedirectToAction("PendientesValidacion");
                 }
 
-                // Actualizar estado a verificado
                 documento.estado_validacion = "verificado";
                 await _context.SaveChangesAsync();
 
-                // Enviar notificación al chofer (obtener usuario asociado a chofer)
                 var usuario = await _context.Usuarios
                     .Where(u => u.correo_electronico.StartsWith(documento.Chofer.numero_cedula) && u.rol == "user")
                     .FirstOrDefaultAsync();
 
                 if (usuario != null)
                 {
-                    // Agregar notificación en el sistema
+                    // Notificación en el sistema
                     var notificacion = new Notificaciones_Usuario
                     {
                         id_usuario = usuario.id_usuario,
@@ -221,19 +223,18 @@ namespace COMAVI_SA.Controllers
                     _context.NotificacionesUsuario.Add(notificacion);
                     await _context.SaveChangesAsync();
 
-                    // Enviar correo electrónico
-                    var emailBody = $@"
-                    <h2>Documento Verificado - Sistema COMAVI</h2>
-                    <p>Estimado/a {documento.Chofer.nombreCompleto},</p>
-                    <p>Nos complace informarle que su documento '{documento.tipo_documento}' ha sido verificado exitosamente.</p>
-                    <p>Detalles del documento:</p>
-                    <ul>
-                        <li><strong>Tipo:</strong> {documento.tipo_documento}</li>
-                        <li><strong>Fecha de emisión:</strong> {documento.fecha_emision:dd/MM/yyyy}</li>
-                        <li><strong>Fecha de vencimiento:</strong> {documento.fecha_vencimiento:dd/MM/yyyy}</li>
-                    </ul>
-                    <p>Gracias por mantener actualizada su documentación.</p>
-                    <p>Atentamente,<br>Equipo COMAVI</p>";
+                    // Usar plantilla de email
+                    var templateData = new Dictionary<string, string>
+            {
+                {"NombreUsuario", documento.Chofer.nombreCompleto},
+                {"TipoDocumento", documento.tipo_documento},
+                {"FechaEmision", documento.fecha_emision.ToString("dd/MM/yyyy")},
+                {"FechaVencimiento", documento.fecha_vencimiento.ToString("dd/MM/yyyy")}
+            };
+
+                    var emailBody = await _emailTemplatingService.LoadAndPopulateTemplateAsync(
+                        "DocumentoVerificado.html",
+                        templateData);
 
                     await _emailService.SendEmailAsync(
                         usuario.correo_electronico,
@@ -273,18 +274,16 @@ namespace COMAVI_SA.Controllers
                     return RedirectToAction("PendientesValidacion");
                 }
 
-                // Actualizar estado a rechazado
                 documento.estado_validacion = "rechazado";
                 await _context.SaveChangesAsync();
 
-                // Enviar notificación al chofer (obtener usuario asociado a chofer)
                 var usuario = await _context.Usuarios
                     .Where(u => u.correo_electronico.StartsWith(documento.Chofer.numero_cedula) && u.rol == "user")
                     .FirstOrDefaultAsync();
 
                 if (usuario != null)
                 {
-                    // Agregar notificación en el sistema
+                    // Notificación en el sistema
                     var notificacion = new Notificaciones_Usuario
                     {
                         id_usuario = usuario.id_usuario,
@@ -296,20 +295,19 @@ namespace COMAVI_SA.Controllers
                     _context.NotificacionesUsuario.Add(notificacion);
                     await _context.SaveChangesAsync();
 
-                    // Enviar correo electrónico
-                    var emailBody = $@"
-                    <h2>Documento Rechazado - Sistema COMAVI</h2>
-                    <p>Estimado/a {documento.Chofer.nombreCompleto},</p>
-                    <p>Lamentamos informarle que su documento '{documento.tipo_documento}' ha sido rechazado.</p>
-                    <p><strong>Motivo del rechazo:</strong> {motivoRechazo}</p>
-                    <p>Detalles del documento:</p>
-                    <ul>
-                        <li><strong>Tipo:</strong> {documento.tipo_documento}</li>
-                        <li><strong>Fecha de emisión:</strong> {documento.fecha_emision:dd/MM/yyyy}</li>
-                        <li><strong>Fecha de vencimiento:</strong> {documento.fecha_vencimiento:dd/MM/yyyy}</li>
-                    </ul>
-                    <p>Por favor, suba un nuevo documento que cumpla con los requisitos necesarios.</p>
-                    <p>Atentamente,<br>Equipo COMAVI</p>";
+                    // Usar plantilla de email
+                    var templateData = new Dictionary<string, string>
+                    {
+                        {"NombreUsuario", documento.Chofer.nombreCompleto},
+                        {"TipoDocumento", documento.tipo_documento},
+                        {"FechaEmision", documento.fecha_emision.ToString("dd/MM/yyyy")},
+                        {"FechaVencimiento", documento.fecha_vencimiento.ToString("dd/MM/yyyy")},
+                        {"MotivoRechazo", motivoRechazo}
+                    };
+
+                    var emailBody = await _emailTemplatingService.LoadAndPopulateTemplateAsync(
+                        "DocumentoRechazado.html",
+                        templateData);
 
                     await _emailService.SendEmailAsync(
                         usuario.correo_electronico,
@@ -366,14 +364,13 @@ namespace COMAVI_SA.Controllers
                     return RedirectToAction("DocumentosPorVencer");
                 }
 
-                // Enviar notificación al chofer (obtener usuario asociado a chofer)
                 var usuario = await _context.Usuarios
                     .Where(u => u.correo_electronico.StartsWith(documento.Chofer.numero_cedula) && u.rol == "user")
                     .FirstOrDefaultAsync();
 
                 if (usuario != null)
                 {
-                    // Agregar notificación en el sistema
+                    // Notificación en el sistema
                     var notificacion = new Notificaciones_Usuario
                     {
                         id_usuario = usuario.id_usuario,
@@ -385,18 +382,20 @@ namespace COMAVI_SA.Controllers
                     _context.NotificacionesUsuario.Add(notificacion);
                     await _context.SaveChangesAsync();
 
-                    // Calcular días restantes
                     var diasRestantes = (documento.fecha_vencimiento - DateTime.Now).Days;
 
-                    // Enviar correo electrónico
-                    var emailBody = $@"
-                    <h2>Recordatorio de Vencimiento - Sistema COMAVI</h2>
-                    <p>Estimado/a {documento.Chofer.nombreCompleto},</p>
-                    <p>Le recordamos que su documento '{documento.tipo_documento}' está próximo a vencer.</p>
-                    <p><strong>Fecha de vencimiento:</strong> {documento.fecha_vencimiento:dd/MM/yyyy} ({diasRestantes} días restantes)</p>
-                    <p>Por favor, actualice este documento antes de la fecha de vencimiento para evitar problemas en sus asignaciones.</p>
-                    <p>Puede subir un nuevo documento accediendo a su perfil en el sistema.</p>
-                    <p>Atentamente,<br>Equipo COMAVI</p>";
+                    // Usar plantilla de email
+                    var templateData = new Dictionary<string, string>
+                    {
+                        {"NombreUsuario", documento.Chofer.nombreCompleto},
+                        {"TipoDocumento", documento.tipo_documento},
+                        {"FechaVencimiento", documento.fecha_vencimiento.ToString("dd/MM/yyyy")},
+                        {"DiasRestantes", diasRestantes.ToString()}
+                    };
+
+                    var emailBody = await _emailTemplatingService.LoadAndPopulateTemplateAsync(
+                        "RecordatorioVencimientoDocumento.html",
+                        templateData);
 
                     await _emailService.SendEmailAsync(
                         usuario.correo_electronico,

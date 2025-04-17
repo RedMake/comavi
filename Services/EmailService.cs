@@ -43,9 +43,9 @@ namespace COMAVI_SA.Services
                 email.Subject = subject;
                 email.Body = new TextPart(MimeKit.Text.TextFormat.Html) { Text = body };
 
-                // En producción, usar las credenciales de KeyVault
 #pragma warning disable CS8604 // Possible null reference argument.
                 string password ="_YcNJTF(H!v-3yy";
+
 #pragma warning restore CS8604 // Possible null reference argument.
 
                 using var smtp = new SmtpClient();
@@ -53,7 +53,6 @@ namespace COMAVI_SA.Services
                 await smtp.AuthenticateAsync("no-reply-support@docktrack.lat", password);
                 await smtp.SendAsync(email);
                 await smtp.DisconnectAsync(true);
-
             }
             catch (Exception ex)
             {
