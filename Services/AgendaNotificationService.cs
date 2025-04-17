@@ -2,6 +2,8 @@
 using COMAVI_SA.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using System.Reflection;
 
 namespace COMAVI_SA.Services
 {
@@ -12,13 +14,17 @@ namespace COMAVI_SA.Services
     {
         private readonly ComaviDbContext _context;
         private readonly IEmailService _emailService;
+        private readonly IEmailTemplatingService _emailTemplatingService;
 
         public AgendaNotificationService(
             ComaviDbContext context,
-            IEmailService emailService)
+            IEmailService emailService,
+            IEmailTemplatingService emailTemplatingService)
         {
             _context = context;
             _emailService = emailService;
+            _emailTemplatingService = emailTemplatingService;
+
         }
 
         public async Task EnviarNotificacionesAgendaAsync()
@@ -67,34 +73,48 @@ namespace COMAVI_SA.Services
             }
         }
 
-        private async Task EnviarCorreoNotificacionAsync(EventoAgenda evento)
+        public async Task EnviarCorreoNotificacionAsync(EventoAgenda evento)
         {
             try
             {
                 string diasFaltantes = (evento.fecha_inicio.Date - DateTime.Now.Date).Days.ToString();
-                string asunto = $"Recordatorio: {evento.titulo} - {diasFaltantes} días";
+                if (int.TryParse(diasFaltantes, out int diasInt) && diasInt < 0)
+                {
+                    diasFaltantes = "0";
+                }
 
-                var emailBody = $@"
-            <h2>Recordatorio de Agenda - Sistema COMAVI</h2>
-            <p>Estimado/a {evento.Usuario.nombre_usuario},</p>
-            <p>Le recordamos que tiene un evento programado en {diasFaltantes} días:</p>
-            <p><strong>Título:</strong> {evento.titulo}</p>
-            <p><strong>Fecha:</strong> {evento.fecha_inicio.ToString("dd/MM/yyyy HH:mm")}</p>
-            <p><strong>Tipo:</strong> {evento.tipo_evento}</p>
-            <p><strong>Descripción:</strong> {evento.descripcion}</p>
-            <p>Puede acceder al sistema para ver más detalles o actualizar este evento.</p>
-            <p>Atentamente,<br>Sistema COMAVI</p>";
+                string asunto = $"Recordatorio: {evento.titulo} - Faltan {diasFaltantes} día(s)";
+                string templateFileName = "RecordatorioComaviProfesional.html";
+
+                var data = new Dictionary<string, string>
+                {
+                    { "NombreUsuario", evento.Usuario?.nombre_usuario ?? "Usuario" },
+                    { "DiasFaltantes", diasFaltantes },
+                    { "TituloEvento", evento.titulo },
+                    { "FechaEvento", evento.fecha_inicio.ToString("dd/MM/yyyy HH:mm") },
+                    { "TipoEvento", evento.tipo_evento },
+                    { "DescripcionEvento", System.Net.WebUtility.HtmlEncode(evento.descripcion ?? "") }
+                };
+
+                var emailBody = await _emailTemplatingService.LoadAndPopulateTemplateAsync(templateFileName, data);
+
+                if (emailBody.StartsWith("Error:"))
+                {
+                    return;
+                }
 
                 await _emailService.SendEmailAsync(
-                    evento.Usuario.correo_electronico,
+                    evento.Usuario?.correo_electronico ?? "Usuario",
                     asunto,
-                    emailBody);
+                    emailBody
+                );
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 throw;
             }
         }
+       
 
         private async Task CrearNotificacionSistemaAsync(EventoAgenda evento)
         {

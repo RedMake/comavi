@@ -34,6 +34,7 @@ namespace COMAVI_SA.Tests.Controllers
         private readonly Mock<ComaviDbContext> _mockContext;
         private readonly Mock<IAuthorizationService> _mockAuthorizationService;
         private readonly LoginController _controller;
+        private readonly Mock<IEmailTemplatingService> _mockEmailTemplatingService;
 
         public LoginControllerTests()
         {
@@ -48,7 +49,7 @@ namespace COMAVI_SA.Tests.Controllers
             _mockPdfService = new Mock<IPdfService>();
             _mockContext = new Mock<ComaviDbContext>(new DbContextOptions<ComaviDbContext>());
             _mockAuthorizationService = new Mock<IAuthorizationService>();
-
+            _mockEmailTemplatingService = new Mock<IEmailTemplatingService>();
             // Setup controller
             _controller = new LoginController(
                 _mockDatabaseRepository.Object,
@@ -60,7 +61,8 @@ namespace COMAVI_SA.Tests.Controllers
                 _mockEmailService.Object,
                 _mockPdfService.Object,
                 _mockContext.Object,
-                _mockAuthorizationService.Object
+                _mockAuthorizationService.Object,
+                _mockEmailTemplatingService.Object
             );
 
             // Setup TempData

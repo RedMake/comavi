@@ -43,12 +43,31 @@ namespace COMAVI_SA.Services
                 email.Subject = subject;
                 email.Body = new TextPart(MimeKit.Text.TextFormat.Html) { Text = body };
 
-                // En producción, usar las credenciales de KeyVault
 #pragma warning disable CS8604 // Possible null reference argument.
-                string password = _environment.IsDevelopment()
-                    ? "_YcNJTF(H!v-3yy" // Solo para desarrollo
-                    : NotNull.CheckNotNullOrEmpty(_configuration["EmailPassword"],
-                        message: "La contraseña de email no está configurada en KeyVault");
+
+                string? passwordValue;
+                string errorMessage;
+
+                if (_environment.IsDevelopment())
+                {
+                    passwordValue = _configuration["EmailSettings:EmailPassword"];
+                    errorMessage = "La contraseña de email ('EmailPassword') no está configurada para el entorno de Desarrollo.";
+                }
+                else
+                {
+                    passwordValue = _configuration["EmailSettings:EmailPassword"];
+                    errorMessage = "La contraseña de email ('EmailPassword') no está configurada en la fuente esperada (probablemente Azure Key Vault).";
+                }
+
+                if (string.IsNullOrEmpty(passwordValue))
+                {
+                    Console.WriteLine($"Error: {errorMessage}");
+                    Console.WriteLine($"Contra: {passwordValue}");
+                    throw new InvalidOperationException(errorMessage);
+                }
+
+                string password = passwordValue;
+
 #pragma warning restore CS8604 // Possible null reference argument.
 
                 using var smtp = new SmtpClient();
@@ -56,7 +75,6 @@ namespace COMAVI_SA.Services
                 await smtp.AuthenticateAsync("no-reply-support@docktrack.lat", password);
                 await smtp.SendAsync(email);
                 await smtp.DisconnectAsync(true);
-
             }
             catch (Exception ex)
             {

@@ -35,6 +35,7 @@ namespace COMAVI_SA.Controllers
         private readonly ComaviDbContext _context;
         private readonly IMemoryCache _cache;
         private readonly IAuthorizationService _authorizationService;
+        private readonly IEmailTemplatingService _emailTemplatingService;
 
         public LoginController(
             IDatabaseRepository databaseRepository,
@@ -46,7 +47,8 @@ namespace COMAVI_SA.Controllers
             IEmailService emailService,
             IPdfService pdfService,
             ComaviDbContext context,
-            IAuthorizationService authorizationService)
+            IAuthorizationService authorizationService,
+            IEmailTemplatingService emailTemplatingService)
         {
             _databaseRepository = databaseRepository;
             _userService = userService;
@@ -58,7 +60,7 @@ namespace COMAVI_SA.Controllers
             _pdfService = pdfService;
             _context = context;
             _authorizationService = authorizationService;
-
+            _emailTemplatingService = emailTemplatingService;
         }
 
         [AllowAnonymous]
@@ -81,11 +83,6 @@ namespace COMAVI_SA.Controllers
 
                 if (!ModelState.IsValid)
                 {
-
-                    foreach (var error in ModelState.Values.SelectMany(v => v.Errors))
-                    {
-                        ModelState.AddModelError("", error.ErrorMessage);
-                    }
 
                     return View(model);
                 }
@@ -1521,18 +1518,18 @@ namespace COMAVI_SA.Controllers
                     return RedirectToAction("Index");
                 }
 
-                // Generar token y enviar correo
                 var token = await _userService.GeneratePasswordResetTokenAsync(user.id_usuario);
                 var resetLink = Url.Action("ResetPassword", "Login", new { token, email }, Request.Scheme);
 
-                var emailBody = $@"
-                <h2>Restablecer Contraseña - Sistema COMAVI</h2>
-                <p>Hemos recibido una solicitud para restablecer la contraseña de su cuenta.</p>
-                <p>Haga clic en el siguiente enlace para crear una nueva contraseña:</p>
-                <p><a href='{resetLink}' style='padding: 10px; background-color: #4e73df; color: white; text-decoration: none; border-radius: 5px;'>Restablecer Contraseña</a></p>
-                <p>Si no solicitó restablecer su contraseña, puede ignorar este correo.</p>
-                <p>El enlace expirará en 24 horas.</p>
-                <p>Atentamente,<br>Equipo COMAVI</p>";
+                var templateData = new Dictionary<string, string>
+                {
+                    {"ResetLink", resetLink},
+                    {"NombreUsuario", user.nombre_usuario ?? "Usuario"}
+                };
+
+                var emailBody = await _emailTemplatingService.LoadAndPopulateTemplateAsync(
+                    "RestablecerContrasena.html",
+                    templateData);
 
                 await _emailService.SendEmailAsync(
                     email,
@@ -1638,13 +1635,15 @@ namespace COMAVI_SA.Controllers
         {
             try
             {
-                var emailBody = $@"
-        <h2>Confirmación de Cambio de Contraseña - COMAVI S.A.</h2>
-        <p>Estimado/a {nombre},</p>
-        <p>Le informamos que la contraseña de su cuenta ha sido actualizada exitosamente.</p>
-        <p>Si usted no realizó este cambio, por favor contacte inmediatamente al administrador del sistema.</p>
-        <p>Fecha y hora del cambio: {DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss")}</p>
-        <p>Atentamente,<br>Equipo COMAVI</p>";
+                var templateData = new Dictionary<string, string>
+                {
+                    {"NombreUsuario", nombre},
+                    {"FechaCambio", DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss")}
+                };
+
+                var emailBody = await _emailTemplatingService.LoadAndPopulateTemplateAsync(
+                    "CambioContrasenaConfirmacion.html",
+                    templateData);
 
                 await _emailService.SendEmailAsync(
                     email,
@@ -1679,19 +1678,16 @@ namespace COMAVI_SA.Controllers
                 var verificationLink = Url.Action("Verificar", "Login", new { token, email }, Request.Scheme);
                 var instruccionesLink = Url.Action("InstruccionesVerificacion", "Login", new { email, nombre }, Request.Scheme);
 
-                var emailBody = $@"
-                <h2>Bienvenido a COMAVI S.A. - Sistema de Seguimiento de Licencias</h2>
-                <p>Estimado/a {nombre},</p>
-                <p>Gracias por registrarse en nuestro sistema. Para completar su registro, por favor siga estos pasos:</p>
-                <ol>
-                    <li>Verifique su cuenta haciendo clic en el siguiente enlace: <a href='{verificationLink}'>Verificar cuenta</a></li>
-                    <li>Una vez verificada, inicie sesión en el sistema.</li>
-                    <li>Complete su perfil con su información personal y de licencia.</li>
-                    <li>Suba los documentos requeridos (licencia, identificación, etc.) en formato PDF.</li>
-                </ol>
-                <p>Para obtener instrucciones detalladas, visite: <a href='{instruccionesLink}'>Ver instrucciones completas</a></p>
-                <p><strong>Importante:</strong> Si no completa el proceso de verificación en 3 días, su cuenta será eliminada automáticamente.</p>
-                <p>Atentamente,<br>Equipo COMAVI</p>";
+                var templateData = new Dictionary<string, string>
+                {
+                    {"NombreUsuario", nombre},
+                    {"VerificationLink", verificationLink},
+                    {"InstruccionesLink", instruccionesLink}
+                };
+
+                var emailBody = await _emailTemplatingService.LoadAndPopulateTemplateAsync(
+                    "VerificacionCuenta.html",
+                    templateData);
 
                 await _emailService.SendEmailAsync(
                     email,
@@ -1700,7 +1696,7 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                throw ;
+                throw;
             }
         }
 
