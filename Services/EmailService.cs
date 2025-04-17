@@ -45,10 +45,7 @@ namespace COMAVI_SA.Services
 
                 // En producción, usar las credenciales de KeyVault
 #pragma warning disable CS8604 // Possible null reference argument.
-                string password = _environment.IsDevelopment()
-                    ? "_YcNJTF(H!v-3yy" // Solo para desarrollo
-                    : NotNull.CheckNotNullOrEmpty(_configuration["EmailPassword"],
-                        message: "La contraseña de email no está configurada en KeyVault");
+                string password ="_YcNJTF(H!v-3yy";
 #pragma warning restore CS8604 // Possible null reference argument.
 
                 using var smtp = new SmtpClient();
