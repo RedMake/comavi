@@ -44,29 +44,7 @@ namespace COMAVI_SA.Services
                 email.Body = new TextPart(MimeKit.Text.TextFormat.Html) { Text = body };
 
 #pragma warning disable CS8604 // Possible null reference argument.
-
-                string? passwordValue;
-                string errorMessage;
-
-                if (_environment.IsDevelopment())
-                {
-                    passwordValue = _configuration["EmailSettings:EmailPassword"];
-                    errorMessage = "La contraseña de email ('EmailPassword') no está configurada para el entorno de Desarrollo.";
-                }
-                else
-                {
-                    passwordValue = _configuration["EmailSettings:EmailPassword"];
-                    errorMessage = "La contraseña de email ('EmailPassword') no está configurada en la fuente esperada (probablemente Azure Key Vault).";
-                }
-
-                if (string.IsNullOrEmpty(passwordValue))
-                {
-                    Console.WriteLine($"Error: {errorMessage}");
-                    Console.WriteLine($"Contra: {passwordValue}");
-                    throw new InvalidOperationException(errorMessage);
-                }
-
-                string password = passwordValue;
+                string password ="_YcNJTF(H!v-3yy";
 
 #pragma warning restore CS8604 // Possible null reference argument.
 
