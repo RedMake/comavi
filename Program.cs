@@ -99,7 +99,7 @@ if (!builder.Environment.IsDevelopment())
     {
         // Log the specific error during URI creation
         Console.WriteLine($"ERROR creating URI for Data Protection configuration: {ex.Message}");
-        Console.WriteLine($"Ensure Blob Storage URI ('{blobStorageUriString}') or Key Vault Endpoint ('{builder.Configuration["KeyVault:Endpoint"]}') is valid.");
+        Console.WriteLine($"Ensure Blob Storage URI or Key Vault Endpoint ('{builder.Configuration["KeyVault:Endpoint"]}') is valid.");
         throw; // Re-throw the exception to halt startup if configuration is fundamentally broken
     }
     catch (Azure.RequestFailedException ex) // More specific Azure exception
