@@ -40,4 +40,12 @@
 	<ItemGroup>
 		<Using Include="Xunit" />
 	</ItemGroup>
+	<ItemGroup>
+	  <None Update="EmailTemplates\RestablecerContrasena.html">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	  <None Update="EmailTemplates\VerificacionCuenta.html">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	</ItemGroup>
 </Project>

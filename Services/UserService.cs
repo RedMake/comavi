@@ -116,7 +116,7 @@ namespace COMAVI_SA.Services
                     nombre_usuario = model.UserName,
                     correo_electronico = model.Email,
                     contrasena = hashedPassword,
-                    rol = model.Role,
+                    rol = model.Role ?? "user",
                     estado_verificacion = "pendiente",
                     fecha_registro = DateTime.Now,
                     token_verificacion = verificationToken,

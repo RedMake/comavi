@@ -23,6 +23,17 @@ using System;
 using System.IO;
 using Microsoft.Extensions.Caching.Memory;
 using COMAVI_SA.Models;
+using Microsoft.Extensions.Hosting;
+if (args.Contains("ef"))
+{
+    Console.WriteLine("Running in EF tool context — configuring NoOpHostedService.");
+    var tempBuilder = WebApplication.CreateBuilder(args);
+    tempBuilder.Host.ConfigureServices(services =>
+    {
+        services.AddHostedService<NoOpHostedService>();
+    });
+    return;
+}
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -41,7 +52,7 @@ catch (Exception ex)
 
 try
 {
-    Console.WriteLine("Configuring Distributed Memory Cache...");
+    Console.WriteLine("Configuring Distributed Memory Cache..");
     builder.Services.AddDistributedMemoryCache();
     Console.WriteLine("Distributed Memory Cache configured successfully.");
 }

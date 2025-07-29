@@ -123,7 +123,7 @@ namespace COMAVI_SA.Controllers
             }
             catch (Exception ex)
             {
-                ModelState.AddModelError("", "Error en el servidor. Por favor, intente más tarde.");
+                ModelState.AddModelError("", $"Error en el servidor: {ex.Message}");
                 return View(model);
             }
         }

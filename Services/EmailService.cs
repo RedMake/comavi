@@ -2,6 +2,8 @@
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using MimeKit;
+using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Hosting;
 
 namespace COMAVI_SA.Services
 {
@@ -11,7 +13,6 @@ namespace COMAVI_SA.Services
     {
         Task SendEmailAsync(string to, string subject, string body);
         Task EnviarCorreoAsync(string to, string subject, string body) => SendEmailAsync(to, subject, body);
-
     }
 
     public class EmailService : IEmailService
@@ -19,9 +20,7 @@ namespace COMAVI_SA.Services
         private readonly IConfiguration _configuration;
         private readonly IWebHostEnvironment _environment;
 
-        public EmailService(
-            IConfiguration configuration,
-            IWebHostEnvironment environment)
+        public EmailService(IConfiguration configuration, IWebHostEnvironment environment)
         {
             _configuration = NotNull.Check(configuration);
             _environment = NotNull.Check(environment);
@@ -36,26 +35,30 @@ namespace COMAVI_SA.Services
 
             try
             {
-                // Configuración de correo de Namecheap
+                var smtpSection = _configuration.GetSection("SmtpSettings");
+
+                var host = smtpSection["Host"];
+                var port = smtpSection.GetValue<int>("Port");
+                var enableSsl = smtpSection.GetValue<bool>("EnableSsl");
+                var username = smtpSection["UserName"];
+                var password = smtpSection["Password"];
+                var from = smtpSection["From"];
+
                 var email = new MimeMessage();
-                email.From.Add(MailboxAddress.Parse("no-reply-support@docktrack.lat"));
+                email.From.Add(MailboxAddress.Parse(from));
                 email.To.Add(MailboxAddress.Parse(to));
                 email.Subject = subject;
                 email.Body = new TextPart(MimeKit.Text.TextFormat.Html) { Text = body };
 
-#pragma warning disable CS8604 // Possible null reference argument.
-                string password ="_YcNJTF(H!v-3yy";
-
-#pragma warning restore CS8604 // Possible null reference argument.
-
                 using var smtp = new SmtpClient();
-                await smtp.ConnectAsync("mail.privateemail.com", 587, SecureSocketOptions.StartTls);
-                await smtp.AuthenticateAsync("no-reply-support@docktrack.lat", password);
+                await smtp.ConnectAsync(host, port, enableSsl ? SecureSocketOptions.StartTls : SecureSocketOptions.Auto);
+                await smtp.AuthenticateAsync(username, password);
                 await smtp.SendAsync(email);
                 await smtp.DisconnectAsync(true);
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"ERROR al enviar correo: {ex.Message}");
                 throw;
             }
         }
